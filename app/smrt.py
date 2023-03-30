@@ -1,6 +1,6 @@
 from flask import Flask, request, Response
 import base64
-import requests
+import time
 import summary
 import transcript
 from whatsapp import Whatsapp
@@ -25,23 +25,34 @@ def return_response():
             if 'mimetype' in message:
                 if message['mimetype'] == "audio/ogg; codecs=opus":
                     data = message['body']
+                    debug = {}
                     whatsapp.sendMessage(message['from'], "Processing...")
                     decoded = base64.b64decode(data)
-                    with open('out.ogg', 'wb') as output_file:
-                        output_file.write(decoded)
+                    #with open('out.ogg', 'wb') as output_file:
+                    #    output_file.write(decoded)
+
+                    start = time.time()
                     transcript = transcriber.transcribe(decoded)
+                    end = time.time()
+                    debug['transcript_time'] = end - start
+                    
                     transcriptText = transcript['text']
                     words = transcript['words']
                     language = transcript['language']
                     whatsapp.sendMessage(message['from'], "Transcribed: \n%s" % (transcriptText))
-                    debug = {}
+                    
                     debug['transcript_language'] = language
                     debug['transcript_language_probability'] = transcript['language_probability']
                     debug['transcript_words'] = transcript['words']
                     debug['transcript_cost'] = transcript['cost']
                     if words > CONFIG_MIN_WORDS_FOR_SUMMARY:
                         whatsapp.sendMessage(message['from'], "Writing summary...")
+
+                        start = time.time()
                         summary = summarizer.summarize(transcriptText, language)
+                        end = time.time()
+                        debug['summary_time'] = end - start
+
                         summaryText = summary['text']
                         debug['summary_cost'] = summary['cost']
                         whatsapp.sendMessage(message['from'], "Summary: \n%s" % (summaryText))
