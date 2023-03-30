@@ -1,0 +1,76 @@
+import openai
+import requests
+import asyncio
+from EdgeGPT import Chatbot, ConversationStyle
+
+class SummaryInterface:
+    def identifier(self) -> str:
+        """
+        Identifies the process with a unique name
+        """
+        pass
+
+    def summarize(self, text: str, language: str) -> dict:
+        """Creates a summary for the given text"""
+        pass
+
+class OpenAIChatGPTSummary(SummaryInterface):
+    def __init__(self, apiKey: str):
+        self._apiKey = apiKey
+        self._costPerToken = 0.002 / 1000.
+    
+    def summarize(self, text: str, language: str):
+        openai.api_key = self._apiKey
+        if language == 'de':
+            prompt = "Fasse die wichtigsten Punkte des folgenden Textes in so wenig Stichpunkten zusammen wie möglich, hebe dabei besonders Daten und Zeiten hervor, wenn sie vorhanden sind: %s" % (text)
+        else:
+            prompt = "Summarize the most important points in the following text in a few bullet points as short as possible, emphasize dates and time if they are present in the text: %s" % (text)
+        response = openai.Completion.create(model="text-davinci-003", prompt="Say this is a test", temperature=0, max_tokens=100)
+        completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": prompt}])
+        cost = completion['usage']['total_tokens'] * self._costPerToken
+        response = completion['choices'][0]['message']['content']
+        return {
+            'text': response, 
+            'cost': cost
+        }
+    
+class ChatGPTSummary(SummaryInterface):
+    def summarize(self, text: str, language: str):
+        url='http://127.0.0.1:8000/v1/completions'
+        headers={'accept': 'application/json', 
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer [Your API Key]'
+                }
+        prompt = "Summarize the most important points in the following text in a few bullet points as short as possible, emphasize dates and time if they are present in the text: %s" % (text)
+        data = {
+            "model": "text-davinci-003",
+            "prompt": prompt,
+            "max_tokens": 100,
+            "temperature": 1.0,
+            }
+        response = requests.post(url, json=data, headers=headers, verify=False)
+        return response.json()['choices'][0]['text']
+    
+class BingGPTSummary(SummaryInterface):
+    async def _summarize(self, text, language):
+        bot = Chatbot(cookiePath = "cookie.json")
+        if language == 'de':
+            prompt = "Fasse die wichtigsten Punkte des folgenden Textes mit den wichtigsten Stichpunkten und so kurz wie möglich zusammen, hebe dabei besonders Daten und Zeiten hervor, wenn sie vorhanden sind, erwähne dabei nicht deinen Namen: %s" % (text)
+        else:
+            prompt = "Summarize the most important points in the following text in a few bullet points as short as possible, emphasize dates and time if they are present in the text: %s" % (text)
+        
+        
+        response = await bot.ask(prompt=prompt, conversation_style=ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
+        text = response['item']['messages'][1]['text']
+        print(text)
+        text = text[text.find(".")+1:].strip()
+        # we dropt the first sentence because it's Bing introducing itself. 
+
+        await bot.close()
+        return {
+            'text': text,
+            'cost': 0
+        }
+    
+    def summarize(self, text: str, language: str):
+        return asyncio.run(self._summarize(text, language))

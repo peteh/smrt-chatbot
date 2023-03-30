@@ -1,0 +1,6 @@
+app/.env
+app/.venv
+.venv
+*.pyc
+app/cookie.json
+app/models
