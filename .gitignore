@@ -4,3 +4,6 @@ app/.venv
 *.pyc
 app/cookie.json
 app/models
+models/*
+docker-compose.override.yml
+cookie.json

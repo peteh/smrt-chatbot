@@ -1,17 +1,41 @@
 import requests
 
+
 class Whatsapp:
-    def __init__(self, apiKey: str):
+    def __init__(self, server, session, apiKey: str):
+        self._server = server
+        self._session = session
         self._apiKey = apiKey
-    
+
     def sendMessage(self, recipient: str, text: str):
-        url = 'http://localhost:21465/api/smrt/send-message'
+        url = "%s/api/%s/send-message" % (self._server, self._session)
+        print(url)
+        print(self._apiKey)
         data = {
-                "phone": recipient,
-                "message": text,
-                "isGroup": False
-                }
+            "phone": recipient,
+            "message": text,
+            "isGroup": False
+        }
         headers = {"Authorization": "Bearer %s" % (self._apiKey)}
 
         response = requests.post(url, json=data, headers=headers)
-        #print(response.json())
+        print(response.json())
+
+    def react(self, messageId, reactionText):
+        url = "%s/api/%s/react-message" % (self._server, self._session)
+        data = {
+            "msgId": messageId,
+            "reaction": reactionText
+        }
+        headers = {"Authorization": "Bearer %s" % (self._apiKey)}
+
+        response = requests.post(url, json=data, headers=headers)
+
+    def reactHourglassHalf(self, messageId):
+        self.react(messageId, "\u231b")
+        
+    def reactHourglassFull(self, messageId):
+        self.react(messageId, "\u23f3")
+
+    def reactDone(self, messageId):
+        self.react(messageId, "\u2714\ufe0f")

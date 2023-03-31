@@ -42,13 +42,14 @@ class WhisperTranscript(TranscriptInterface):
             'text': text, 
             'words': words,
             'language': language,
-            'duration': duration
+            'duration': duration,
+            'cost': 0
         }
 
 class FasterWhisperTranscript(TranscriptInterface):
 
     def _getModelFolderName(self, model):
-        return "models/faster_whisper_%s" % (model)
+        return "../models/faster_whisper_%s" % (model)
     
     def _isModelCached(self, model):
         foldername = self._getModelFolderName(model)
@@ -65,13 +66,13 @@ class FasterWhisperTranscript(TranscriptInterface):
     def transcribe(self, audioData):
 
         model_size = "medium"
-        if not self._isModelCached(model_size):
-            self._download(model_size)
+        #if not self._isModelCached(model_size):
+        #    self._download(model_size)
 
-        modelPath = self._getModelFolderName(model_size)
+        #modelPath = self._getModelFolderName(model_size)
 
         # Run on GPU with FP16
-        model = faster_whisper.WhisperModel(modelPath, device="cpu", compute_type="int8")
+        model = faster_whisper.WhisperModel(model_size, device="cpu", compute_type="int8")
         audioReader = BytesIO(audioData)
         # or run on GPU with INT8
         # model = WhisperModel(model_size, device="cuda", compute_type="int8_float16")

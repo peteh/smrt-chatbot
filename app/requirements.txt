@@ -3,3 +3,4 @@ flask
 openai
 python-decouple
 EdgeGPT
+faster_whisper

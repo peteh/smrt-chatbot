@@ -1,17 +1,18 @@
 from flask import Flask, request, Response
-import base64
-import time
 import summary
 import transcript
 from whatsapp import Whatsapp
 from decouple import config
+import base64
+import time
+import json
 
 app = Flask(__name__)
 
 transcriber = transcript.FasterWhisperTranscript()
 #summarizer = summary.OpenAIChatGPTSummary(config('OPENAI_APIKEY'))
 summarizer = summary.BingGPTSummary()
-whatsapp = Whatsapp(config('WPPCONNECT_APIKEY'))
+whatsapp = Whatsapp(config("WPPCONNECT_SERVER"), "smrt", config('WPPCONNECT_APIKEY'))
 CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
 
 print(CONFIG_MIN_WORDS_FOR_SUMMARY)
@@ -20,6 +21,8 @@ print(CONFIG_MIN_WORDS_FOR_SUMMARY)
 @app.route('/incoming', methods=['POST'])
 def return_response():
     message = request.json
+    print(json.dumps(message, indent=4))
+    
     if 'event' in message:
         if message['event'] == "onmessage":
             if 'mimetype' in message:
@@ -27,6 +30,8 @@ def return_response():
                     data = message['body']
                     debug = {}
                     whatsapp.sendMessage(message['from'], "Processing...")
+                    whatsapp.reactHourglassFull(message['id'])
+                    
                     decoded = base64.b64decode(data)
                     #with open('out.ogg', 'wb') as output_file:
                     #    output_file.write(decoded)
@@ -46,7 +51,8 @@ def return_response():
                     debug['transcript_words'] = transcript['words']
                     debug['transcript_cost'] = transcript['cost']
                     if words > CONFIG_MIN_WORDS_FOR_SUMMARY:
-                        whatsapp.sendMessage(message['from'], "Writing summary...")
+                        whatsapp.reactHourglassHalf(message['id'])
+                        #whatsapp.sendMessage(message['from'], "Writing summary...")
 
                         start = time.time()
                         summary = summarizer.summarize(transcriptText, language)
@@ -56,11 +62,14 @@ def return_response():
                         summaryText = summary['text']
                         debug['summary_cost'] = summary['cost']
                         whatsapp.sendMessage(message['from'], "Summary: \n%s" % (summaryText))
+                    whatsapp.reactDone(message['id'])
                     debugText = "Debug: \n"
                     for debugKey, debugValue in debug.items():
                         debugText += debugKey + ": " + str(debugValue) + "\n"
                     debugText = debugText.strip()
                     whatsapp.sendMessage(message['from'], debugText)
+            else:
+                whatsapp.sendMessage(message['from'], "Please send a voice message")
     return Response(status=200)
 
 
