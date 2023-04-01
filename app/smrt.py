@@ -29,12 +29,12 @@ def return_response():
                 if message['mimetype'] == "audio/ogg; codecs=opus":
                     data = message['body']
                     debug = {}
-                    whatsapp.sendMessage(message['from'], "Processing...")
+                    #whatsapp.sendMessage(message['from'], "Processing...")
                     whatsapp.reactHourglassFull(message['id'])
                     
                     decoded = base64.b64decode(data)
-                    #with open('out.ogg', 'wb') as output_file:
-                    #    output_file.write(decoded)
+                    with open('out.ogg', 'wb') as output_file:
+                        output_file.write(decoded)
 
                     start = time.time()
                     transcript = transcriber.transcribe(decoded)
@@ -72,5 +72,5 @@ def return_response():
                 whatsapp.sendMessage(message['from'], "Please send a voice message")
     return Response(status=200)
 
-
+whatsapp.startSession()
 app.run(host="0.0.0.0", port=9000)

@@ -48,6 +48,11 @@ class WhisperTranscript(TranscriptInterface):
 
 class FasterWhisperTranscript(TranscriptInterface):
 
+    def __init__(self, model = "medium", beamSize = 5, threads = 4):
+        self._beamSize = beamSize
+        self._threads = threads
+        self._model = model
+
     def _getModelFolderName(self, model):
         return "../models/faster_whisper_%s" % (model)
     
@@ -64,22 +69,21 @@ class FasterWhisperTranscript(TranscriptInterface):
             download_model(model, foldername)
 
     def transcribe(self, audioData):
-
-        model_size = "medium"
         #if not self._isModelCached(model_size):
         #    self._download(model_size)
 
         #modelPath = self._getModelFolderName(model_size)
 
         # Run on GPU with FP16
-        model = faster_whisper.WhisperModel(model_size, device="cpu", compute_type="int8")
+        # TODO: experiment with thread
+        model = faster_whisper.WhisperModel(self._model, device="cpu", compute_type="int8", cpu_threads = self._threads)
         audioReader = BytesIO(audioData)
         # or run on GPU with INT8
         # model = WhisperModel(model_size, device="cuda", compute_type="int8_float16")
         # or run on CPU with INT8
         # model = WhisperModel(model_size, device="cpu", compute_type="int8")
 
-        segments, info = model.transcribe(audioReader, beam_size=5)
+        segments, info = model.transcribe(audioReader, beam_size=self._beamSize)
         supportedLanguages = ['en', 'de', 'es', 'fr']
         if info.language not in supportedLanguages:
             print("Warning: language detected as '%s', therefore we redo as 'en'" % (info.language))
@@ -97,8 +101,7 @@ class FasterWhisperTranscript(TranscriptInterface):
         words = len(text.split(' '))
         language = info.language
         language_probability = info.language_probability
-        
-        print(segments)
+
         return {
             'text': text, 
             'words': words,

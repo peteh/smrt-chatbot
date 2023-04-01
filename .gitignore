@@ -7,3 +7,4 @@ app/models
 models/*
 docker-compose.override.yml
 cookie.json
+samples/*

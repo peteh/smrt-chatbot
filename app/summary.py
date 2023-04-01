@@ -1,7 +1,8 @@
 import openai
 import requests
 import asyncio
-from EdgeGPT import Chatbot, ConversationStyle
+import EdgeGPT
+import Bard
 
 class SummaryInterface:
     def identifier(self) -> str:
@@ -53,14 +54,14 @@ class ChatGPTSummary(SummaryInterface):
     
 class BingGPTSummary(SummaryInterface):
     async def _summarize(self, text, language):
-        bot = Chatbot(cookiePath = "cookie.json")
+        bot = EdgeGPT.Chatbot(cookiePath = "cookie.json")
         if language == 'de':
             prompt = "Fasse die wichtigsten Punkte des folgenden Textes mit den wichtigsten Stichpunkten und so kurz wie möglich zusammen, hebe dabei besonders Daten und Zeiten hervor, wenn sie vorhanden sind, erwähne dabei nicht deinen Namen: %s" % (text)
         else:
             prompt = "Summarize the most important points in the following text in a few bullet points as short as possible, emphasize dates and time if they are present in the text: %s" % (text)
         
         
-        response = await bot.ask(prompt=prompt, conversation_style=ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
+        response = await bot.ask(prompt=prompt, conversation_style=EdgeGPT.ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
         text = response['item']['messages'][1]['text']
         print(text)
         text = text[text.find(".")+1:].strip()
@@ -74,3 +75,23 @@ class BingGPTSummary(SummaryInterface):
     
     def summarize(self, text: str, language: str):
         return asyncio.run(self._summarize(text, language))
+
+class BardSummary(SummaryInterface):
+    def __init__(self, sessionId):
+        self._sessionId = sessionId
+
+    def summarize(self, text: str, language: str):
+        bot = Bard.Chatbot(session_id = self._sessionId)
+        if language == 'de':
+            prompt = "Fasse den folgenden Text zusammen: %s" % (text)
+        else:
+            prompt = "Summarize the following text in a few important key points: %s" % (text)
+        
+        print(prompt)
+        response = bot.ask(message=prompt)
+        text = response['content']
+        text = text.strip()
+        return {
+            'text': text,
+            'cost': 0
+        }

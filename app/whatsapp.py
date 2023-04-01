@@ -6,6 +6,14 @@ class Whatsapp:
         self._server = server
         self._session = session
         self._apiKey = apiKey
+    
+    def startSession(self):
+        url = "%s/api/%s/start-session" % (self._server, self._session)
+        data = {
+        }
+        headers = {"Authorization": "Bearer %s" % (self._apiKey)}
+        response = requests.post(url, json=data, headers=headers)
+        print(response.json())
 
     def sendMessage(self, recipient: str, text: str):
         url = "%s/api/%s/send-message" % (self._server, self._session)
