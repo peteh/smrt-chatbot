@@ -45,7 +45,7 @@ def return_response():
                         chatText += "%s: %s\n" % (row['sender'], row['message'])
                     summary = summarizer.summarize(chatText, 'de')
 
-                    summaryText = "Summary(last %d messages)\n%s" % (messageCount, summary['text'])
+                    summaryText = "Summary (last %d messages)\n%s" % (messageCount, summary['text'])
                     whatsapp.sendGroupMessage(message['chatId'], summaryText)
                     whatsapp.reactDone(message['id'])
                 else:
