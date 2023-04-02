@@ -28,6 +28,20 @@ class Whatsapp:
 
         response = requests.post(url, json=data, headers=headers)
         print(response.json())
+    
+    def sendGroupMessage(self, chatId: str, text: str):
+        url = "%s/api/%s/send-message" % (self._server, self._session)
+        print(url)
+        print(self._apiKey)
+        data = {
+            "phone": chatId,
+            "message": text,
+            "isGroup": True
+        }
+        headers = {"Authorization": "Bearer %s" % (self._apiKey)}
+
+        response = requests.post(url, json=data, headers=headers)
+        print(response.json())
 
     def react(self, messageId, reactionText):
         url = "%s/api/%s/react-message" % (self._server, self._session)

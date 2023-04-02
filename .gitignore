@@ -8,3 +8,5 @@ models/*
 docker-compose.override.yml
 cookie.json
 samples/*
+out.ogg
+data.sqlite
