@@ -33,6 +33,7 @@ def return_response():
                 messageText = message['content']
                 # TODO: filter out own messages probably
                 if messageText.startswith("#summary"):
+                    debug = {}
                     whatsapp.reactHourglassFull(message['id'])
                     # TODO: put to configuration
                     messageCount = 20
@@ -41,13 +42,30 @@ def return_response():
                         messageCount = int(command[1])
 
                     chatText = ""
-                    for row in db.getGroupMessages(message['chatId'], messageCount):
+                    rows = db.getGroupMessages(message['chatId'], messageCount)
+                    msgNum = 0
+                    for row in rows:
                         chatText += "%s: %s\n" % (row['sender'], row['message'])
+                        msgNum += 1
+
+                    start = time.time()
                     summary = summarizer.summarize(chatText, 'de')
+                    end = time.time()
+
+                    debug['summmary_input'] = chatText
+                    debug['summmary_maxMessages'] = messageCount
+                    debug['summmary_actualMessages'] = msgNum
+                    debug['summary_time'] = end - start
+                    debug['summary_cost'] = summary['cost']
 
                     summaryText = "Summary (last %d messages)\n%s" % (messageCount, summary['text'])
                     whatsapp.sendGroupMessage(message['chatId'], summaryText)
                     whatsapp.reactDone(message['id'])
+                    debugText = "Debug: \n"
+                    for debugKey, debugValue in debug.items():
+                        debugText += debugKey + ": " + str(debugValue) + "\n"
+                    debugText = debugText.strip()
+                    whatsapp.sendMessage(message['sender']['id'], debugText)
                 else:
                     db.addGroupMessage(message['chatId'], pushName, messageText)
 
