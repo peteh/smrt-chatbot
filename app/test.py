@@ -77,22 +77,23 @@ def testOpenAIWhisperTranscript():
     f.close()
     print(whisper.transcribe(data))
 
-def _testFasterWhisperPerformanceSingle(threads, fileName):
-    whisper = FasterWhisperTranscript(model = "large-v2", threads=threads)
+def _testFasterWhisperPerformanceSingle(beamSize, threads, fileName):
+    whisper = FasterWhisperTranscript(model = "medium", beamSize = beamSize, threads=threads)
     f = open(fileName, 'rb')
     data = f.read()
     f.close()
     return whisper.transcribe(data)
     
 def testFasterWhisperPerformance():
-    for threads in range(1, 16):
+    beamSize = 5
+    for threads in range(2, 17, 2):
         start = time.time()
-        data = _testFasterWhisperPerformanceSingle(threads, "samples/newyear.ogg")
+        data = _testFasterWhisperPerformanceSingle(beamSize, threads, "samples/newyear.ogg")
         end = time.time()
         duration = end - start
         print("Threads: %d, Duration: %f" % (threads, duration))
         print(data)
 
 
-#testFasterWhisperPerformance()
-testBardSummaryGerman()
+testFasterWhisperPerformance()
+#testBardSummaryGerman()
