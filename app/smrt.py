@@ -36,29 +36,29 @@ def return_response():
                     debug = {}
                     whatsapp.reactHourglassFull(message['id'])
                     # TODO: put to configuration
-                    messageCount = 20
+                    maxMessageCount = 20
                     command = messageText.split(" ")
                     if len(command) > 1:
-                        messageCount = int(command[1])
+                        maxMessageCount = int(command[1])
 
                     chatText = ""
-                    rows = db.getGroupMessages(message['chatId'], messageCount)
-                    msgNum = 0
+                    rows = db.getGroupMessages(message['chatId'], maxMessageCount)
+                    actualMessageCount = 0
                     for row in rows:
                         chatText += "%s: %s\n" % (row['sender'], row['message'])
-                        msgNum += 1
+                        actualMessageCount += 1
 
                     start = time.time()
                     summary = summarizer.summarize(chatText, 'de')
                     end = time.time()
 
                     debug['summmary_input'] = chatText
-                    debug['summmary_maxMessages'] = messageCount
-                    debug['summmary_actualMessages'] = msgNum
+                    debug['summmary_maxMessages'] = maxMessageCount
+                    debug['summmary_actualMessages'] = actualMessageCount
                     debug['summary_time'] = end - start
                     debug['summary_cost'] = summary['cost']
 
-                    summaryText = "Summary (last %d messages)\n%s" % (messageCount, summary['text'])
+                    summaryText = "Summary (last %d messages)\n%s" % (actualMessageCount, summary['text'])
                     whatsapp.sendGroupMessage(message['chatId'], summaryText)
                     whatsapp.reactDone(message['id'])
                     debugText = "Debug: \n"
@@ -113,8 +113,8 @@ def return_response():
                             debugText += debugKey + ": " + str(debugValue) + "\n"
                         debugText = debugText.strip()
                         whatsapp.sendMessage(message['from'], debugText)
-            else:
-                whatsapp.sendMessage(message['from'], "Please send a voice message")
+                else:
+                    whatsapp.sendMessage(message['from'], "Please send a voice message")
     return Response(status=200)
 
 whatsapp.startSession()
