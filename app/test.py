@@ -95,5 +95,6 @@ def testFasterWhisperPerformance():
         print(data)
 
 
-testFasterWhisperPerformance()
+#testFasterWhisperPerformance()
 #testBardSummaryGerman()
+testBingGPTSummary()

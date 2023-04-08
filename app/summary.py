@@ -3,6 +3,7 @@ import requests
 import asyncio
 import EdgeGPT
 import Bard
+import json
 
 class SummaryInterface:
     def identifier(self) -> str:
@@ -62,8 +63,9 @@ class BingGPTSummary(SummaryInterface):
         
         
         response = await bot.ask(prompt=prompt, conversation_style=EdgeGPT.ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
+        print(json.dumps(response, indent = 4))
         text = response['item']['messages'][1]['text']
-        print(text)
+        
         text = text[text.find(".")+1:].strip()
         # we dropt the first sentence because it's Bing introducing itself. 
 
