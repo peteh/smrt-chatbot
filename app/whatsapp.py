@@ -10,6 +10,7 @@ class Whatsapp:
     def startSession(self):
         url = "%s/api/%s/start-session" % (self._server, self._session)
         data = {
+            'web-hook': 'http://smrt:9000/incoming'
         }
         headers = {"Authorization": "Bearer %s" % (self._apiKey)}
         response = requests.post(url, json=data, headers=headers)
