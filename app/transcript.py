@@ -3,8 +3,11 @@ import openai
 from io import BytesIO
 import faster_whisper
 import os
+from abc import ABC, abstractmethod
 
-class TranscriptInterface:
+class TranscriptInterface(ABC):
+
+    @abstractmethod
     def transcribe(self, audioData) -> dict:
         """Creates a transcript for the given audio data"""
         pass

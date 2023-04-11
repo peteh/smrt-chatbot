@@ -4,14 +4,16 @@ import asyncio
 import EdgeGPT
 import Bard
 import json
+from abc import ABC, abstractmethod
 
-class SummaryInterface:
+class SummaryInterface(ABC):
     def identifier(self) -> str:
         """
         Identifies the process with a unique name
         """
         pass
 
+    @abstractmethod
     def summarize(self, text: str, language: str) -> dict:
         """Creates a summary for the given text"""
         pass
@@ -55,21 +57,24 @@ class ChatGPTSummary(SummaryInterface):
     
 class BingGPTSummary(SummaryInterface):
     async def _summarize(self, text, language):
-        bot = EdgeGPT.Chatbot(cookiePath = "cookie.json")
-        if language == 'de':
-            prompt = "Fasse die wichtigsten Punkte des folgenden Textes mit den wichtigsten Stichpunkten und so kurz wie möglich zusammen, hebe dabei besonders Daten und Zeiten hervor, wenn sie vorhanden sind, erwähne dabei nicht deinen Namen: %s" % (text)
-        else:
-            prompt = "Summarize the most important points in the following text in a few bullet points as short as possible, emphasize dates and time if they are present in the text: %s" % (text)
-        
-        
-        response = await bot.ask(prompt=prompt, conversation_style=EdgeGPT.ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
-        print(json.dumps(response, indent = 4))
-        text = response['item']['messages'][1]['text']
-        
-        text = text[text.find(".")+1:].strip()
-        # we dropt the first sentence because it's Bing introducing itself. 
+        try:
+            bot = EdgeGPT.Chatbot(cookiePath = "cookie.json")
+            if language == 'de':
+                prompt = "Fasse die wichtigsten Punkte des folgenden Textes mit den wichtigsten Stichpunkten und so kurz wie möglich zusammen, hebe dabei besonders Daten und Zeiten hervor, wenn sie vorhanden sind, erwähne dabei nicht deinen Namen: %s" % (text)
+            else:
+                prompt = "Summarize the most important points in the following text in a few bullet points as short as possible, emphasize dates and time if they are present in the text: %s" % (text)
+            
+            
+            response = await bot.ask(prompt=prompt, conversation_style=EdgeGPT.ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
+            print(json.dumps(response, indent = 4))
+            text = response['item']['messages'][1]['text']
+            
+            text = text[text.find(".")+1:].strip()
+            # we dropt the first sentence because it's Bing introducing itself. 
 
-        await bot.close()
+            await bot.close()
+        except Exception as ex:
+            text = "Summary failed with exception: %s" % (ex)
         return {
             'text': text,
             'cost': 0
