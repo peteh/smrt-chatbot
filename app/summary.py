@@ -5,6 +5,7 @@ import EdgeGPT
 import Bard
 import json
 from abc import ABC, abstractmethod
+from questionbot import QuestionBotInterface
 
 class SummaryInterface(ABC):
     def identifier(self) -> str:
@@ -54,7 +55,23 @@ class ChatGPTSummary(SummaryInterface):
             }
         response = requests.post(url, json=data, headers=headers, verify=False)
         return response.json()['choices'][0]['text']
-    
+
+class QuestionBotSummary(SummaryInterface):
+    def __init__(self, questionBot: QuestionBotInterface):
+        self._bot = questionBot
+
+    def summarize(self, text: str, language: str):
+        bot = EdgeGPT.Chatbot(cookiePath = "cookie.json")
+        if language == 'de':
+            prompt = "Fasse die wichtigsten Punkte des folgenden Textes mit den wichtigsten Stichpunkten und so kurz wie möglich zusammen, hebe dabei besonders Daten und Zeiten hervor, wenn sie vorhanden sind, erwähne dabei nicht deinen Namen: %s" % (text)
+        else:
+            prompt = "Summarize the most important points in the following text in a few bullet points as short as possible, emphasize dates and time if they are present in the text: %s" % (text)
+        
+        
+        response = self._bot.answer(prompt=prompt)
+        #print(json.dumps(response, indent = 4))
+        return response
+
 class BingGPTSummary(SummaryInterface):
     async def _summarize(self, text, language):
         try:

@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import asyncio
 import EdgeGPT
 import json
+from revChatGPT.V1 import Chatbot
 
 class QuestionBotInterface(ABC):
     @abstractmethod
@@ -16,6 +17,7 @@ class QuestionBotBingGPT(QuestionBotInterface):
             
             response = await bot.ask(prompt=prompt, conversation_style=EdgeGPT.ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
             print(json.dumps(response, indent = 4))
+            
             text = response['item']['messages'][1]['text']
             
             text = text[text.find(".")+1:].strip()
@@ -24,11 +26,32 @@ class QuestionBotBingGPT(QuestionBotInterface):
             await bot.close()
         except Exception as ex:
             text = "Prompt failed with exception: %s" % (ex)
+            raise ex
         return {
             'text': text,
             'cost': 0
         }
     
     def answer(self, prompt: str):
-        return asyncio.run(self.answer(prompt))
+        return asyncio.run(self._answer(prompt))
+
+class QuestionBotChatGPTOpenAI(QuestionBotInterface):
+    def __init__(self, cookie):
+        self._cookie = cookie
+
+    def answer(self, prompt: str):
+        config = {
+            "access_token": self._cookie
+            }
         
+        chatbot = Chatbot(config)
+
+        message = ""
+        for data in chatbot.ask(
+            prompt,
+        ):
+            message = data["message"]
+        return {
+            'text': message, 
+            'cost': 0
+        }

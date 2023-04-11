@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from summary import SummaryInterface
 from transcript import TranscriptInterface
-from whatsapp import MessengerInterface
+from messenger import MessengerInterface
+from questionbot import QuestionBotInterface
 
 from db import Database
 
@@ -23,6 +24,7 @@ class VoiceMessagePipeline(PipelineInterface):
         self._transcriber = transcriber
         self._summarizer = summarizer
         self._minWordsForSummary = minWordsForSummary
+        
 
     def matches(self, messenger: MessengerInterface, message: dict):
         return messenger.hasAudioData(message)
@@ -83,18 +85,43 @@ class VoiceMessagePipeline(PipelineInterface):
 
 
 class GroupMessageQuestionPipeline(PipelineInterface):
-    def __init__(self, db: Database, summarizer: SummaryInterface):
+    def __init__(self, db: Database, summarizer: SummaryInterface, questionBot: QuestionBotInterface, ):
         self._db = db
         self._summarizer = summarizer
+        self._questionBot = questionBot
 
     def matches(self, messenger: MessengerInterface, message: dict):
         # TODO: abstract chat type
         return messenger.isGroupMessage(message) and message['type']=='chat'
 
+    def _getChatText(self, identifier, maxMessageCount):
+        chatText = ""
+        rows = self._db.getGroupMessages(identifier, maxMessageCount)
+        actualMessageCount = 0
+        for row in rows:
+            chatText += "%s: %s\n" % (row['sender'], row['message'])
+            actualMessageCount += 1
+        return (chatText, actualMessageCount)
+    
     def process(self, messenger: MessengerInterface, message: dict):
         pushName = message['sender']['pushname']
         messageText = message['content']
         # TODO: filter out own messages probably
+        QUESTION_COMMAND = "#question"
+        if messageText.startswith(QUESTION_COMMAND):
+            messenger.markInProgress0(message)
+            question = messageText[len(QUESTION_COMMAND)+1:]
+            print("Question: %s" % (question))
+            # TODO: make number configurable
+            chatText, actualMessageCount = self._getChatText(message['chatId'], 100)
+            print(chatText)
+            prompt = "Der folgende Text beinhaltet eine Konversation mehrere Individuen: \n%s\n\n Beantworte folgende Frage zu dieser Konversation: %s" % (chatText, question)
+            answer = self._questionBot.answer(prompt)
+            answerText = answer['text']
+            print("Question: %s" % (answerText))
+            messenger.messageToGroup(message, answerText)
+            messenger.markInProgressDone(message)
+
         if messageText.startswith("#summary"):
             debug = {}
             messenger.markInProgress0(message)
@@ -104,12 +131,8 @@ class GroupMessageQuestionPipeline(PipelineInterface):
             if len(command) > 1:
                 maxMessageCount = int(command[1])
 
-            chatText = ""
-            rows = self._db.getGroupMessages(message['chatId'], maxMessageCount)
-            actualMessageCount = 0
-            for row in rows:
-                chatText += "%s: %s\n" % (row['sender'], row['message'])
-                actualMessageCount += 1
+            
+            chatText, actualMessageCount = self._getChatText(message['chatId'], maxMessageCount)
 
             start = time.time()
             summary = self._summarizer.summarize(chatText, 'de')

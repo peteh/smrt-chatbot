@@ -6,3 +6,4 @@ python-decouple
 EdgeGPT
 faster_whisper
 GoogleBard
+revChatGPT
