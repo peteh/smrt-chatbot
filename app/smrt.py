@@ -9,6 +9,7 @@ import json
 import db
 
 import pipeline
+import texttoimage
 
 from questionbot import QuestionBotBingGPT, QuestionBotChatGPTOpenAI
 app = Flask(__name__)
@@ -26,7 +27,8 @@ summarizer = summary.QuestionBotSummary(questionBot)
 voicePipeline = pipeline.VoiceMessagePipeline(transcriber, summarizer, CONFIG_MIN_WORDS_FOR_SUMMARY)
 groupMessagePipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, questionBot)
 articleSummaryPipeline = pipeline.ArticleSummaryPipeline(summarizer)
-imagePipeline = pipeline.ImagePromptPipeline()
+imageAPI = texttoimage.StableDiffusionAIOrg()
+imagePipeline = pipeline.ImagePromptPipeline(imageAPI)
 ttsPipeline = pipeline.TextToSpeechPipeline()
 
 @app.route('/incoming', methods=['POST'])

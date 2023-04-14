@@ -3,7 +3,7 @@ from summary import SummaryInterface
 from transcript import TranscriptInterface
 from messenger import MessengerInterface
 from questionbot import QuestionBotInterface
-import replicate
+import texttoimage
 import youtube_transcript_api
 import youtube_transcript_api.formatters
 import urllib.parse
@@ -259,6 +259,9 @@ class ArticleSummaryPipeline(PipelineInterface):
 class ImagePromptPipeline(PipelineInterface):
     IMAGE_COMMAND = "#image"
 
+    def __init__(self, imageAPI: texttoimage.ImagePromptInterface):
+        self._imageAPI = imageAPI
+
     def matches(self, messenger: MessengerInterface, message: dict):
         messageText = messenger.getMessageText(message)
         return messageText.startswith(self.IMAGE_COMMAND)
@@ -268,14 +271,14 @@ class ImagePromptPipeline(PipelineInterface):
         if messageText.startswith(self.IMAGE_COMMAND):
             messenger.markInProgress0(message)
             prompt = messageText[len(self.IMAGE_COMMAND)+1:]
-            replicateAPI = replicate.StableDiffusionAPI()
-            fileName, binary = replicateAPI.process(prompt)
-            if fileName is not None:
-                # TODO: faile
-                if messenger.isGroupMessage(message):
-                    messenger.imageToGroup(message, fileName, binary, prompt)
-                else:
-                    messenger.imageToIndividual(message, fileName, binary, prompt)
+            images = self._imageAPI.process(prompt)
+            if images is not None:
+                for image in images:
+                    fileName, binary = image
+                    if messenger.isGroupMessage(message):
+                        messenger.imageToGroup(message, fileName, binary, prompt)
+                    else:
+                        messenger.imageToIndividual(message, fileName, binary, prompt)
             else:
                 # TODO: FAIL
                 pass

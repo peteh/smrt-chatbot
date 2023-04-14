@@ -3,6 +3,12 @@ import time
 import json
 from abc import ABC, abstractmethod
 
+class ImagePromptInterface(ABC):
+
+    @abstractmethod
+    def process(self, prompt):
+        pass
+
 class ReplicateAPI(ABC):
     def __init__(self, model, modelVersion) -> None:
         self._model = model
@@ -100,3 +106,57 @@ class Kandinsky2API(ReplicateAPI):
                     "scheduler": "p_sampler"
                 }
             }
+
+import websocket
+import json
+import time
+import base64
+class StableDiffusionAIOrg(ImagePromptInterface):
+    def process(self, prompt):
+        apiUrl = "wss://api.stablediffusionai.org/v1/txt2img"
+        ws = websocket.WebSocket()
+        ws.connect(apiUrl)
+        jsonPrompt = json.dumps({"prompt":prompt,"negative_prompt":"","width":512,"height":512})
+        ws.send(jsonPrompt)
+
+        response = json.loads(ws.recv())
+        while response['success'] == 'ttl_remaining':
+            ws.close()
+            timeToWait = response['time']
+            print("Waiting for %d seconds to retry" % (timeToWait))
+            time.sleep(timeToWait)
+            ws = websocket.WebSocket()
+            ws.connect(apiUrl)
+            ws.send(jsonPrompt)
+            response = json.loads(ws.recv())
+
+        if response['success'] != 'process':
+            print("Unexpected error")
+            print(response)
+            ws.close()
+            return None
+        print("In progress")
+        response = json.loads(ws.recv())
+        if response['success'] != True:
+            print("Unexpected error")
+            print(response)
+            ws.close()
+            return None
+        ws.close()
+
+        print("Successfully downloaded images")
+        f = open("response.json", "w")
+        f.write(json.dumps(response, indent = 4))
+        f.close()
+        numImages = len(response['images'])
+        images = []
+        for i in range(numImages):
+            imageName = "image%d.png" % (i+1)
+            imageData = response['images'][i]
+            base64encoded = imageData.split(',')[1].strip()
+            binary = base64.b64decode(base64encoded)
+            images.append((imageName, binary))
+            f = open(imageName, "wb")
+            f.write(binary)
+            f.close()
+        return images
