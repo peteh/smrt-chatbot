@@ -8,7 +8,8 @@ import time
 import json
 import db
 
-from pipeline import VoiceMessagePipeline, GroupMessageQuestionPipeline
+import pipeline
+
 from questionbot import QuestionBotBingGPT, QuestionBotChatGPTOpenAI
 app = Flask(__name__)
 
@@ -19,14 +20,13 @@ whatsapp = Whatsapp(config("WPPCONNECT_SERVER"), "smrt", config('WPPCONNECT_APIK
 CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
 #TODO: prepare for docker
 database = db.Database("data.sqlite")
-print(CONFIG_MIN_WORDS_FOR_SUMMARY)
 
 questionBot = QuestionBotChatGPTOpenAI(config("CHATGPT_COOKIE"))
 summarizer = summary.QuestionBotSummary(questionBot)
-voicePipeline = VoiceMessagePipeline(transcriber, summarizer, CONFIG_MIN_WORDS_FOR_SUMMARY)
-
-
-groupMessagePipeline = GroupMessageQuestionPipeline(database, summarizer, questionBot)
+voicePipeline = pipeline.VoiceMessagePipeline(transcriber, summarizer, CONFIG_MIN_WORDS_FOR_SUMMARY)
+groupMessagePipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, questionBot)
+articleSummaryPipeline = pipeline.ArticleSummaryPipeline(summarizer)
+imagePipeline = pipeline.ImagePromptPipeline()
 
 @app.route('/incoming', methods=['POST'])
 def return_response():
@@ -35,7 +35,7 @@ def return_response():
     
     if 'event' in message:
         if message['event'] == "onmessage":
-            pipelines = [voicePipeline, groupMessagePipeline]
+            pipelines = [voicePipeline, groupMessagePipeline, articleSummaryPipeline, imagePipeline]
             for pipeline in pipelines:
                 if pipeline.matches(whatsapp, message):
                     pipeline.process(whatsapp, message) 

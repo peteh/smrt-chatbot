@@ -3,6 +3,14 @@ from summary import SummaryInterface
 from transcript import TranscriptInterface
 from messenger import MessengerInterface
 from questionbot import QuestionBotInterface
+import replicate
+import youtube_transcript_api
+import youtube_transcript_api.formatters
+import urllib.parse
+
+# article summary pipeline
+import re
+import trafilatura
 
 from db import Database
 
@@ -60,7 +68,6 @@ class VoiceMessagePipeline(PipelineInterface):
         debug['transcript_cost'] = transcript['cost']
         if words > self._minWordsForSummary:
             messenger.markInProgress50(message)
-            #whatsapp.sendMessage(message['from'], "Writing summary...")
 
             start = time.time()
             summary = self._summarizer.summarize(transcriptText, language)
@@ -108,6 +115,7 @@ class GroupMessageQuestionPipeline(PipelineInterface):
         messageText = message['content']
         # TODO: filter out own messages probably
         QUESTION_COMMAND = "#question"
+        SUMMARY_COMMAND = "#summary"
         if messageText.startswith(QUESTION_COMMAND):
             messenger.markInProgress0(message)
             question = messageText[len(QUESTION_COMMAND)+1:]
@@ -118,11 +126,11 @@ class GroupMessageQuestionPipeline(PipelineInterface):
             prompt = "Der folgende Text beinhaltet eine Konversation mehrere Individuen: \n%s\n\n Beantworte folgende Frage zu dieser Konversation: %s" % (chatText, question)
             answer = self._questionBot.answer(prompt)
             answerText = answer['text']
-            print("Question: %s" % (answerText))
+            print("Answer: %s" % (answerText))
             messenger.messageToGroup(message, answerText)
             messenger.markInProgressDone(message)
 
-        if messageText.startswith("#summary"):
+        if messageText.startswith(SUMMARY_COMMAND):
             debug = {}
             messenger.markInProgress0(message)
             # TODO: put to configuration
@@ -131,7 +139,6 @@ class GroupMessageQuestionPipeline(PipelineInterface):
             if len(command) > 1:
                 maxMessageCount = int(command[1])
 
-            
             chatText, actualMessageCount = self._getChatText(message['chatId'], maxMessageCount)
 
             start = time.time()
@@ -153,4 +160,127 @@ class GroupMessageQuestionPipeline(PipelineInterface):
             debugText = debugText.strip()
             messenger.messageToGroup(message, debugText)
         else:
+            # TODO: filter messages with command
             self._db.addGroupMessage(message['chatId'], pushName, messageText)
+            
+
+
+class ArticleSummaryPipeline(PipelineInterface):
+    def __init__(self, summarizer: SummaryInterface):
+        self._summarizer = summarizer
+        self._linkRegex = re.compile('((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', re.DOTALL)
+        self._language = "en"
+
+    def _extractUrl(self, text: str):
+        links = []
+        for extract in re.findall(self._linkRegex, text):
+            links.append(extract[0])
+        return links
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        messageText = messenger.getMessageText(message)
+        links = self._extractUrl(messageText)
+        return len(links) > 0
+    
+    def _processArticle(self, link: str):
+        config = trafilatura.settings.use_config()
+        config.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
+
+        downloaded = trafilatura.fetch_url(link)
+        if downloaded is None: 
+            print("Failed to retrieve article, skipping")
+            return ""
+
+        # extract information from HTML
+        extractedText = trafilatura.extract(downloaded, config=config)
+        summarizedText = self._summarizer.summarize(extractedText, self._language)['text']
+        print("==EXTRACTED==")
+        print(extractedText)
+        print("==SUMMARY==")
+        print(summarizedText)
+        return summarizedText
+    
+    def _extractYoutubeVideoId(self, link):
+        print(link)
+        """
+        Examples:
+        - http://youtu.be/SA2iWivDJiE
+        - http://www.youtube.com/watch?v=_oPAwA_Udwc&feature=feedu
+        - http://www.youtube.com/embed/SA2iWivDJiE
+        - http://www.youtube.com/v/SA2iWivDJiE?version=3&amp;hl=en_US
+        """
+        query = urllib.parse.urlparse(link)
+        if query.hostname == 'youtu.be':
+            return query.path[1:]
+        if query.hostname in ('www.youtube.com', 'youtube.com', "m.youtube.com"):
+            if query.path == '/watch':
+                p = urllib.parse.parse_qs(query.query)
+                return p['v'][0]
+            if query.path[:7] == '/embed/':
+                return query.path.split('/')[2]
+            if query.path[:3] == '/v/':
+                return query.path.split('/')[2]
+        # fail?
+        return None
+    
+    def _processYoutube(self, link):
+        videoId = self._extractYoutubeVideoId(link)
+        print(videoId)
+        transcript = youtube_transcript_api.YouTubeTranscriptApi.get_transcript(videoId, languages=['en', 'de'])
+        textFormatter = youtube_transcript_api.formatters.TextFormatter()
+        
+        text = textFormatter.format_transcript(transcript)
+        # reducing to the last 10k letters to limit input for summary
+        reducedText = text[-10000:]
+        summarizedText = self._summarizer.summarize(reducedText, self._language)['text']
+        return summarizedText
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        messageText = messenger.getMessageText(message)
+        messenger.markInProgress0(message)
+        links = self._extractUrl(messageText)
+        totalSummary = ""
+        
+        
+        for link in links:
+            if "youtube.com/" in link:
+                summarizedText = self._processYoutube(link)
+            else:
+                summarizedText = self._processArticle(link)
+            summaryPart = "%s: \n%s\n" % (link, summarizedText)
+            totalSummary += summaryPart
+        if messenger.isGroupMessage(message):
+            messenger.messageToGroup(message, totalSummary)
+        else:
+            messenger.messageToIndividual(message, totalSummary)
+        messenger.markInProgressDone(message)
+
+
+class ImagePromptPipeline(PipelineInterface):
+    IMAGE_COMMAND = "#image"
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        messageText = messenger.getMessageText(message)
+        return messageText.startswith(self.IMAGE_COMMAND)
+    
+    def process(self, messenger: MessengerInterface, message: dict):
+        messageText = messenger.getMessageText(message)
+        if messageText.startswith(self.IMAGE_COMMAND):
+            messenger.markInProgress0(message)
+            prompt = messageText[len(self.IMAGE_COMMAND)+1:]
+            replicateAPI = replicate.StableDiffusionAPI()
+            fileName, binary = replicateAPI.process(prompt)
+            if fileName is not None:
+                # TODO: faile
+                if messenger.isGroupMessage(message):
+                    messenger.imageToGroup(message, fileName, binary, prompt)
+                else:
+                    messenger.imageToIndividual(message, fileName, binary, prompt)
+            else:
+                # TODO: FAIL
+                pass
+            messenger.markInProgressDone(message)
+
+
+
+    
