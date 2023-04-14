@@ -9,3 +9,4 @@ GoogleBard
 revChatGPT
 trafilatura
 youtube-transcript-api
+TTS

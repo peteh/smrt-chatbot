@@ -46,7 +46,7 @@ class VoiceMessagePipeline(PipelineInterface):
         messenger.markInProgress0(message)
         
         decoded = base64.b64decode(data)
-        with open('out.ogg', 'wb') as output_file:
+        with open('out.opus', 'wb') as output_file:
             output_file.write(decoded)
 
         start = time.time()
@@ -243,7 +243,7 @@ class ArticleSummaryPipeline(PipelineInterface):
         
         
         for link in links:
-            if "youtube.com/" in link:
+            if self._extractYoutubeVideoId(link) is not None:
                 summarizedText = self._processYoutube(link)
             else:
                 summarizedText = self._processArticle(link)
@@ -282,5 +282,44 @@ class ImagePromptPipeline(PipelineInterface):
             messenger.markInProgressDone(message)
 
 
+from TTS.api import TTS
+import tempfile
+import os
+import subprocess
+class TextToSpeechPipeline(PipelineInterface):
 
+    TTS_COMMAND = "#tts"
+
+    def __init__(self):
+        self._tts = TTS("tts_models/de/thorsten/tacotron2-DDC")
+
+    def _textToVorbisAudio(self, text: str):
+        with tempfile.TemporaryDirectory() as tmp:
+            
+            inputFile = os.path.join(tmp, 'input.wav')
+            self._tts.tts_to_file(text=text, file_path=inputFile)
+            outputFile = os.path.join(tmp, 'output.opus')
+            
+            subprocess.run(["opusenc", inputFile, outputFile]) 
+            file = open(outputFile,mode='rb')
+            oggData = file.read()
+            file.close()
+        return oggData
     
+    def matches(self, messenger: MessengerInterface, message: dict):
+        messageText = messenger.getMessageText(message)
+        return messageText.startswith(self.TTS_COMMAND)
+    
+    def process(self, messenger: MessengerInterface, message: dict):
+        messageText = messenger.getMessageText(message)
+        if messageText.startswith(self.TTS_COMMAND):
+            messenger.markInProgress0(message)
+            text = messageText[len(self.TTS_COMMAND)+1:]
+            audioData = self._textToVorbisAudio(text)
+            
+            if messenger.isGroupMessage(message):
+                messenger.audioToGroup(message, audioData)
+            else:
+                messenger.audioToIndividual(message, audioData)
+
+            messenger.markInProgressDone(message)

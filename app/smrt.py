@@ -27,6 +27,7 @@ voicePipeline = pipeline.VoiceMessagePipeline(transcriber, summarizer, CONFIG_MI
 groupMessagePipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, questionBot)
 articleSummaryPipeline = pipeline.ArticleSummaryPipeline(summarizer)
 imagePipeline = pipeline.ImagePromptPipeline()
+ttsPipeline = pipeline.TextToSpeechPipeline()
 
 @app.route('/incoming', methods=['POST'])
 def return_response():
@@ -35,7 +36,7 @@ def return_response():
     
     if 'event' in message:
         if message['event'] == "onmessage":
-            pipelines = [voicePipeline, groupMessagePipeline, articleSummaryPipeline, imagePipeline]
+            pipelines = [voicePipeline, groupMessagePipeline, articleSummaryPipeline, imagePipeline, ttsPipeline]
             for pipeline in pipelines:
                 if pipeline.matches(whatsapp, message):
                     pipeline.process(whatsapp, message) 

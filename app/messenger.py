@@ -48,6 +48,14 @@ class MessengerInterface(ABC):
     def imageToIndividual(self, message, fileName, binaryData, caption = ""):
         pass
 
+    @abstractmethod
+    def audioToGroup(self, groupMessage, binaryData):
+        pass
+
+    @abstractmethod  
+    def audioToIndividual(self, message, binaryData):
+        pass
+
 class Whatsapp(MessengerInterface):
     REACT_HOURGLASS_HALF = "\u231b"
     REACT_HOURGLASS_FULL = "\u23f3"
@@ -88,7 +96,6 @@ class Whatsapp(MessengerInterface):
             "reaction": reactionText
         }
         headers = {"Authorization": "Bearer %s" % (self._apiKey)}
-
         response = requests.post(url, json=data, headers=headers)
 
     def markInProgress0(self, message: dict):
@@ -121,17 +128,32 @@ class Whatsapp(MessengerInterface):
             "isGroup": isGroup, 
             
         }
-        print(data)
         headers = {"Authorization": "Bearer %s" % (self._apiKey)}
-
         response = requests.post(url, json=data, headers=headers)
-        print(response.json())
 
     def imageToGroup(self, groupMessage, fileName, binaryData, caption = ""):
         self._sendImage(groupMessage['chatId'], True, fileName, binaryData, caption)
         
     def imageToIndividual(self, message, fileName, binaryData, caption = ""):
         self._sendImage(message['sender']['id'], False, fileName, binaryData, caption)
+    
+    def audioToGroup(self, groupMessage, binaryData):
+        self._sendAudio(groupMessage['chatId'], True, binaryData)
+        
+    def audioToIndividual(self, message, binaryData):
+        self._sendAudio(message['sender']['id'], False, binaryData)
+
+    def _sendAudio(self, recipient: str, isGroup: bool, binaryData):
+        url = "%s/api/%s/send-voice-base64" % (self._server, self._session)
+        base64data = base64.b64encode(binaryData).decode('utf-8')
+        
+        data = {
+            "phone": recipient,
+            "base64Ptt": "data:audio/ogg;base64,%s" % base64data,
+            "isGroup": isGroup, 
+        }
+        headers = {"Authorization": "Bearer %s" % (self._apiKey)}
+        response = requests.post(url, json=data, headers=headers)
     
     def hasAudioData(self, message: dict):
         return 'mimetype' in message and message['mimetype'] == "audio/ogg; codecs=opus"

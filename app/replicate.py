@@ -77,7 +77,7 @@ class StableDiffusionAPI(ReplicateAPI):
                 "inputs": {
                     "guidance_scale": 7.5,
                     "image_dimensions": "512x512",
-                    "num_inference_steps": 50,
+                    "num_inference_steps": 100,
                     "num_outputs": 1,
                     "prompt": prompt,
                     "scheduler": "K_EULER"
