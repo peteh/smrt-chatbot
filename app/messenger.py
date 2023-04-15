@@ -119,10 +119,14 @@ class Whatsapp(MessengerInterface):
     def _sendImage(self, recipient: str, isGroup: bool, fileName: str, binaryData, caption: str):
         url = "%s/api/%s/send-image" % (self._server, self._session)
         base64data = base64.b64encode(binaryData).decode('utf-8')
-        
+        if fileName.endswith('.webp'):
+            dataType="image/webp"
+        else:
+            dataType="image/png"
+            
         data = {
             "phone": recipient,
-            "base64": "data:image/png;base64,%s" % base64data,
+            "base64": "data:%s;base64,%s" % (dataType, base64data),
             "filename": fileName,
             "message": caption,
             "isGroup": isGroup, 

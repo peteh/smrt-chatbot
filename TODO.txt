@@ -1,2 +1,3 @@
 Clean up code and handle errors
 move pipelines in separate files
+add image to image pipeline

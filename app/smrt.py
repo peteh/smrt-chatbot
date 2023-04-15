@@ -28,6 +28,7 @@ voicePipeline = pipeline.VoiceMessagePipeline(transcriber, summarizer, CONFIG_MI
 groupMessagePipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, questionBot)
 articleSummaryPipeline = pipeline.ArticleSummaryPipeline(summarizer)
 imageAPI = texttoimage.StableDiffusionAIOrg()
+#imageAPI = texttoimage.StableHordeTextToImage(config('STABLEHORDE_APIKEY'))
 imagePipeline = pipeline.ImagePromptPipeline(imageAPI)
 ttsPipeline = pipeline.TextToSpeechPipeline()
 

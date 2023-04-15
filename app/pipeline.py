@@ -298,7 +298,6 @@ class TextToSpeechPipeline(PipelineInterface):
 
     def _textToVorbisAudio(self, text: str):
         with tempfile.TemporaryDirectory() as tmp:
-            
             inputFile = os.path.join(tmp, 'input.wav')
             self._tts.tts_to_file(text=text, file_path=inputFile)
             outputFile = os.path.join(tmp, 'output.opus')
