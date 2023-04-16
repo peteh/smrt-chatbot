@@ -7,6 +7,7 @@ import texttoimage
 import youtube_transcript_api
 import youtube_transcript_api.formatters
 import urllib.parse
+import logging
 
 # article summary pipeline
 import re
@@ -270,18 +271,23 @@ class ImagePromptPipeline(PipelineInterface):
         messageText = messenger.getMessageText(message)
         if messageText.startswith(self.IMAGE_COMMAND):
             messenger.markInProgress0(message)
-            prompt = messageText[len(self.IMAGE_COMMAND)+1:]
-            images = self._imageAPI.process(prompt)
-            if images is None:
-                messenger.markInProgressFail(message)
-                return
+            try:
+                prompt = messageText[len(self.IMAGE_COMMAND)+1:]
+                images = self._imageAPI.process(prompt)
+                if images is None:
+                    messenger.markInProgressFail(message)
+                    return
 
-            for image in images:
-                fileName, binary = image
-                if messenger.isGroupMessage(message):
-                    messenger.imageToGroup(message, fileName, binary, prompt)
-                else:
-                    messenger.imageToIndividual(message, fileName, binary, prompt)
+                for image in images:
+                    fileName, binary = image
+                    if messenger.isGroupMessage(message):
+                        messenger.imageToGroup(message, fileName, binary, prompt)
+                    else:
+                        messenger.imageToIndividual(message, fileName, binary, prompt)
+            except Exception as e:
+                logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
+                messenger.markInProgressFail(message)
+
             messenger.markInProgressDone(message)
 
 
