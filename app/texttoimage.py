@@ -124,6 +124,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
     def process(self, prompt):
         apiUrl = "wss://api.stablediffusionai.org/v1/txt2img"
         ws = websocket.WebSocket()
+        ws.settimeout(300)
         ws.connect(apiUrl)
 
         jsonPrompt = {"prompt":prompt,
@@ -140,7 +141,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
             time.sleep(timeToWait)
             ws = websocket.WebSocket()
             ws.connect(apiUrl)
-            ws.send(jsonPrompt)
+            ws.send(json.dumps(jsonPrompt))
             response = json.loads(ws.recv())
 
         if response['success'] != 'process':
@@ -150,7 +151,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
             return None
         print("In progress")
         startTime = time.time()
-
+        
         response = json.loads(ws.recv())
         if response['success'] != True:
             print("Unexpected error")
