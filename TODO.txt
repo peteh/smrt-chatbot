@@ -6,3 +6,4 @@ proper error handling for all processing steps with exceptions
 Fix model storage in docker container
 Switch to new wppconnect version
 disable file downloading and explicitely request to download files for wppconnect
+add negative prompt for stablehorde

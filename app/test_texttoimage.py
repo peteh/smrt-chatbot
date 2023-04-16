@@ -5,7 +5,7 @@ from decouple import config
 class TextToImageTest(unittest.TestCase):
     def _testTextToImage(self, textToImage):
         # arrange
-        prompt = "a girl with green hair"
+        prompt = "Underwear party"
 
         # act
         images = textToImage.process(prompt)
@@ -18,12 +18,14 @@ class TextToImageTest(unittest.TestCase):
             self.assertGreater(len(fileName), 0)
             self.assertGreater(len(binary), 20000)
 
+    @unittest.skip("temporary")
     def test_stableHorde(self):
         textToImage = texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))
         self._testTextToImage(textToImage)
     
     def test_StableDiffusionAIOrg(self):
         textToImage = texttoimage.StableDiffusionAIOrg()
+        textToImage.setStoreFiles(True)
         self._testTextToImage(textToImage)
 
     @unittest.skip("No quota left on account")

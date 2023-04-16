@@ -119,7 +119,13 @@ import time
 import base64
 class StableDiffusionAIOrg(ImagePromptInterface):
     def __init__(self) -> None:
-        self._negativePrompt = "ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft"
+        #self._negativePrompt = "ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft"
+        self._negativePrompt = "ugly, tiling, disfigured hands, disfigured feet, disfigured face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft"
+        
+        self._storeFiles = False
+
+    def setStoreFiles(self, store: bool):
+        self._storeFiles = store
 
     def process(self, prompt):
         apiUrl = "wss://api.stablediffusionai.org/v1/txt2img"
@@ -175,9 +181,10 @@ class StableDiffusionAIOrg(ImagePromptInterface):
             base64encoded = imageData.split(',')[1].strip()
             binary = base64.b64decode(base64encoded)
             images.append((imageName, binary))
-            #f = open(imageName, "wb")
-            #f.write(binary)
-            #f.close()
+            if self._storeFiles:
+                f = open(imageName, "wb")
+                f.write(binary)
+                f.close()
         return images
     
 
