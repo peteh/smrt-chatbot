@@ -15,6 +15,10 @@ class MessengerInterface(ABC):
     @abstractmethod
     def markInProgressDone(self, message: dict):
         pass
+
+    @abstractmethod
+    def markInProgressFail(self, message: dict):
+        pass
     
     @abstractmethod
     def isGroupMessage(self, message: dict):
@@ -60,6 +64,7 @@ class Whatsapp(MessengerInterface):
     REACT_HOURGLASS_HALF = "\u231b"
     REACT_HOURGLASS_FULL = "\u23f3"
     REACT_CHECKMARK = "\u2714\ufe0f"
+    REACT_FAIL = "\u274c"
 
     def __init__(self, server, session, apiKey: str):
         self._server = server
@@ -106,6 +111,9 @@ class Whatsapp(MessengerInterface):
     
     def markInProgressDone(self, message: dict):
         self._react(message['id'], self.REACT_CHECKMARK)
+    
+    def markInProgressFail(self, message: dict):
+        self._react(message['id'], self.REACT_FAIL)
 
     def isGroupMessage(self, message: dict):
         return 'isGroupMsg' in message and message['isGroupMsg'] == True

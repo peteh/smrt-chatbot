@@ -272,16 +272,16 @@ class ImagePromptPipeline(PipelineInterface):
             messenger.markInProgress0(message)
             prompt = messageText[len(self.IMAGE_COMMAND)+1:]
             images = self._imageAPI.process(prompt)
-            if images is not None:
-                for image in images:
-                    fileName, binary = image
-                    if messenger.isGroupMessage(message):
-                        messenger.imageToGroup(message, fileName, binary, prompt)
-                    else:
-                        messenger.imageToIndividual(message, fileName, binary, prompt)
-            else:
-                # TODO: FAIL
-                pass
+            if images is None:
+                messenger.markInProgressFail(message)
+                return
+
+            for image in images:
+                fileName, binary = image
+                if messenger.isGroupMessage(message):
+                    messenger.imageToGroup(message, fileName, binary, prompt)
+                else:
+                    messenger.imageToIndividual(message, fileName, binary, prompt)
             messenger.markInProgressDone(message)
 
 

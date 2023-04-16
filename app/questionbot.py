@@ -11,22 +11,26 @@ class QuestionBotInterface(ABC):
         pass
 
 class QuestionBotBingGPT(QuestionBotInterface):
-    async def _answer(self, prompt):
-        try:
-            bot = EdgeGPT.Chatbot(cookiePath = "cookie.json")
-            
-            response = await bot.ask(prompt=prompt, conversation_style=EdgeGPT.ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
-            print(json.dumps(response, indent = 4))
-            
-            text = response['item']['messages'][1]['text']
-            
-            text = text[text.find(".")+1:].strip()
-            # we dropt the first sentence because it's Bing introducing itself. 
+    def __init__(self, cookePath = "cookie.json") -> None:
+        self._cookePath = cookePath
 
-            await bot.close()
+    async def _answer(self, prompt):
+        bot = EdgeGPT.Chatbot(self._cookePath)
+        try:
+            response = await bot.ask(prompt=prompt, conversation_style=EdgeGPT.ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
+            #print(json.dumps(response, indent = 4))
+            text = response['item']['messages'][1]['text']
+            print(text)
+            firstSentence = text[text.find(".")+1:]
+            if "Bing" in firstSentence:
+                # we dropt the first sentence because is Bing introducing itself
+                text = text[text.find(".")+1:].strip()
         except Exception as ex:
             text = "Prompt failed with exception: %s" % (ex)
             raise ex
+        finally:
+            await bot.close()
+        
         return {
             'text': text,
             'cost': 0

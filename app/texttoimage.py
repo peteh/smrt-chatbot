@@ -49,6 +49,12 @@ class ReplicateAPI(ABC):
         r = s.post(self._generatePredictUrl(), json = data)
         jsonResponse = r.json()
         
+        if 'uuid' not in jsonResponse:
+            s.close()
+            print("No uuid in server response")
+            print(json.dumps(jsonResponse, indent = 4))
+            return None
+        
         uuid = jsonResponse['uuid']
         predictUrlForUuid = self._generatePredictUrlForUuid(uuid)
 
@@ -112,18 +118,25 @@ import json
 import time
 import base64
 class StableDiffusionAIOrg(ImagePromptInterface):
+    def __init__(self) -> None:
+        self._negativePrompt = "ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft"
+
     def process(self, prompt):
         apiUrl = "wss://api.stablediffusionai.org/v1/txt2img"
         ws = websocket.WebSocket()
         ws.connect(apiUrl)
-        jsonPrompt = json.dumps({"prompt":prompt,"negative_prompt":"","width":512,"height":512})
-        ws.send(jsonPrompt)
+
+        jsonPrompt = {"prompt":prompt,
+                      "negative_prompt": self._negativePrompt,
+                      "width":512,
+                      "height":512}
+        ws.send(json.dumps(jsonPrompt))
 
         response = json.loads(ws.recv())
         while response['success'] == 'ttl_remaining':
             ws.close()
             timeToWait = response['time']
-            print("Waiting for %d seconds to retry" % (timeToWait))
+            print("Wait time - waiting for %d seconds to retry" % (timeToWait))
             time.sleep(timeToWait)
             ws = websocket.WebSocket()
             ws.connect(apiUrl)
@@ -136,6 +149,8 @@ class StableDiffusionAIOrg(ImagePromptInterface):
             ws.close()
             return None
         print("In progress")
+        startTime = time.time()
+
         response = json.loads(ws.recv())
         if response['success'] != True:
             print("Unexpected error")
@@ -143,6 +158,9 @@ class StableDiffusionAIOrg(ImagePromptInterface):
             ws.close()
             return None
         ws.close()
+        endTime = time.time()
+        processTime = endTime - startTime
+        print("Processing took %.2fs" % (processTime))
 
         print("Successfully downloaded images")
         #f = open("response.json", "w")
@@ -165,8 +183,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
 class StableHordeTextToImage(ImagePromptInterface):
     def __init__(self, apiKey) -> None:
         self._headers = {
-            # TODO: remove api key
-            "apikey": ""
+            "apikey": apiKey
         }
 
     def _requestJob(self, prompt) -> str: 
