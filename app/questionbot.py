@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 import asyncio
 import EdgeGPT
-import json
 from revChatGPT.V1 import Chatbot
 
 class QuestionBotInterface(ABC):
@@ -15,7 +14,7 @@ class QuestionBotBingGPT(QuestionBotInterface):
         self._cookePath = cookePath
 
     async def _answer(self, prompt):
-        bot = EdgeGPT.Chatbot(self._cookePath)
+        bot = EdgeGPT.Chatbot(cookiePath=self._cookePath)
         try:
             response = await bot.ask(prompt=prompt, conversation_style=EdgeGPT.ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
             #print(json.dumps(response, indent = 4))
