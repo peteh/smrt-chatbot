@@ -18,7 +18,6 @@ class TextToImageTest(unittest.TestCase):
             self.assertGreater(len(fileName), 0)
             self.assertGreater(len(binary), 20000)
 
-    @unittest.skip("temporary")
     def test_stableHorde(self):
         textToImage = texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))
         self._testTextToImage(textToImage)
@@ -26,6 +25,12 @@ class TextToImageTest(unittest.TestCase):
     def test_StableDiffusionAIOrg(self):
         textToImage = texttoimage.StableDiffusionAIOrg()
         textToImage.setStoreFiles(True)
+        self._testTextToImage(textToImage)
+    
+    def test_CombinedProcessor(self):
+        processors = [texttoimage.StableDiffusionAIOrg(), 
+                      texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
+        textToImage = texttoimage.CombinedTextToImageProcessor(processors)
         self._testTextToImage(textToImage)
 
     @unittest.skip("No quota left on account")
