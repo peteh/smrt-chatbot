@@ -118,7 +118,7 @@ import json
 import time
 import base64
 class StableDiffusionAIOrg(ImagePromptInterface):
-    WEBSOCKET_TIMEOUT = 400
+    WEBSOCKET_TIMEOUT = 600
     def __init__(self) -> None:
         #self._negativePrompt = "ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft"
         self._negativePrompt = "ugly, tiling, disfigured hands, disfigured feet, disfigured face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft"
@@ -147,6 +147,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
             timeToWait = response['time']
             print("Wait time - waiting for %d seconds to retry" % (timeToWait))
             time.sleep(timeToWait)
+
             ws = websocket.WebSocket()
             ws.settimeout(self.WEBSOCKET_TIMEOUT)
             ws.connect(apiUrl)
