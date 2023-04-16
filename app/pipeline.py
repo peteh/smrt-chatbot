@@ -294,12 +294,19 @@ class TextToSpeechPipeline(PipelineInterface):
     TTS_COMMAND = "#tts"
 
     def __init__(self):
-        self._tts = TTS("tts_models/de/thorsten/tacotron2-DDC")
+        self._tts = None
+
+    def _getTTS(self):
+        # lazy loading
+        if self._tts is None:
+            self._tts = TTS("tts_models/de/thorsten/tacotron2-DDC")
+        return self._tts
 
     def _textToVorbisAudio(self, text: str):
+        tts = self._getTTS()
         with tempfile.TemporaryDirectory() as tmp:
             inputFile = os.path.join(tmp, 'input.wav')
-            self._tts.tts_to_file(text=text, file_path=inputFile)
+            tts.tts_to_file(text=text, file_path=inputFile)
             outputFile = os.path.join(tmp, 'output.opus')
             
             subprocess.run(["opusenc", inputFile, outputFile]) 

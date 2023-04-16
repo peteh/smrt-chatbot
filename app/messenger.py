@@ -41,7 +41,7 @@ class MessengerInterface(ABC):
         pass
 
     @abstractmethod
-    def getMessageText(self, message: dict):
+    def getMessageText(self, message: dict) -> str:
         pass
     
     @abstractmethod
