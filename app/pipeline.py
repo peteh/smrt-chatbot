@@ -287,6 +287,7 @@ class ImagePromptPipeline(PipelineInterface):
             except Exception as e:
                 logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
                 messenger.markInProgressFail(message)
+                return
 
             messenger.markInProgressDone(message)
 
