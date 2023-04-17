@@ -216,7 +216,7 @@ class StableHordeTextToImage(ImagePromptInterface):
             "index": 0,
             "jobId": "",
             "models": [
-                "Anything Diffusion"
+                "stable_diffusion_2.1"
             ],
             "nsfw": True,
             "params": {
