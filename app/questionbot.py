@@ -20,7 +20,7 @@ class QuestionBotBingGPT(QuestionBotInterface):
             #print(json.dumps(response, indent = 4))
             text = response['item']['messages'][1]['text']
             print(text)
-            firstSentence = text[text.find(".")+1:]
+            firstSentence = text[:text.find(".")+1:]
             if "Bing" in firstSentence:
                 # we dropt the first sentence because is Bing introducing itself
                 text = text[text.find(".")+1:].strip()
