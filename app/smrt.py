@@ -34,9 +34,8 @@ articleSummaryPipeline = pipeline.ArticleSummaryPipeline(summarizer)
 
 processors = [texttoimage.StableDiffusionAIOrg(), 
               texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
-imageAPI = texttoimage.CombinedTextToImageProcessor(processors)
-#imageAPI = texttoimage.StableDiffusionAIOrg()
-#imageAPI = texttoimage.StableHordeTextToImage(config('STABLEHORDE_APIKEY'))
+imageAPI = texttoimage.FallbackTextToImageProcessor(processors)
+
 imagePipeline = pipeline.ImagePromptPipeline(imageAPI)
 ttsPipeline = pipeline.TextToSpeechPipeline()
 

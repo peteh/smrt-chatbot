@@ -27,10 +27,10 @@ class TextToImageTest(unittest.TestCase):
         textToImage.setStoreFiles(True)
         self._testTextToImage(textToImage)
     
-    def test_CombinedProcessor(self):
+    def test_FallbackProcessor(self):
         processors = [texttoimage.StableDiffusionAIOrg(), 
                       texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
-        textToImage = texttoimage.CombinedTextToImageProcessor(processors)
+        textToImage = texttoimage.FallbackTextToImageProcessor(processors)
         self._testTextToImage(textToImage)
 
     @unittest.skip("No quota left on account")

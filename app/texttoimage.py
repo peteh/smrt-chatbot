@@ -298,7 +298,7 @@ class StableHordeTextToImage(ImagePromptInterface):
         return self._downloadFiles(requestId)
 
 from typing import List
-class CombinedTextToImageProcessor(ImagePromptInterface):
+class FallbackTextToImageProcessor(ImagePromptInterface):
     def __init__(self, processors: List[ImagePromptInterface]) -> None:
         super().__init__()
         self._processors = processors
