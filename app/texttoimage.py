@@ -10,6 +10,8 @@ class ImagePromptInterface(ABC):
     def process(self, prompt):
         pass
 
+DEFAULT_NEGATIVE_PROMPT = "blender, cropped, lowres, poorly drawn face, out of frame, poorly drawn hands, blurry, bad art, blurred, text, watermark, disfigured, deformed, closed eyes"
+
 class ReplicateAPI(ABC):
     def __init__(self, model, modelVersion) -> None:
         self._model = model
@@ -123,7 +125,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
     def __init__(self) -> None:
         super().__init__()
         #self._negativePrompt = "ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft"
-        self._negativePrompt = "ugly, tiling, disfigured hands, disfigured feet, disfigured face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft"
+        self._negativePrompt = DEFAULT_NEGATIVE_PROMPT
         
         self._storeFiles = False
 
@@ -204,7 +206,7 @@ class StableHordeTextToImage(ImagePromptInterface):
         self._headers = {
             "apikey": apiKey
         }
-        self._negativePrompt = "ugly, tiling, disfigured hands, disfigured feet, disfigured face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft"
+        self._negativePrompt = DEFAULT_NEGATIVE_PROMPT
 
     def _requestJob(self, prompt) -> str: 
         url = 'https://stablehorde.net/api/v2/generate/async'
@@ -216,7 +218,7 @@ class StableHordeTextToImage(ImagePromptInterface):
             "index": 0,
             "jobId": "",
             "models": [
-                "stable_diffusion_2.1"
+                "Deliberate"
             ],
             "nsfw": True,
             "params": {
