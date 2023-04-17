@@ -11,7 +11,7 @@ import db
 import pipeline
 import texttoimage
 
-from questionbot import QuestionBotBingGPT, QuestionBotChatGPTOpenAI
+import questionbot
 app = Flask(__name__)
 
 transcriber = transcript.FasterWhisperTranscript()
@@ -21,9 +21,12 @@ whatsapp = Whatsapp(config("WPPCONNECT_SERVER"), "smrt", config('WPPCONNECT_APIK
 CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
 #TODO: prepare for docker
 database = db.Database("data.sqlite")
+bots = [questionbot.QuestionBotBingGPT(),
+        questionbot.QuestionBotChatGPTOpenAI(config("CHATGPT_COOKIE")),
+        questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))]
 
-#questionBot = QuestionBotChatGPTOpenAI(config("CHATGPT_COOKIE"))
-questionBot = QuestionBotBingGPT()
+questionBot = questionbot.FallbackQuestionbot(bots)
+
 summarizer = summary.QuestionBotSummary(questionBot)
 voicePipeline = pipeline.VoiceMessagePipeline(transcriber, summarizer, CONFIG_MIN_WORDS_FOR_SUMMARY)
 groupMessagePipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, questionBot)

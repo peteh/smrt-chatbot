@@ -24,6 +24,37 @@ class QuestionBotTest(unittest.TestCase):
         questionBot = questionbot.QuestionBotChatGPTOpenAI(cookie = config('CHATGPT_COOKIE'))
         self._testQuestionbot(questionBot)
 
+    def test_QuestionBotOpenAIAPI(self):
+        questionBot = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
+        self._testQuestionbot(questionBot) 
+    
+    def test_FallbackQuestionbot(self):
+        # arrange
+        class ExceptionQuestionBot(questionbot.QuestionBotInterface):
+            def answer(self, prompt: str):
+                raise Exception("Epic Fail")
+        
+        class NoneQuestionBot(questionbot.QuestionBotInterface):
+            def answer(self, prompt: str):
+                return None
+            
+        class GoodQuestionBot(questionbot.QuestionBotInterface):
+            def answer(self, prompt: str):
+                return {
+                    "text": prompt,
+                    "cost": 0
+                }
+        bots = [ExceptionQuestionBot(), NoneQuestionBot(), GoodQuestionBot()]
+        questionBot = questionbot.FallbackQuestionbot(bots)
+
+        # act
+        answer = questionBot.answer("yolo")
+
+        # assert
+        self.assertIsNotNone(answer)
+        self.assertIn("text", answer)
+        self.assertEqual(answer['text'], "yolo (3/3)")
+
 if __name__ == '__main__':
     unittest.main()
 
