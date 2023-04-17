@@ -223,7 +223,7 @@ class ArticleSummaryPipeline(PipelineInterface):
         
         try:
             for link in links:
-                if youtubeextract.YoutubeExtract.isYoutubeLink(link) is not None:
+                if youtubeextract.YoutubeExtract.isYoutubeLink(link):
                     summarizedText = self._processYoutube(link)
                 else:
                     summarizedText = self._processArticle(link)
