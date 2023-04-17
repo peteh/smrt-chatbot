@@ -22,7 +22,8 @@ CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
 #TODO: prepare for docker
 database = db.Database("data.sqlite")
 
-questionBot = QuestionBotChatGPTOpenAI(config("CHATGPT_COOKIE"))
+#questionBot = QuestionBotChatGPTOpenAI(config("CHATGPT_COOKIE"))
+questionBot = QuestionBotBingGPT()
 summarizer = summary.QuestionBotSummary(questionBot)
 voicePipeline = pipeline.VoiceMessagePipeline(transcriber, summarizer, CONFIG_MIN_WORDS_FOR_SUMMARY)
 groupMessagePipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, questionBot)

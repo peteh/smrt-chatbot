@@ -12,7 +12,7 @@ class TextToImageTest(unittest.TestCase):
 
         # assert
         self.assertIsNotNone(images)
-        self.assertGreater(len(images), 0)
+        self.assertGreaterEqual(len(images), 1)
         for image in images:
             fileName, binary = image
             self.assertGreater(len(fileName), 0)

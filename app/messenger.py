@@ -60,6 +60,10 @@ class MessengerInterface(ABC):
     def audioToIndividual(self, message, binaryData):
         pass
 
+    @abstractmethod
+    def downloadMedia(self, message):
+        pass
+
 class Whatsapp(MessengerInterface):
     REACT_HOURGLASS_HALF = "\u231b"
     REACT_HOURGLASS_FULL = "\u23f3"
@@ -70,14 +74,14 @@ class Whatsapp(MessengerInterface):
         self._server = server
         self._session = session
         self._apiKey = apiKey
+        self._headers = {"Authorization": "Bearer %s" % (self._apiKey)}
     
     def _startSession(self):
         url = "%s/api/%s/start-session" % (self._server, self._session)
         data = {
             #'web-hook': 'http://smrt:9000/incoming'
         }
-        headers = {"Authorization": "Bearer %s" % (self._apiKey)}
-        response = requests.post(url, json=data, headers=headers)
+        response = requests.post(url, json=data, headers=self._headers)
         print(response.json())
 
     def _sendMessage(self, recipient: str, isGroup, text: str):
@@ -89,9 +93,7 @@ class Whatsapp(MessengerInterface):
             "message": text,
             "isGroup": isGroup
         }
-        headers = {"Authorization": "Bearer %s" % (self._apiKey)}
-
-        response = requests.post(url, json=data, headers=headers)
+        response = requests.post(url, json=data, headers=self._headers)
         print(response.json())
 
     def _react(self, messageId, reactionText):
@@ -100,8 +102,7 @@ class Whatsapp(MessengerInterface):
             "msgId": messageId,
             "reaction": reactionText
         }
-        headers = {"Authorization": "Bearer %s" % (self._apiKey)}
-        response = requests.post(url, json=data, headers=headers)
+        response = requests.post(url, json=data, headers=self._headers)
 
     def markInProgress0(self, message: dict):
         self._react(message['id'], self.REACT_HOURGLASS_FULL)
@@ -140,8 +141,7 @@ class Whatsapp(MessengerInterface):
             "isGroup": isGroup, 
             
         }
-        headers = {"Authorization": "Bearer %s" % (self._apiKey)}
-        response = requests.post(url, json=data, headers=headers)
+        response = requests.post(url, json=data, headers=self._headers)
 
     def imageToGroup(self, groupMessage, fileName, binaryData, caption = ""):
         self._sendImage(groupMessage['chatId'], True, fileName, binaryData, caption)
@@ -178,3 +178,15 @@ class Whatsapp(MessengerInterface):
 
     def getMessageText(self, message: dict):
         return message['content']
+    
+    def downloadMedia(self, message):
+        msgId = message['id']
+        url = "%s/api/%s/get-media-by-message/%s" % (self._server, self._session, msgId)
+        response = requests.get(url, headers=self._headers)
+
+        jsonResponse = response.json()
+        data = jsonResponse['base64']        
+        decoded = base64.b64decode(data)
+        mimeType = jsonResponse['mimetype']
+
+        return (mimeType, decoded)

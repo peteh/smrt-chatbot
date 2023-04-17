@@ -4,9 +4,6 @@ from transcript import TranscriptInterface
 from messenger import MessengerInterface
 from questionbot import QuestionBotInterface
 import texttoimage
-import youtube_transcript_api
-import youtube_transcript_api.formatters
-import urllib.parse
 import logging
 
 # article summary pipeline
@@ -16,7 +13,6 @@ import trafilatura
 from db import Database
 
 import time
-import base64
 
 class PipelineInterface(ABC):
     @abstractmethod
@@ -33,6 +29,7 @@ class VoiceMessagePipeline(PipelineInterface):
         self._transcriber = transcriber
         self._summarizer = summarizer
         self._minWordsForSummary = minWordsForSummary
+        self._storeFiles = False
         
 
     def matches(self, messenger: MessengerInterface, message: dict):
@@ -40,15 +37,13 @@ class VoiceMessagePipeline(PipelineInterface):
     
     def process(self, messenger: MessengerInterface, message: dict):
         print("Processing in Voice Pipeline")
-        # TODO: extract data from class
-        data = message['body']
         debug = {}
-        #whatsapp.sendMessage(message['from'], "Processing...")
         messenger.markInProgress0(message)
         
-        decoded = base64.b64decode(data)
-        with open('out.opus', 'wb') as output_file:
-            output_file.write(decoded)
+        mimeType, decoded = messenger.downloadMedia(message)
+        if self._storeFiles:
+            with open('out.opus', 'wb') as output_file:
+                output_file.write(decoded)
 
         start = time.time()
         transcript = self._transcriber.transcribe(decoded)
@@ -93,6 +88,9 @@ class VoiceMessagePipeline(PipelineInterface):
 
 
 class GroupMessageQuestionPipeline(PipelineInterface):
+    QUESTION_COMMAND = "#question"
+    SUMMARY_COMMAND = "#summary"
+    
     def __init__(self, db: Database, summarizer: SummaryInterface, questionBot: QuestionBotInterface, ):
         self._db = db
         self._summarizer = summarizer
@@ -112,14 +110,14 @@ class GroupMessageQuestionPipeline(PipelineInterface):
         return (chatText, actualMessageCount)
     
     def process(self, messenger: MessengerInterface, message: dict):
+        # TODO: abstract this
         pushName = message['sender']['pushname']
         messageText = message['content']
-        # TODO: filter out own messages probably
-        QUESTION_COMMAND = "#question"
-        SUMMARY_COMMAND = "#summary"
-        if messageText.startswith(QUESTION_COMMAND):
+
+        
+        if messageText.startswith(self.QUESTION_COMMAND):
             messenger.markInProgress0(message)
-            question = messageText[len(QUESTION_COMMAND)+1:]
+            question = messageText[len(self.QUESTION_COMMAND)+1:]
             print("Question: %s" % (question))
             # TODO: make number configurable
             chatText, actualMessageCount = self._getChatText(message['chatId'], 100)
@@ -131,7 +129,7 @@ class GroupMessageQuestionPipeline(PipelineInterface):
             messenger.messageToGroup(message, answerText)
             messenger.markInProgressDone(message)
 
-        if messageText.startswith(SUMMARY_COMMAND):
+        if messageText.startswith(self.SUMMARY_COMMAND):
             debug = {}
             messenger.markInProgress0(message)
             # TODO: put to configuration
@@ -165,8 +163,10 @@ class GroupMessageQuestionPipeline(PipelineInterface):
             self._db.addGroupMessage(message['chatId'], pushName, messageText)
             
 
-
+import youtubeextract
 class ArticleSummaryPipeline(PipelineInterface):
+    MAX_TRANSCRIPT_LENGTH = 20000
+
     def __init__(self, summarizer: SummaryInterface):
         self._summarizer = summarizer
         self._linkRegex = re.compile('((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', re.DOTALL)
@@ -201,39 +201,18 @@ class ArticleSummaryPipeline(PipelineInterface):
         print(summarizedText)
         return summarizedText
     
-    def _extractYoutubeVideoId(self, link):
-        print(link)
-        """
-        Examples:
-        - http://youtu.be/SA2iWivDJiE
-        - http://www.youtube.com/watch?v=_oPAwA_Udwc&feature=feedu
-        - http://www.youtube.com/embed/SA2iWivDJiE
-        - http://www.youtube.com/v/SA2iWivDJiE?version=3&amp;hl=en_US
-        """
-        query = urllib.parse.urlparse(link)
-        if query.hostname == 'youtu.be':
-            return query.path[1:]
-        if query.hostname in ('www.youtube.com', 'youtube.com', "m.youtube.com"):
-            if query.path == '/watch':
-                p = urllib.parse.parse_qs(query.query)
-                return p['v'][0]
-            if query.path[:7] == '/embed/':
-                return query.path.split('/')[2]
-            if query.path[:3] == '/v/':
-                return query.path.split('/')[2]
-        # fail?
-        return None
+    
     
     def _processYoutube(self, link):
-        videoId = self._extractYoutubeVideoId(link)
-        print(videoId)
-        transcript = youtube_transcript_api.YouTubeTranscriptApi.get_transcript(videoId, languages=['en', 'de'])
-        textFormatter = youtube_transcript_api.formatters.TextFormatter()
-        
-        text = textFormatter.format_transcript(transcript)
+        processor = youtubeextract.YoutubeExtract(link)
+        text = processor.getScript()
+        print("Length of youtube transcript: %d" % (len(text)))
         # reducing to the last 10k letters to limit input for summary
-        reducedText = text[-10000:]
-        summarizedText = self._summarizer.summarize(reducedText, self._language)['text']
+        # TODO: maybe do in parts...
+        if len(text) > self.MAX_TRANSCRIPT_LENGTH:
+            print("Transcript exceeding %d letters, reducing..." % (self.MAX_TRANSCRIPT_LENGTH))
+        text = text[-self.MAX_TRANSCRIPT_LENGTH:]
+        summarizedText = self._summarizer.summarize(text, self._language)['text']
         return summarizedText
 
     def process(self, messenger: MessengerInterface, message: dict):
@@ -242,14 +221,18 @@ class ArticleSummaryPipeline(PipelineInterface):
         links = self._extractUrl(messageText)
         totalSummary = ""
         
-        
-        for link in links:
-            if self._extractYoutubeVideoId(link) is not None:
-                summarizedText = self._processYoutube(link)
-            else:
-                summarizedText = self._processArticle(link)
-            summaryPart = "%s: \n%s\n" % (link, summarizedText)
-            totalSummary += summaryPart
+        try:
+            for link in links:
+                if youtubeextract.YoutubeExtract.isYoutubeLink(link) is not None:
+                    summarizedText = self._processYoutube(link)
+                else:
+                    summarizedText = self._processArticle(link)
+                summaryPart = "%s: \n%s\n" % (link, summarizedText)
+                totalSummary += summaryPart
+        except Exception as e:
+                logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
+                messenger.markInProgressFail(message)
+                return
         if messenger.isGroupMessage(message):
             messenger.messageToGroup(message, totalSummary)
         else:
