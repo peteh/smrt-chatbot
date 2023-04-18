@@ -28,7 +28,7 @@ class QuestionBotOpenAIAPI(QuestionBotInterface):
             'cost': cost
         }
         
-
+import re
 class QuestionBotBingGPT(QuestionBotInterface):
     def __init__(self, cookePath = "cookie.json") -> None:
         self._cookePath = cookePath
@@ -39,8 +39,8 @@ class QuestionBotBingGPT(QuestionBotInterface):
             response = await bot.ask(prompt=prompt, conversation_style=EdgeGPT.ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
             #print(json.dumps(response, indent = 4))
             text = response['item']['messages'][1]['text']
-            print(text)
             firstSentence = text[:text.find(".")+1:]
+            text = re.sub("\[\^[0-9]+\^\]", "", text)
             if "Bing" in firstSentence:
                 # we dropt the first sentence because is Bing introducing itself
                 text = text[text.find(".")+1:].strip()
