@@ -20,8 +20,8 @@ class QuestionBotTest(unittest.TestCase):
         questionBot = questionbot.QuestionBotBingGPT()
         self._testQuestionbot(questionBot)
     
-    def test_QuestionBotChatGPTOpenAI(self):
-        questionBot = questionbot.QuestionBotChatGPTOpenAI(cookie = config('CHATGPT_COOKIE'))
+    def test_QuestionBotRevChatGPT(self):
+        questionBot = questionbot.QuestionBotRevChatGPT(cookie = config('CHATGPT_COOKIE'))
         self._testQuestionbot(questionBot)
 
     def test_QuestionBotOpenAIAPI(self):

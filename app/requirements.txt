@@ -10,4 +10,4 @@ revChatGPT
 trafilatura
 youtube-transcript-api
 TTS
-websocket-client
+websockets

@@ -116,10 +116,11 @@ class Kandinsky2API(ReplicateAPI):
                 }
             }
 
-import websocket
+
 import json
 import time
 import base64
+import websockets.sync.client as wsclient
 class StableDiffusionAIOrg(ImagePromptInterface):
     WEBSOCKET_TIMEOUT = 600
     def __init__(self) -> None:
@@ -135,9 +136,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
     def process(self, prompt):
         try:
             apiUrl = "wss://api.stablediffusionai.org/v1/txt2img"
-            ws = websocket.WebSocket()
-            ws.settimeout(self.WEBSOCKET_TIMEOUT)
-            ws.connect(apiUrl)
+            ws = wsclient.connect(apiUrl)
 
             jsonPrompt = {"prompt":prompt,
                         "negative_prompt": self._negativePrompt,
@@ -153,9 +152,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
                 print("Wait time - waiting for %d seconds to retry" % (timeToWait))
                 time.sleep(timeToWait)
 
-                ws = websocket.WebSocket()
-                ws.settimeout(self.WEBSOCKET_TIMEOUT)
-                ws.connect(apiUrl)
+                ws = wsclient.connect(apiUrl)
                 ws.send(jsonPromptStr)
                 response = json.loads(ws.recv())
 
@@ -199,6 +196,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
             logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
         return None
     
+
 
 class StableHordeTextToImage(ImagePromptInterface):
     def __init__(self, apiKey) -> None:
