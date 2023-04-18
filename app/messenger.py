@@ -33,6 +33,10 @@ class MessengerInterface(ABC):
         pass
 
     @abstractmethod
+    def deleteMessage(self, message: dict):
+        pass
+
+    @abstractmethod
     def hasAudioData(self, message: dict):
         pass
 
@@ -125,6 +129,17 @@ class Whatsapp(MessengerInterface):
     def messageToIndividual(self, message: dict, text: str):
         self._sendMessage(message['sender']['id'], False, text)
     
+    def deleteMessage(self, message: dict):
+        url = "%s/api/%s/send-image" % (self._server, self._session)
+        isGroup = self.isGroupMessage(message)
+        recpipient = message['chatId'] if isGroup else message['sender']['id'] 
+        data = {
+            "phone": recpipient,
+            "messageId": message['id'],
+            "isGroup": isGroup
+        }
+        response = requests.post(url, json=data, headers=self._headers)
+    
     def _sendImage(self, recipient: str, isGroup: bool, fileName: str, binaryData, caption: str):
         url = "%s/api/%s/send-image" % (self._server, self._session)
         base64data = base64.b64encode(binaryData).decode('utf-8')
@@ -178,6 +193,7 @@ class Whatsapp(MessengerInterface):
 
     def getMessageText(self, message: dict):
         return message['content']
+
     
     def downloadMedia(self, message):
         msgId = message['id']

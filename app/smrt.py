@@ -50,6 +50,8 @@ def return_response():
             for pipeline in pipelines:
                 if pipeline.matches(whatsapp, message):
                     pipeline.process(whatsapp, message) 
+            # delete message from phone after processing
+            whatsapp.deleteMessage(message)
 
     return Response(status=200)
 
