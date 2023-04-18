@@ -21,9 +21,11 @@ whatsapp = Whatsapp(config("WPPCONNECT_SERVER"), "smrt", config('WPPCONNECT_APIK
 CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
 #TODO: prepare for docker
 database = db.Database("data.sqlite")
-bots = [questionbot.QuestionBotBingGPT(),
+bots = [
         questionbot.QuestionBotRevChatGPT(config("CHATGPT_COOKIE")),
-        questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))]
+        questionbot.QuestionBotBingGPT(),
+        questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
+        ]
 
 questionBot = questionbot.FallbackQuestionbot(bots)
 
