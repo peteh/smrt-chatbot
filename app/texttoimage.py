@@ -123,6 +123,7 @@ import base64
 import websockets.sync.client as wsclient
 class StableDiffusionAIOrg(ImagePromptInterface):
     WEBSOCKET_TIMEOUT = 600
+    WEBSOCKET_MAXSIZE = 1024*1024*50
     def __init__(self) -> None:
         super().__init__()
         #self._negativePrompt = "ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft"
@@ -136,7 +137,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
     def process(self, prompt):
         try:
             apiUrl = "wss://api.stablediffusionai.org/v1/txt2img"
-            ws = wsclient.connect(apiUrl)
+            ws = wsclient.connect(apiUrl, max_size=self.WEBSOCKET_MAXSIZE)
 
             jsonPrompt = {"prompt":prompt,
                         "negative_prompt": self._negativePrompt,
@@ -152,7 +153,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
                 print("Wait time - waiting for %d seconds to retry" % (timeToWait))
                 time.sleep(timeToWait)
 
-                ws = wsclient.connect(apiUrl)
+                ws = wsclient.connect(apiUrl, max_size=self.WEBSOCKET_MAXSIZE)
                 ws.send(jsonPromptStr)
                 response = json.loads(ws.recv())
 
