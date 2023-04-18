@@ -139,6 +139,7 @@ class Whatsapp(MessengerInterface):
             "isGroup": isGroup
         }
         response = requests.post(url, json=data, headers=self._headers)
+        print(response.json())
     
     def _sendImage(self, recipient: str, isGroup: bool, fileName: str, binaryData, caption: str):
         url = "%s/api/%s/send-image" % (self._server, self._session)
