@@ -130,7 +130,7 @@ class Whatsapp(MessengerInterface):
         self._sendMessage(message['sender']['id'], False, text)
     
     def deleteMessage(self, message: dict):
-        url = "%s/api/%s/send-image" % (self._server, self._session)
+        url = "%s/api/%s/delete-message" % (self._server, self._session)
         isGroup = self.isGroupMessage(message)
         recpipient = message['chatId'] if isGroup else message['sender']['id'] 
         data = {
