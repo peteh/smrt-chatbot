@@ -22,7 +22,7 @@ CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
 #TODO: prepare for docker
 database = db.Database("data.sqlite")
 bots = [questionbot.QuestionBotBingGPT(),
-        questionbot.QuestionBotChatGPTOpenAI(config("CHATGPT_COOKIE")),
+        questionbot.QuestionBotRevChatGPT(config("CHATGPT_COOKIE")),
         questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))]
 
 questionBot = questionbot.FallbackQuestionbot(bots)

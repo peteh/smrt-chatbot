@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import asyncio
 import EdgeGPT
-from revChatGPT.V1 import Chatbot
+import revChatGPT.V1
 import logging
 
 class QuestionBotInterface(ABC):
@@ -58,7 +58,7 @@ class QuestionBotBingGPT(QuestionBotInterface):
     def answer(self, prompt: str):
         return asyncio.run(self._answer(prompt))
 
-class QuestionBotChatGPTOpenAI(QuestionBotInterface):
+class QuestionBotRevChatGPT(QuestionBotInterface):
     def __init__(self, cookie):
         self._cookie = cookie
 
@@ -68,7 +68,7 @@ class QuestionBotChatGPTOpenAI(QuestionBotInterface):
                 "access_token": self._cookie
                 }
             
-            chatbot = Chatbot(config)
+            chatbot = revChatGPT.V1.Chatbot(config)
 
             message = ""
             for data in chatbot.ask(
