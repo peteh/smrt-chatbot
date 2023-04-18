@@ -75,6 +75,8 @@ class QuestionBotRevChatGPT(QuestionBotInterface):
                 prompt,
             ):
                 message = data["message"]
+            # delete the previous question again
+            chatbot.delete_conversation(data["conversation_id"])
             return {
                 'text': message, 
                 'cost': 0
