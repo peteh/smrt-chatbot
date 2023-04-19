@@ -43,7 +43,8 @@ class QuestionBotBingGPT(QuestionBotInterface):
             text = re.sub("\[\^[0-9]+\^\]", "", text)
             if "Bing" in firstSentence:
                 # we dropt the first sentence because is Bing introducing itself
-                text = text[text.find(".")+1:].strip()
+                text = text[text.find(".")+1:]
+            text = text.strip()
         except Exception as e:
                 logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
                 return None
