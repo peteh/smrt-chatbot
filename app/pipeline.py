@@ -63,6 +63,7 @@ class GrammarPipeline(PipelineInterface):
             messenger.messageToGroup(message, answerText)
         else:
             messenger.messageToIndividual(message, answerText)
+        messenger.markInProgressDone(message)
         
 
         
