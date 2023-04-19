@@ -296,6 +296,36 @@ class StableHordeTextToImage(ImagePromptInterface):
             return None
         return self._downloadFiles(requestId)
 
+import BingImageCreator
+class BingImageProcessor(ImagePromptInterface):
+    def __init__(self, cookiePath = "cookie.json") -> None:
+        try:
+            with open(cookiePath, "r", encoding="utf-8") as f:
+                cookies = json.load(f)
+                for cookie in cookies:
+                    if cookie['name'] == "_U":
+                        self._cookie = cookie['value']
+        except FileNotFoundError as e:
+            raise FileNotFoundError("Cookie file not found") from e
+    
+    def process(self, prompt):
+        try:
+            imageGen = BingImageCreator.ImageGen(self._cookie)
+            imageUrls = imageGen.get_images(prompt)
+            imgNum = 0
+            images = []
+            for imageUrl in imageUrls:
+                imgNum += 1
+                r = requests.get(imageUrl)
+                images.append(("image%d.jpg" % imgNum, r.content))
+            if images is None or len(images) == 0:
+                return images
+            return images
+        except Exception as e:
+            logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
+        print("Failed to get an image")
+        return None
+    
 from typing import List
 class FallbackTextToImageProcessor(ImagePromptInterface):
     def __init__(self, processors: List[ImagePromptInterface]) -> None:

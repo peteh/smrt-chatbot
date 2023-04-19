@@ -11,3 +11,4 @@ trafilatura
 youtube-transcript-api
 TTS
 websockets
+BingImageCreator

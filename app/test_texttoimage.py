@@ -5,7 +5,7 @@ from decouple import config
 class TextToImageTest(unittest.TestCase):
     def _testTextToImage(self, textToImage):
         # arrange
-        prompt = "Underwear party"
+        prompt = "A beatiful girl with green eyes"
 
         # act
         images = textToImage.process(prompt)
@@ -25,6 +25,10 @@ class TextToImageTest(unittest.TestCase):
     def test_StableDiffusionAIOrg(self):
         textToImage = texttoimage.StableDiffusionAIOrg()
         textToImage.setStoreFiles(True)
+        self._testTextToImage(textToImage)
+    
+    def test_BingImageProcessor(self):
+        textToImage = texttoimage.BingImageProcessor()
         self._testTextToImage(textToImage)
     
     def test_FallbackProcessor(self):
