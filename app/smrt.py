@@ -40,6 +40,7 @@ imageAPI = texttoimage.FallbackTextToImageProcessor(processors)
 
 imagePipeline = pipeline.ImagePromptPipeline(imageAPI)
 ttsPipeline = pipeline.TextToSpeechPipeline()
+grammarPipeline = pipeline.GrammarPipeline(questionBot)
 
 @app.route('/incoming', methods=['POST'])
 def return_response():
@@ -48,7 +49,13 @@ def return_response():
     
     if 'event' in message:
         if message['event'] == "onmessage":
-            pipelines = [voicePipeline, groupMessagePipeline, articleSummaryPipeline, imagePipeline, ttsPipeline]
+            pipelines = [voicePipeline, 
+                         groupMessagePipeline, 
+                         articleSummaryPipeline, 
+                         imagePipeline, 
+                         ttsPipeline, 
+                         grammarPipeline]
+            
             for pipeline in pipelines:
                 if pipeline.matches(whatsapp, message):
                     pipeline.process(whatsapp, message) 

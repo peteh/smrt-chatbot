@@ -23,6 +23,49 @@ class PipelineInterface(ABC):
     def process(self, messenger: MessengerInterface, message: dict):
         pass
 
+class GrammarPipeline(PipelineInterface):
+    GRAMMAR_COMMAND = "#grammar"
+    GRAMMATIK_COMMAND = "#grammatik"
+
+    def __init__(self, questionBot: QuestionBotInterface) -> None:
+        super().__init__()
+        self._questionBot = questionBot
+    
+    def matches(self, messenger: MessengerInterface, message: dict):
+        return messenger.getMessageText(message).startswith(self.GRAMMAR_COMMAND) \
+            or messenger.getMessageText(message).startswith(self.GRAMMATIK_COMMAND)
+    
+    def process(self, messenger: MessengerInterface, message: dict):
+        messageText = messenger.getMessageText(message)
+        if messageText.startswith(self.GRAMMAR_COMMAND):
+            text = messageText[len(self.GRAMMAR_COMMAND)+1:]
+            prompt = "Enhance the quality of the text below. Grammar, punctuation, spelling, \
+        word choice and style should be examined in detail. Additionally, the style and \
+        tone must be improved to ensure the writing is polished, error-free, and \
+        easy to read: \n%s" % (text)
+            
+        elif messageText.startswith(self.GRAMMATIK_COMMAND):
+            text = messageText[len(self.GRAMMATIK_COMMAND)+1:]
+            prompt = "Verbessere die Qualität des folgenden Textes. Grammatik, Interpunktion, Rechtschreibung, \
+        Wortwahl und Stil soll besonders beachtet werden. Außerdem soll Stil und Ton so verbessert werden, \
+        dass einen eleganter, fehlerfreier und einfach zu lesender Text entsteht: \n%s" % (text)
+        else:
+            # skip
+            return
+        
+        messenger.markInProgress0(message)
+        answer = self._questionBot.answer(prompt)
+        if answer is None:
+            messenger.markInProgressFail(message)
+            return
+        answerText = answer['text']
+        if messenger.isGroupMessage(message):
+            messenger.messageToGroup(message, answerText)
+        else:
+            messenger.messageToIndividual(message, answerText)
+        
+
+        
 
 class VoiceMessagePipeline(PipelineInterface):
     def __init__(self, transcriber: TranscriptInterface, summarizer: SummaryInterface, minWordsForSummary: int):
@@ -87,6 +130,7 @@ class VoiceMessagePipeline(PipelineInterface):
             messenger.messageToIndividual(message, debugText)
 
 
+# TODO split into message storage pipeline and command pipeline
 class GroupMessageQuestionPipeline(PipelineInterface):
     QUESTION_COMMAND = "#question"
     SUMMARY_COMMAND = "#summary"
