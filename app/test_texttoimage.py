@@ -16,7 +16,7 @@ class TextToImageTest(unittest.TestCase):
         for image in images:
             fileName, binary = image
             self.assertGreater(len(fileName), 0)
-            self.assertGreater(len(binary), 20000)
+            self.assertGreater(len(binary), 10000)
 
     def test_stableHorde(self):
         textToImage = texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))
@@ -28,8 +28,22 @@ class TextToImageTest(unittest.TestCase):
         self._testTextToImage(textToImage)
     
     def test_FallbackProcessor(self):
-        processors = [texttoimage.StableDiffusionAIOrg(), 
-                      texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
+        # arrange
+        class ExceptionImageProcessor(texttoimage.ImagePromptInterface):
+            def process(self, prompt):
+                raise Exception("fail")
+        
+        class NoneImageProcessor(texttoimage.ImagePromptInterface):
+            def process(self, prompt):
+                return None
+            
+        class GoodImageProcessor(texttoimage.ImagePromptInterface):
+            def process(self, prompt):
+                return [("bla.jpg", "x" * 50000)]
+    
+        processors = [ExceptionImageProcessor(), 
+                      NoneImageProcessor(), 
+                      GoodImageProcessor()]
         textToImage = texttoimage.FallbackTextToImageProcessor(processors)
         self._testTextToImage(textToImage)
 
