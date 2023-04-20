@@ -12,7 +12,7 @@ def testSendMessage():
     text = "Test Message"
 
     wa = Whatsapp(config('WPPCONNECT_APIKEY'))
-    wa._sendMessage(recipient, text)
+    wa._send_message(recipient, text)
 
 def testOpenAISummary():
     summary = OpenAIChatGPTSummary(config('OPENAI_APIKEY'))

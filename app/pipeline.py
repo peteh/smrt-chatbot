@@ -32,11 +32,11 @@ class GrammarPipeline(PipelineInterface):
         self._questionBot = questionBot
     
     def matches(self, messenger: MessengerInterface, message: dict):
-        return messenger.getMessageText(message).startswith(self.GRAMMAR_COMMAND) \
-            or messenger.getMessageText(message).startswith(self.GRAMMATIK_COMMAND)
+        return messenger.get_message_text(message).startswith(self.GRAMMAR_COMMAND) \
+            or messenger.get_message_text(message).startswith(self.GRAMMATIK_COMMAND)
     
     def process(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.getMessageText(message)
+        messageText = messenger.get_message_text(message)
         if messageText.startswith(self.GRAMMAR_COMMAND):
             text = messageText[len(self.GRAMMAR_COMMAND)+1:]
             prompt = "Enhance the quality of the text below. Grammar, punctuation, spelling, \
@@ -53,17 +53,17 @@ class GrammarPipeline(PipelineInterface):
             # skip
             return
         
-        messenger.markInProgress0(message)
+        messenger.mark_in_progress_0(message)
         answer = self._questionBot.answer(prompt)
         if answer is None:
-            messenger.markInProgressFail(message)
+            messenger.mark_in_progress_fail(message)
             return
         answerText = answer['text']
-        if messenger.isGroupMessage(message):
-            messenger.messageToGroup(message, answerText)
+        if messenger.is_group_message(message):
+            messenger.message_to_group(message, answerText)
         else:
-            messenger.messageToIndividual(message, answerText)
-        messenger.markInProgressDone(message)
+            messenger.message_to_individual(message, answerText)
+        messenger.mark_in_progress_done(message)
         
 
         
@@ -82,7 +82,7 @@ class VoiceMessagePipeline(PipelineInterface):
     def process(self, messenger: MessengerInterface, message: dict):
         print("Processing in Voice Pipeline")
         debug = {}
-        messenger.markInProgress0(message)
+        messenger.mark_in_progress_0(message)
         
         mimeType, decoded = messenger.downloadMedia(message)
         if self._storeFiles:
@@ -97,17 +97,17 @@ class VoiceMessagePipeline(PipelineInterface):
         transcriptText = transcript['text']
         words = transcript['words']
         language = transcript['language']
-        if messenger.isGroupMessage(message):
-            messenger.messageToGroup(message, "Transcribed: \n%s" % (transcriptText))
+        if messenger.is_group_message(message):
+            messenger.message_to_group(message, "Transcribed: \n%s" % (transcriptText))
         else:
-            messenger.messageToIndividual(message, "Transcribed: \n%s" % (transcriptText))
+            messenger.message_to_individual(message, "Transcribed: \n%s" % (transcriptText))
         
         debug['transcript_language'] = language
         debug['transcript_language_probability'] = transcript['language_probability']
         debug['transcript_words'] = transcript['words']
         debug['transcript_cost'] = transcript['cost']
         if words > self._minWordsForSummary:
-            messenger.markInProgress50(message)
+            messenger.mark_in_progress_50(message)
 
             start = time.time()
             summary = self._summarizer.summarize(transcriptText, language)
@@ -116,19 +116,19 @@ class VoiceMessagePipeline(PipelineInterface):
 
             summaryText = summary['text']
             debug['summary_cost'] = summary['cost']
-            if messenger.isGroupMessage(message):
-                messenger.messageToGroup(message, "Summary: \n%s" % (summaryText))
+            if messenger.is_group_message(message):
+                messenger.message_to_group(message, "Summary: \n%s" % (summaryText))
             else:
-                messenger.messageToIndividual(message, "Summary: \n%s" % (summaryText))
-        messenger.markInProgressDone(message)
+                messenger.message_to_individual(message, "Summary: \n%s" % (summaryText))
+        messenger.mark_in_progress_done(message)
         debugText = "Debug: \n"
         for debugKey, debugValue in debug.items():
             debugText += debugKey + ": " + str(debugValue) + "\n"
         debugText = debugText.strip()
-        if messenger.isGroupMessage(message):
-            messenger.messageToGroup(message, debugText)
+        if messenger.is_group_message(message):
+            messenger.message_to_group(message, debugText)
         else:
-            messenger.messageToIndividual(message, debugText)
+            messenger.message_to_individual(message, debugText)
 
 
 # TODO split into message storage pipeline and command pipeline
@@ -143,7 +143,7 @@ class GroupMessageQuestionPipeline(PipelineInterface):
 
     def matches(self, messenger: MessengerInterface, message: dict):
         # TODO: abstract chat type
-        return messenger.isGroupMessage(message) and message['type']=='chat'
+        return messenger.is_group_message(message) and message['type']=='chat'
 
     def _getChatText(self, identifier, maxMessageCount):
         chatText = ""
@@ -161,7 +161,7 @@ class GroupMessageQuestionPipeline(PipelineInterface):
 
         
         if messageText.startswith(self.QUESTION_COMMAND):
-            messenger.markInProgress0(message)
+            messenger.mark_in_progress_0(message)
             question = messageText[len(self.QUESTION_COMMAND)+1:]
             print("Question: %s" % (question))
             # TODO: make number configurable
@@ -171,12 +171,12 @@ class GroupMessageQuestionPipeline(PipelineInterface):
             answer = self._questionBot.answer(prompt)
             answerText = answer['text']
             print("Answer: %s" % (answerText))
-            messenger.messageToGroup(message, answerText)
-            messenger.markInProgressDone(message)
+            messenger.message_to_group(message, answerText)
+            messenger.mark_in_progress_done(message)
 
         if messageText.startswith(self.SUMMARY_COMMAND):
             debug = {}
-            messenger.markInProgress0(message)
+            messenger.mark_in_progress_0(message)
             # TODO: put to configuration
             maxMessageCount = 20
             command = messageText.split(" ")
@@ -196,13 +196,13 @@ class GroupMessageQuestionPipeline(PipelineInterface):
             debug['summary_cost'] = summary['cost']
 
             summaryText = "Summary (last %d messages)\n%s" % (actualMessageCount, summary['text'])
-            messenger.messageToGroup(message, summaryText)
-            messenger.markInProgressDone(message)
+            messenger.message_to_group(message, summaryText)
+            messenger.mark_in_progress_done(message)
             debugText = "Debug: \n"
             for debugKey, debugValue in debug.items():
                 debugText += debugKey + ": " + str(debugValue) + "\n"
             debugText = debugText.strip()
-            messenger.messageToGroup(message, debugText)
+            messenger.message_to_group(message, debugText)
         else:
             # TODO: filter messages with command
             self._db.addGroupMessage(message['chatId'], pushName, messageText)
@@ -224,7 +224,7 @@ class ArticleSummaryPipeline(PipelineInterface):
         return links
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.getMessageText(message)
+        messageText = messenger.get_message_text(message)
         links = self._extractUrl(messageText)
         return len(links) > 0
     
@@ -261,8 +261,8 @@ class ArticleSummaryPipeline(PipelineInterface):
         return summarizedText
 
     def process(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.getMessageText(message)
-        messenger.markInProgress0(message)
+        messageText = messenger.get_message_text(message)
+        messenger.mark_in_progress_0(message)
         links = self._extractUrl(messageText)
         totalSummary = ""
         
@@ -276,13 +276,13 @@ class ArticleSummaryPipeline(PipelineInterface):
                 totalSummary += summaryPart
         except Exception as e:
                 logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
-                messenger.markInProgressFail(message)
+                messenger.mark_in_progress_fail(message)
                 return
-        if messenger.isGroupMessage(message):
-            messenger.messageToGroup(message, totalSummary)
+        if messenger.is_group_message(message):
+            messenger.message_to_group(message, totalSummary)
         else:
-            messenger.messageToIndividual(message, totalSummary)
-        messenger.markInProgressDone(message)
+            messenger.message_to_individual(message, totalSummary)
+        messenger.mark_in_progress_done(message)
 
 
 class ImagePromptPipeline(PipelineInterface):
@@ -292,32 +292,32 @@ class ImagePromptPipeline(PipelineInterface):
         self._imageAPI = imageAPI
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.getMessageText(message)
+        messageText = messenger.get_message_text(message)
         return messageText.startswith(self.IMAGE_COMMAND)
     
     def process(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.getMessageText(message)
+        messageText = messenger.get_message_text(message)
         if messageText.startswith(self.IMAGE_COMMAND):
-            messenger.markInProgress0(message)
+            messenger.mark_in_progress_0(message)
             try:
                 prompt = messageText[len(self.IMAGE_COMMAND)+1:]
                 images = self._imageAPI.process(prompt)
                 if images is None:
-                    messenger.markInProgressFail(message)
+                    messenger.mark_in_progress_fail(message)
                     return
 
                 for image in images:
                     fileName, binary = image
-                    if messenger.isGroupMessage(message):
+                    if messenger.is_group_message(message):
                         messenger.imageToGroup(message, fileName, binary, prompt)
                     else:
                         messenger.imageToIndividual(message, fileName, binary, prompt)
             except Exception as e:
                 logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
-                messenger.markInProgressFail(message)
+                messenger.mark_in_progress_fail(message)
                 return
 
-            messenger.markInProgressDone(message)
+            messenger.mark_in_progress_done(message)
 
 
 from TTS.api import TTS
@@ -351,19 +351,19 @@ class TextToSpeechPipeline(PipelineInterface):
         return oggData
     
     def matches(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.getMessageText(message)
+        messageText = messenger.get_message_text(message)
         return messageText.startswith(self.TTS_COMMAND)
     
     def process(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.getMessageText(message)
+        messageText = messenger.get_message_text(message)
         if messageText.startswith(self.TTS_COMMAND):
-            messenger.markInProgress0(message)
+            messenger.mark_in_progress_0(message)
             text = messageText[len(self.TTS_COMMAND)+1:]
             audioData = self._textToVorbisAudio(text)
             
-            if messenger.isGroupMessage(message):
+            if messenger.is_group_message(message):
                 messenger.audioToGroup(message, audioData)
             else:
                 messenger.audioToIndividual(message, audioData)
 
-            messenger.markInProgressDone(message)
+            messenger.mark_in_progress_done(message)

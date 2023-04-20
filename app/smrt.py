@@ -1,25 +1,23 @@
+"""Main application"""
+import json
+
 from flask import Flask, request, Response
 import summary
 import transcript
-from messenger import MessengerInterface, Whatsapp
+import messenger
 from decouple import config
-import base64
-import time
-import json
 import db
-
 import pipeline
 import texttoimage
-
 import questionbot
+
 app = Flask(__name__)
 
 transcriber = transcript.FasterWhisperTranscript()
-#summarizer = summary.OpenAIChatGPTSummary(config('OPENAI_APIKEY'))
 
-whatsapp = Whatsapp(config("WPPCONNECT_SERVER"), "smrt", config('WPPCONNECT_APIKEY'))
+whatsapp = messenger.Whatsapp(config("WPPCONNECT_SERVER"), "smrt", config('WPPCONNECT_APIKEY'))
 CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
-#TODO: prepare for docker
+# TODO: prepare for docker
 database = db.Database("data.sqlite")
 bots = [
         questionbot.QuestionBotRevChatGPT(config("CHATGPT_COOKIE")),
@@ -45,25 +43,26 @@ grammarPipeline = pipeline.GrammarPipeline(questionBot)
 
 @app.route('/incoming', methods=['POST'])
 def return_response():
+    """Handles new incoming messages from wpp-server"""
     message = request.json
     print(json.dumps(message, indent=4))
     
     if 'event' in message:
         if message['event'] == "onmessage":
-            pipelines = [voicePipeline, 
-                         groupMessagePipeline, 
-                         articleSummaryPipeline, 
-                         imagePipeline, 
-                         ttsPipeline, 
+            pipelines = [voicePipeline,
+                         groupMessagePipeline,
+                         articleSummaryPipeline,
+                         imagePipeline,
+                         ttsPipeline,
                          grammarPipeline]
             
-            for pipeline in pipelines:
-                if pipeline.matches(whatsapp, message):
-                    pipeline.process(whatsapp, message) 
+            for pipe in pipelines:
+                if pipe.matches(whatsapp, message):
+                    pipe.process(whatsapp, message) 
             # delete message from phone after processing
             #whatsapp.deleteMessage(message)
 
     return Response(status=200)
 
-whatsapp._startSession()
+whatsapp.start_session()
 app.run(host="0.0.0.0", port=9000)
