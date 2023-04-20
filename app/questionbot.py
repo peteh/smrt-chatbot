@@ -30,11 +30,11 @@ class QuestionBotOpenAIAPI(QuestionBotInterface):
         
 import re
 class QuestionBotBingGPT(QuestionBotInterface):
-    def __init__(self, cookePath = "cookie.json") -> None:
-        self._cookePath = cookePath
+    def __init__(self, cookiePath = "cookie.json") -> None:
+        self._cookePath = cookiePath
 
     async def _answer(self, prompt):
-        bot = EdgeGPT.Chatbot(cookiePath=self._cookePath)
+        bot = EdgeGPT.Chatbot(cookie_path=self._cookePath)
         try:
             response = await bot.ask(prompt=prompt, conversation_style=EdgeGPT.ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub")
             #print(json.dumps(response, indent = 4))
