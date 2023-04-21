@@ -398,3 +398,36 @@ class TextToSpeechPipeline(PipelineInterface):
                 messenger.send_audio_to_individual(message, audio_data)
 
             messenger.mark_in_progress_done(message)
+
+class TinderPipelinePipelineInterface(PipelineInterface):
+    """A pipeline to write answers to tinder messages. """
+    TINDER_COMMAND = "#tinder"
+
+    def __init__(self, question_bot: QuestionBotInterface) -> None:
+        super().__init__()
+        self._question_bot = question_bot
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        message_text = messenger.get_message_text(message)
+        if message_text.startswith(self.TINDER_COMMAND):
+            return True
+        return False
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        message_text = messenger.get_message_text(message)
+        messenger.mark_in_progress_0(message)
+        tinder_message = message_text[len(self.TINDER_COMMAND)+1:]
+        prompt = f"Schreibe eine kurze, lockere, lustige Anwort auf folgende Nachricht \
+            von einem Mädchen: \n{tinder_message}"
+        answer = self._question_bot.answer(prompt)
+        if answer is None:
+            messenger.mark_in_progress_fail(message)
+            return
+
+        response_text = answer['text']
+        if messenger.is_group_message(message):
+            messenger.send_message_to_group(message, response_text)
+        else:
+            messenger.send_message_to_individual(message, response_text)
+
+        messenger.mark_in_progress_done(message)

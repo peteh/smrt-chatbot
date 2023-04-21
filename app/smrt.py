@@ -40,6 +40,7 @@ image_api = texttoimage.FallbackTextToImageProcessor(processors)
 imagePipeline = pipeline.ImagePromptPipeline(image_api)
 ttsPipeline = pipeline.TextToSpeechPipeline()
 grammarPipeline = pipeline.GrammarPipeline(question_bot)
+tinderPipeline = pipeline.TinderPipelinePipelineInterface(question_bot)
 
 @app.route('/incoming', methods=['POST'])
 def return_response():
@@ -54,7 +55,8 @@ def return_response():
                          articleSummaryPipeline,
                          imagePipeline,
                          ttsPipeline,
-                         grammarPipeline]
+                         grammarPipeline,
+                         tinderPipeline]
 
             for pipe in pipelines:
                 if pipe.matches(whatsapp, message):
