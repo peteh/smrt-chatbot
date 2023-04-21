@@ -42,7 +42,6 @@ class PipelineInterface(ABC):
 
 class PipelineHelper():
     """Helper functions for pipelines"""
-    
     @staticmethod
     def extract_command(data: str):
         """Extracts commands from a text"""
@@ -106,7 +105,8 @@ class GrammarPipeline(PipelineInterface):
             or self.GRAMMATIK_COMMAND in command
 
     def process(self, messenger: MessengerInterface, message: dict):
-        (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+        (command, _, text) = PipelineHelper.extract_command_full(
+            messenger.get_message_text(message))
         message_text = messenger.get_message_text(message)
         if self.GRAMMAR_COMMAND in command:
             text = message_text[len(self.GRAMMAR_COMMAND)+1:]
@@ -372,43 +372,41 @@ class ArticleSummaryPipeline(PipelineInterface):
 
 class ImagePromptPipeline(PipelineInterface):
     """Pipe to turn prompts into images. """
-    IMAGE_COMMAND = "#image"
+    IMAGE_COMMAND = "image"
 
     def __init__(self, image_api: texttoimage.ImagePromptInterface):
         self._image_api = image_api
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        message_text = messenger.get_message_text(message)
-        return message_text.startswith(self.IMAGE_COMMAND)
+        command = PipelineHelper.extract_command(messenger.get_message_text(message))
+        return self.IMAGE_COMMAND in command
 
     def process(self, messenger: MessengerInterface, message: dict):
-        message_text = messenger.get_message_text(message)
-        if message_text.startswith(self.IMAGE_COMMAND):
-            messenger.mark_in_progress_0(message)
-            try:
-                prompt = message_text[len(self.IMAGE_COMMAND)+1:]
-                images = self._image_api.process(prompt)
-                if images is None:
-                    messenger.mark_in_progress_fail(message)
-                    return
-
-                for image in images:
-                    (file_name, binary) = image
-                    if messenger.is_group_message(message):
-                        messenger.send_image_to_group(message, file_name, binary, prompt)
-                    else:
-                        messenger.send_image_to_individual(message, file_name, binary, prompt)
-            except Exception as ex:
-                logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
+        (_, _, prompt) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+        messenger.mark_in_progress_0(message)
+        try:
+            images = self._image_api.process(prompt)
+            if images is None:
                 messenger.mark_in_progress_fail(message)
                 return
 
-            messenger.mark_in_progress_done(message)
+            for image in images:
+                (file_name, binary) = image
+                if messenger.is_group_message(message):
+                    messenger.send_image_to_group(message, file_name, binary, prompt)
+                else:
+                    messenger.send_image_to_individual(message, file_name, binary, prompt)
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
+            messenger.mark_in_progress_fail(message)
+            return
+
+        messenger.mark_in_progress_done(message)
 
 
 class TextToSpeechPipeline(PipelineInterface):
     """Pipe to generate a voice messages based on input text. """
-    TTS_COMMAND = "#tts"
+    TTS_COMMAND = "tts"
 
     def __init__(self):
         self._tts = None
@@ -433,22 +431,20 @@ class TextToSpeechPipeline(PipelineInterface):
         return ogg_data
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        message_text = messenger.get_message_text(message)
-        return message_text.startswith(self.TTS_COMMAND)
+        command = PipelineHelper.extract_command(messenger.get_message_text(message))
+        return self.TTS_COMMAND in command
 
     def process(self, messenger: MessengerInterface, message: dict):
-        message_text = messenger.get_message_text(message)
-        if message_text.startswith(self.TTS_COMMAND):
-            messenger.mark_in_progress_0(message)
-            text = message_text[len(self.TTS_COMMAND)+1:]
-            audio_data = self._text_to_vorbis_audio(text)
+        (_, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+        messenger.mark_in_progress_0(message)
+        audio_data = self._text_to_vorbis_audio(text)
 
-            if messenger.is_group_message(message):
-                messenger.send_audio_to_group(message, audio_data)
-            else:
-                messenger.send_audio_to_individual(message, audio_data)
+        if messenger.is_group_message(message):
+            messenger.send_audio_to_group(message, audio_data)
+        else:
+            messenger.send_audio_to_individual(message, audio_data)
 
-            messenger.mark_in_progress_done(message)
+        messenger.mark_in_progress_done(message)
 
 class TinderPipelinePipelineInterface(PipelineInterface):
     """A pipeline to write answers to tinder messages. """
