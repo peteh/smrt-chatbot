@@ -140,7 +140,7 @@ class VoiceMessagePipeline(PipelineInterface):
             if messenger.is_group_message(message):
                 messenger.send_message_to_group(message, f"Summary: \n{summary_text}")
             else:
-                messenger.send_message_to_individual(message, f"Summary: \n%s{summary_text}")
+                messenger.send_message_to_individual(message, f"Summary: \n{summary_text}")
         messenger.mark_in_progress_done(message)
         debug_text = "Debug: \n"
         for debug_key, debug_value in debug.items():
