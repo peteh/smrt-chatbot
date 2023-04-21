@@ -40,31 +40,82 @@ class PipelineInterface(ABC):
     def process(self, messenger: MessengerInterface, message: dict):
         """Processes a message by the pipeline. """
 
+class PipelineHelper():
+    """Helper functions for pipelines"""
+    
+    @staticmethod
+    def extract_command(data: str):
+        """Extracts commands from a text"""
+        left_over = data.strip()
+        if not left_over.startswith("#"):
+            return None
+        length = 0
+        for i in range(1, len(left_over)):
+            if left_over[i].isalpha():
+                length += 1
+            else:
+                break
+        if length == 0:
+            return None
+        command = left_over[1:1 + length]
+        return command
+
+    @staticmethod
+    def extract_command_full(data: str) -> List[str]:
+        """Extracts commands from a text"""
+        left_over = data.strip()
+        if not left_over.startswith("#"):
+            return None
+        length = 0
+        for i in range(1, len(left_over)):
+            if left_over[i].isalpha():
+                length += 1
+            else:
+                break
+        if length == 0:
+            return None
+        command = left_over[1:1 + length]
+        left_over = left_over[1 + length:]
+
+        params = ""
+        if len(left_over) > 0 and left_over[0] == "(":
+            end_parentesis = left_over.find(")")
+            if end_parentesis == -1:
+                return None
+            params = left_over[1:end_parentesis]
+            left_over = left_over[end_parentesis+1:]
+
+        left_over = left_over.strip()
+        return (command, params, left_over)
+
+
 class GrammarPipeline(PipelineInterface):
     """A pipeline that checks incoming messages for grammar 
     and spelling mistakes and fixes them. """
 
-    GRAMMAR_COMMAND = "#grammar"
-    GRAMMATIK_COMMAND = "#grammatik"
+    GRAMMAR_COMMAND = "grammar"
+    GRAMMATIK_COMMAND = "grammatik"
 
     def __init__(self, question_bot: QuestionBotInterface) -> None:
         super().__init__()
         self._question_bot = question_bot
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        return messenger.get_message_text(message).startswith(self.GRAMMAR_COMMAND) \
-            or messenger.get_message_text(message).startswith(self.GRAMMATIK_COMMAND)
+        command = PipelineHelper.extract_command(messenger.get_message_text(message))
+        return self.GRAMMAR_COMMAND in command\
+            or self.GRAMMATIK_COMMAND in command
 
     def process(self, messenger: MessengerInterface, message: dict):
+        (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
         message_text = messenger.get_message_text(message)
-        if message_text.startswith(self.GRAMMAR_COMMAND):
+        if self.GRAMMAR_COMMAND in command:
             text = message_text[len(self.GRAMMAR_COMMAND)+1:]
             prompt = f"Enhance the quality of the text below. Grammar, punctuation, spelling, \
         word choice and style should be examined in detail. Additionally, the style and \
         tone must be improved to ensure the writing is polished, error-free, and \
         easy to read: \n\n{text}"
 
-        elif message_text.startswith(self.GRAMMATIK_COMMAND):
+        elif self.GRAMMATIK_COMMAND in command:
             text = message_text[len(self.GRAMMATIK_COMMAND)+1:]
             prompt = f"Verbessere die Qualität des folgenden Textes. Grammatik, Interpunktion, \
         Rechtschreibung, Wortwahl und Stil soll besonders beachtet werden. Außerdem soll Stil und Ton so verbessert werden, \
