@@ -25,28 +25,28 @@ bots = [
         questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         ]
 
-questionBot = questionbot.FallbackQuestionbot(bots)
+question_bot = questionbot.FallbackQuestionbot(bots)
 
-summarizer = summary.QuestionBotSummary(questionBot)
+summarizer = summary.QuestionBotSummary(question_bot)
 voicePipeline = pipeline.VoiceMessagePipeline(transcriber, summarizer, CONFIG_MIN_WORDS_FOR_SUMMARY)
-groupMessagePipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, questionBot)
+groupMessagePipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
 articleSummaryPipeline = pipeline.ArticleSummaryPipeline(summarizer)
 
-processors = [texttoimage.BingImageProcessor(), 
-              texttoimage.StableDiffusionAIOrg(), 
+processors = [texttoimage.BingImageProcessor(),
+              texttoimage.StableDiffusionAIOrg(),
               texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
-imageAPI = texttoimage.FallbackTextToImageProcessor(processors)
+image_api = texttoimage.FallbackTextToImageProcessor(processors)
 
-imagePipeline = pipeline.ImagePromptPipeline(imageAPI)
+imagePipeline = pipeline.ImagePromptPipeline(image_api)
 ttsPipeline = pipeline.TextToSpeechPipeline()
-grammarPipeline = pipeline.GrammarPipeline(questionBot)
+grammarPipeline = pipeline.GrammarPipeline(question_bot)
 
 @app.route('/incoming', methods=['POST'])
 def return_response():
     """Handles new incoming messages from wpp-server"""
     message = request.json
     print(json.dumps(message, indent=4))
-    
+
     if 'event' in message:
         if message['event'] == "onmessage":
             pipelines = [voicePipeline,
@@ -55,7 +55,7 @@ def return_response():
                          imagePipeline,
                          ttsPipeline,
                          grammarPipeline]
-            
+
             for pipe in pipelines:
                 if pipe.matches(whatsapp, message):
                     pipe.process(whatsapp, message) 

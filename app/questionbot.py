@@ -1,11 +1,17 @@
 """Question bot implementations. """
 import logging
 from abc import ABC, abstractmethod
+from typing import List
+
+# bing gpt standard imports
+import re
 
 import asyncio
 import EdgeGPT
 import revChatGPT.V1
 
+# openai api questionbot
+import openai
 
 class QuestionBotInterface(ABC):
     """Interface for question bots"""
@@ -14,7 +20,7 @@ class QuestionBotInterface(ABC):
     def answer(self, prompt: str) -> dict:
         """Returns an answer to a prompt based on the underlying bots response"""
 
-import openai
+
 class QuestionBotOpenAIAPI(QuestionBotInterface):
     """Question bot based on Open AI's offical api. """
     def __init__(self, api_key) -> None:
@@ -34,7 +40,6 @@ class QuestionBotOpenAIAPI(QuestionBotInterface):
             'cost': cost
         }
 
-import re
 class QuestionBotBingGPT(QuestionBotInterface):
     """Question bot based on Microsoft's Bing search engine chat feature"""
 
@@ -44,13 +49,13 @@ class QuestionBotBingGPT(QuestionBotInterface):
     async def _answer(self, prompt):
         bot = EdgeGPT.Chatbot(cookie_path=self._cooke_path)
         try:
-            response = await bot.ask(prompt=prompt, 
+            response = await bot.ask(prompt=prompt,
                                      conversation_style=EdgeGPT.ConversationStyle.creative,
                                      wss_link="wss://sydney.bing.com/sydney/ChatHub")
             #print(json.dumps(response, indent = 4))
             text = response['item']['messages'][1]['text']
             first_sentence = text[:text.find(".")+1:]
-            text = re.sub("\[\^[0-9]+\^\]", "", text)
+            text = re.sub(r"\[\^[0-9]+\^\]", "", text)
             if "Bing" in first_sentence:
                 # we dropt the first sentence because is Bing introducing itself
                 text = text[text.find(".")+1:]
@@ -97,12 +102,11 @@ class QuestionBotRevChatGPT(QuestionBotInterface):
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
             return None
 
-import typing
 class FallbackQuestionbot(QuestionBotInterface):
     """A question bot implementation that tries multiple question bots 
     until one of them succeeds. """
 
-    def __init__(self, bots: typing.List[QuestionBotInterface]) -> None:
+    def __init__(self, bots: List[QuestionBotInterface]) -> None:
         super().__init__()
         self._bots = bots
 
@@ -114,7 +118,8 @@ class FallbackQuestionbot(QuestionBotInterface):
                 answer = bot.answer(prompt)
                 if answer is not None:
                     if count > 1:
-                        answer['text'] += " (%d/%d)" % (count, len(self._bots))
+                        num_question_bots = len(self._bots)
+                        answer['text'] += f" ({count}/{num_question_bots})"
                     return answer
             except Exception as ex:
                 logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level

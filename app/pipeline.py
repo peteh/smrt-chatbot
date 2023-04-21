@@ -1,91 +1,112 @@
+"""Implemenations of different pipelines to process messages. """
+import time
+import logging
+import re
+from typing import List
+
 from abc import ABC, abstractmethod
+
+
+# text to speech pipeline standard imports
+import tempfile
+import os
+import subprocess
+
 from summary import SummaryInterface
 from transcript import TranscriptInterface
 from messenger import MessengerInterface
 from questionbot import QuestionBotInterface
 import texttoimage
-import logging
+
+
 
 # article summary pipeline
-import re
 import trafilatura
-
 from db import Database
+import youtubeextract
 
-import time
+# text to speech pipeline
+from TTS.api import TTS
+
 
 class PipelineInterface(ABC):
+    """Generic pipeline interface to process messages. """
+
     @abstractmethod
     def matches(self, messenger: MessengerInterface, message: dict):
-        pass
+        """Should return true if the message should be processed by the pipeline. """
 
-    @abstractmethod 
+    @abstractmethod
     def process(self, messenger: MessengerInterface, message: dict):
-        pass
+        """Processes a message by the pipeline. """
 
 class GrammarPipeline(PipelineInterface):
+    """A pipeline that checks incoming messages for grammar 
+    and spelling mistakes and fixes them. """
+
     GRAMMAR_COMMAND = "#grammar"
     GRAMMATIK_COMMAND = "#grammatik"
 
-    def __init__(self, questionBot: QuestionBotInterface) -> None:
+    def __init__(self, question_bot: QuestionBotInterface) -> None:
         super().__init__()
-        self._questionBot = questionBot
-    
+        self._question_bot = question_bot
+
     def matches(self, messenger: MessengerInterface, message: dict):
         return messenger.get_message_text(message).startswith(self.GRAMMAR_COMMAND) \
             or messenger.get_message_text(message).startswith(self.GRAMMATIK_COMMAND)
-    
+
     def process(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.get_message_text(message)
-        if messageText.startswith(self.GRAMMAR_COMMAND):
-            text = messageText[len(self.GRAMMAR_COMMAND)+1:]
-            prompt = "Enhance the quality of the text below. Grammar, punctuation, spelling, \
+        message_text = messenger.get_message_text(message)
+        if message_text.startswith(self.GRAMMAR_COMMAND):
+            text = message_text[len(self.GRAMMAR_COMMAND)+1:]
+            prompt = f"Enhance the quality of the text below. Grammar, punctuation, spelling, \
         word choice and style should be examined in detail. Additionally, the style and \
         tone must be improved to ensure the writing is polished, error-free, and \
-        easy to read: \n%s" % (text)
-            
-        elif messageText.startswith(self.GRAMMATIK_COMMAND):
-            text = messageText[len(self.GRAMMATIK_COMMAND)+1:]
-            prompt = "Verbessere die Qualität des folgenden Textes. Grammatik, Interpunktion, Rechtschreibung, \
-        Wortwahl und Stil soll besonders beachtet werden. Außerdem soll Stil und Ton so verbessert werden, \
-        dass einen eleganter, fehlerfreier und einfach zu lesender Text entsteht: \n%s" % (text)
+        easy to read: \n\n{text}"
+
+        elif message_text.startswith(self.GRAMMATIK_COMMAND):
+            text = message_text[len(self.GRAMMATIK_COMMAND)+1:]
+            prompt = f"Verbessere die Qualität des folgenden Textes. Grammatik, Interpunktion, \
+        Rechtschreibung, Wortwahl und Stil soll besonders beachtet werden. Außerdem soll Stil und Ton so verbessert werden, \
+        dass einen eleganter, fehlerfreier und einfach zu lesender Text entsteht: \n\n{text}"
         else:
             # skip
             return
-        
+
         messenger.mark_in_progress_0(message)
-        answer = self._questionBot.answer(prompt)
+        answer = self._question_bot.answer(prompt)
         if answer is None:
             messenger.mark_in_progress_fail(message)
             return
-        answerText = answer['text']
+        answer_text = answer['text']
         if messenger.is_group_message(message):
-            messenger.message_to_group(message, answerText)
+            messenger.send_message_to_group(message, answer_text)
         else:
-            messenger.message_to_individual(message, answerText)
+            messenger.send_message_to_individual(message, answer_text)
         messenger.mark_in_progress_done(message)
-        
 
-        
 
 class VoiceMessagePipeline(PipelineInterface):
-    def __init__(self, transcriber: TranscriptInterface, summarizer: SummaryInterface, minWordsForSummary: int):
+    """A pipe that converts audio messages to text and summarizes them. """
+    def __init__(self, transcriber: TranscriptInterface,
+                 summarizer: SummaryInterface,
+                 min_words_for_summary: int):
         self._transcriber = transcriber
         self._summarizer = summarizer
-        self._minWordsForSummary = minWordsForSummary
-        self._storeFiles = False
-        
+        self._min_words_for_summary = min_words_for_summary
+        self._store_files = False
+
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        return messenger.hasAudioData(message)
-    
+        return messenger.has_audio_data(message)
+
     def process(self, messenger: MessengerInterface, message: dict):
         print("Processing in Voice Pipeline")
         debug = {}
         messenger.mark_in_progress_0(message)
-        
-        mimeType, decoded = messenger.downloadMedia(message)
-        if self._storeFiles:
+
+        (_, decoded) = messenger.download_media(message)
+        if self._store_files:
             with open('out.opus', 'wb') as output_file:
                 output_file.write(decoded)
 
@@ -93,277 +114,287 @@ class VoiceMessagePipeline(PipelineInterface):
         transcript = self._transcriber.transcribe(decoded)
         end = time.time()
         debug['transcript_time'] = end - start
-        
-        transcriptText = transcript['text']
+
+        transcript_text = transcript['text']
         words = transcript['words']
         language = transcript['language']
         if messenger.is_group_message(message):
-            messenger.message_to_group(message, "Transcribed: \n%s" % (transcriptText))
+            messenger.send_message_to_group(message, f"Transcribed: \n{transcript_text}")
         else:
-            messenger.message_to_individual(message, "Transcribed: \n%s" % (transcriptText))
-        
+            messenger.send_message_to_individual(message, f"Transcribed: \n{transcript_text}")
+
         debug['transcript_language'] = language
         debug['transcript_language_probability'] = transcript['language_probability']
         debug['transcript_words'] = transcript['words']
         debug['transcript_cost'] = transcript['cost']
-        if words > self._minWordsForSummary:
+        if words > self._min_words_for_summary:
             messenger.mark_in_progress_50(message)
 
             start = time.time()
-            summary = self._summarizer.summarize(transcriptText, language)
+            summary = self._summarizer.summarize(transcript_text, language)
             end = time.time()
             debug['summary_time'] = end - start
 
-            summaryText = summary['text']
+            summary_text = summary['text']
             debug['summary_cost'] = summary['cost']
             if messenger.is_group_message(message):
-                messenger.message_to_group(message, "Summary: \n%s" % (summaryText))
+                messenger.send_message_to_group(message, f"Summary: \n{summary_text}")
             else:
-                messenger.message_to_individual(message, "Summary: \n%s" % (summaryText))
+                messenger.send_message_to_individual(message, f"Summary: \n%s{summary_text}")
         messenger.mark_in_progress_done(message)
-        debugText = "Debug: \n"
-        for debugKey, debugValue in debug.items():
-            debugText += debugKey + ": " + str(debugValue) + "\n"
-        debugText = debugText.strip()
+        debug_text = "Debug: \n"
+        for debug_key, debug_value in debug.items():
+            debug_text += debug_key + ": " + str(debug_value) + "\n"
+        debug_text = debug_text.strip()
         if messenger.is_group_message(message):
-            messenger.message_to_group(message, debugText)
+            messenger.send_message_to_group(message, debug_text)
         else:
-            messenger.message_to_individual(message, debugText)
+            messenger.send_message_to_individual(message, debug_text)
 
 
 # TODO split into message storage pipeline and command pipeline
 class GroupMessageQuestionPipeline(PipelineInterface):
+    """Allows to summarize and ask questions in a group conversation. """
     QUESTION_COMMAND = "#question"
     SUMMARY_COMMAND = "#summary"
-    
-    def __init__(self, db: Database, summarizer: SummaryInterface, questionBot: QuestionBotInterface, ):
-        self._db = db
+
+    def __init__(self, database: Database,
+                 summarizer: SummaryInterface,
+                 question_bot: QuestionBotInterface):
+        self._database = database
         self._summarizer = summarizer
-        self._questionBot = questionBot
+        self._question_bot = question_bot
 
     def matches(self, messenger: MessengerInterface, message: dict):
         # TODO: abstract chat type
         return messenger.is_group_message(message) and message['type']=='chat'
 
-    def _getChatText(self, identifier, maxMessageCount):
-        chatText = ""
-        rows = self._db.getGroupMessages(identifier, maxMessageCount)
-        actualMessageCount = 0
+    def _get_chat_text(self, identifier, max_message_count):
+        chat_text = ""
+        rows = self._database.get_group_messages(identifier, max_message_count)
+        actual_message_count = 0
         for row in rows:
-            chatText += "%s: %s\n" % (row['sender'], row['message'])
-            actualMessageCount += 1
-        return (chatText, actualMessageCount)
-    
+            chat_text += f"{row['sender']}: {row['message']}\n"
+            actual_message_count += 1
+        return (chat_text, actual_message_count)
+
+    def _process_question_command(self, messenger: MessengerInterface, message: dict):
+        message_text = messenger.get_message_text(message)
+        messenger.mark_in_progress_0(message)
+        question = message_text[len(self.QUESTION_COMMAND)+1:]
+        print(f"Question: {question}")
+        # TODO: make number configurable
+        (chat_text, _) = self._get_chat_text(message['chatId'], 100)
+        print(chat_text)
+        prompt = f"Der folgende Text beinhaltet eine Konversation mehrere Individuen, \
+            beantworte folgende Frage zu dieser Konversation: {question}\n\nText:\n{chat_text}"
+        answer = self._question_bot.answer(prompt)
+        answer_text = answer['text']
+        print(f"Answer: {answer_text}")
+        messenger.send_message_to_group(message, answer_text)
+        messenger.mark_in_progress_done(message)
+
+    def _process_summary_command(self, messenger: MessengerInterface, message: dict):
+        debug = {}
+        message_text = messenger.get_message_text(message)
+        messenger.mark_in_progress_0(message)
+        # TODO: put to configuration
+        max_message_count = 20
+        command = message_text.split(" ")
+        if len(command) > 1:
+            max_message_count = int(command[1])
+
+        (chat_text, actual_message_count) = self._get_chat_text(message['chatId'],
+                                                                max_message_count)
+
+        start = time.time()
+        summary = self._summarizer.summarize(chat_text, 'de')
+        end = time.time()
+
+        debug['summmary_input'] = chat_text
+        debug['summmary_maxMessages'] = max_message_count
+        debug['summmary_actualMessages'] = actual_message_count
+        debug['summary_time'] = end - start
+        debug['summary_cost'] = summary['cost']
+
+        summary_text = f"Summary (last {actual_message_count} messages)\n{summary['text']}"
+        messenger.send_message_to_group(message, summary_text)
+        messenger.mark_in_progress_done(message)
+        debug_text = "Debug: \n"
+        for debug_key, debug_value in debug.items():
+            debug_text += debug_key + ": " + str(debug_value) + "\n"
+        debug_text = debug_text.strip()
+        messenger.send_message_to_group(message, debug_text)
+
     def process(self, messenger: MessengerInterface, message: dict):
         # TODO: abstract this
-        pushName = message['sender']['pushname']
-        messageText = message['content']
+        push_name = message['sender']['pushname']
+        message_text = messenger.get_message_text(message)
 
-        
-        if messageText.startswith(self.QUESTION_COMMAND):
-            messenger.mark_in_progress_0(message)
-            question = messageText[len(self.QUESTION_COMMAND)+1:]
-            print("Question: %s" % (question))
-            # TODO: make number configurable
-            chatText, actualMessageCount = self._getChatText(message['chatId'], 100)
-            print(chatText)
-            prompt = "Der folgende Text beinhaltet eine Konversation mehrere Individuen: \n%s\n\n Beantworte folgende Frage zu dieser Konversation: %s" % (chatText, question)
-            answer = self._questionBot.answer(prompt)
-            answerText = answer['text']
-            print("Answer: %s" % (answerText))
-            messenger.message_to_group(message, answerText)
-            messenger.mark_in_progress_done(message)
+        if message_text.startswith(self.QUESTION_COMMAND):
+            self._process_question_command(messenger, message)
 
-        if messageText.startswith(self.SUMMARY_COMMAND):
-            debug = {}
-            messenger.mark_in_progress_0(message)
-            # TODO: put to configuration
-            maxMessageCount = 20
-            command = messageText.split(" ")
-            if len(command) > 1:
-                maxMessageCount = int(command[1])
-
-            chatText, actualMessageCount = self._getChatText(message['chatId'], maxMessageCount)
-
-            start = time.time()
-            summary = self._summarizer.summarize(chatText, 'de')
-            end = time.time()
-
-            debug['summmary_input'] = chatText
-            debug['summmary_maxMessages'] = maxMessageCount
-            debug['summmary_actualMessages'] = actualMessageCount
-            debug['summary_time'] = end - start
-            debug['summary_cost'] = summary['cost']
-
-            summaryText = "Summary (last %d messages)\n%s" % (actualMessageCount, summary['text'])
-            messenger.message_to_group(message, summaryText)
-            messenger.mark_in_progress_done(message)
-            debugText = "Debug: \n"
-            for debugKey, debugValue in debug.items():
-                debugText += debugKey + ": " + str(debugValue) + "\n"
-            debugText = debugText.strip()
-            messenger.message_to_group(message, debugText)
+        elif message_text.startswith(self.SUMMARY_COMMAND):
+            self._process_summary_command(messenger, message)
         else:
             # TODO: filter messages with command
-            self._db.addGroupMessage(message['chatId'], pushName, messageText)
-            
+            self._database.add_group_message(message['chatId'], push_name, message_text)
 
-import youtubeextract
+
 class ArticleSummaryPipeline(PipelineInterface):
+    """Summarizes an article or a youtube video. """
+
     MAX_TRANSCRIPT_LENGTH = 20000
 
     def __init__(self, summarizer: SummaryInterface):
         self._summarizer = summarizer
-        self._linkRegex = re.compile('((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', re.DOTALL)
+        self._link_regex = re.compile('((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)',
+                                      re.DOTALL)
         self._language = "en"
 
-    def _extractUrl(self, text: str):
+    def _extract_urls(self, text: str) -> List[str]:
         links = []
-        for extract in re.findall(self._linkRegex, text):
+        for extract in re.findall(self._link_regex, text):
             links.append(extract[0])
         return links
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.get_message_text(message)
-        links = self._extractUrl(messageText)
+        message_text = messenger.get_message_text(message)
+        links = self._extract_urls(message_text)
         return len(links) > 0
-    
-    def _processArticle(self, link: str):
+
+    def _process_article(self, link: str):
         config = trafilatura.settings.use_config()
         config.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
 
         downloaded = trafilatura.fetch_url(link)
-        if downloaded is None: 
+        if downloaded is None:
             print("Failed to retrieve article, skipping")
             return ""
 
         # extract information from HTML
-        extractedText = trafilatura.extract(downloaded, config=config)
-        summarizedText = self._summarizer.summarize(extractedText, self._language)['text']
+        extracted_text = trafilatura.extract(downloaded, config=config)
+        summarized_text = self._summarizer.summarize(extracted_text, self._language)['text']
         print("==EXTRACTED==")
-        print(extractedText)
+        print(extracted_text)
         print("==SUMMARY==")
-        print(summarizedText)
-        return summarizedText
-    
-    
-    
-    def _processYoutube(self, link):
+        print(summarized_text)
+        return summarized_text
+
+    def _process_youtube(self, link):
         processor = youtubeextract.YoutubeExtract(link)
         text = processor.getScript()
-        print("Length of youtube transcript: %d" % (len(text)))
+        text_length = len(text)
+        print(f"Length of youtube transcript: {text_length}")
         # reducing to the last 10k letters to limit input for summary
         # TODO: maybe do in parts...
         if len(text) > self.MAX_TRANSCRIPT_LENGTH:
-            print("Transcript exceeding %d letters, reducing..." % (self.MAX_TRANSCRIPT_LENGTH))
+            print(f"Transcript exceeding {self.MAX_TRANSCRIPT_LENGTH} letters, reducing...")
         text = text[-self.MAX_TRANSCRIPT_LENGTH:]
-        summarizedText = self._summarizer.summarize(text, self._language)['text']
-        return summarizedText
+        summarized_text = self._summarizer.summarize(text, self._language)['text']
+        return summarized_text
 
     def process(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.get_message_text(message)
+        message_text = messenger.get_message_text(message)
         messenger.mark_in_progress_0(message)
-        links = self._extractUrl(messageText)
-        totalSummary = ""
-        
+        links = self._extract_urls(message_text)
+        total_summary = ""
+
         try:
             for link in links:
                 if youtubeextract.YoutubeExtract.isYoutubeLink(link):
-                    summarizedText = self._processYoutube(link)
+                    summarized_text = self._process_youtube(link)
                 else:
-                    summarizedText = self._processArticle(link)
-                summaryPart = "%s: \n%s\n" % (link, summarizedText)
-                totalSummary += summaryPart
-        except Exception as e:
-                logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
-                messenger.mark_in_progress_fail(message)
-                return
+                    summarized_text = self._process_article(link)
+                summary_part = f"{link}: \n{summarized_text}\n"
+                total_summary += summary_part
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
+            messenger.mark_in_progress_fail(message)
+            return
         if messenger.is_group_message(message):
-            messenger.message_to_group(message, totalSummary)
+            messenger.send_message_to_group(message, total_summary)
         else:
-            messenger.message_to_individual(message, totalSummary)
+            messenger.send_message_to_individual(message, total_summary)
         messenger.mark_in_progress_done(message)
 
 
 class ImagePromptPipeline(PipelineInterface):
+    """Pipe to turn prompts into images. """
     IMAGE_COMMAND = "#image"
 
-    def __init__(self, imageAPI: texttoimage.ImagePromptInterface):
-        self._imageAPI = imageAPI
+    def __init__(self, image_api: texttoimage.ImagePromptInterface):
+        self._image_api = image_api
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.get_message_text(message)
-        return messageText.startswith(self.IMAGE_COMMAND)
-    
+        message_text = messenger.get_message_text(message)
+        return message_text.startswith(self.IMAGE_COMMAND)
+
     def process(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.get_message_text(message)
-        if messageText.startswith(self.IMAGE_COMMAND):
+        message_text = messenger.get_message_text(message)
+        if message_text.startswith(self.IMAGE_COMMAND):
             messenger.mark_in_progress_0(message)
             try:
-                prompt = messageText[len(self.IMAGE_COMMAND)+1:]
-                images = self._imageAPI.process(prompt)
+                prompt = message_text[len(self.IMAGE_COMMAND)+1:]
+                images = self._image_api.process(prompt)
                 if images is None:
                     messenger.mark_in_progress_fail(message)
                     return
 
                 for image in images:
-                    fileName, binary = image
+                    (file_name, binary) = image
                     if messenger.is_group_message(message):
-                        messenger.imageToGroup(message, fileName, binary, prompt)
+                        messenger.send_image_to_group(message, file_name, binary, prompt)
                     else:
-                        messenger.imageToIndividual(message, fileName, binary, prompt)
-            except Exception as e:
-                logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
+                        messenger.send_image_to_individual(message, file_name, binary, prompt)
+            except Exception as ex:
+                logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
                 messenger.mark_in_progress_fail(message)
                 return
 
             messenger.mark_in_progress_done(message)
 
 
-from TTS.api import TTS
-import tempfile
-import os
-import subprocess
 class TextToSpeechPipeline(PipelineInterface):
-
+    """Pipe to generate a voice messages based on input text. """
     TTS_COMMAND = "#tts"
 
     def __init__(self):
         self._tts = None
 
-    def _getTTS(self):
+    def _get_tts(self):
         # lazy loading
         if self._tts is None:
             self._tts = TTS("tts_models/de/thorsten/tacotron2-DDC")
         return self._tts
 
-    def _textToVorbisAudio(self, text: str):
-        tts = self._getTTS()
+    def _text_to_vorbis_audio(self, text: str):
+        tts = self._get_tts()
         with tempfile.TemporaryDirectory() as tmp:
-            inputFile = os.path.join(tmp, 'input.wav')
-            tts.tts_to_file(text=text, file_path=inputFile)
-            outputFile = os.path.join(tmp, 'output.opus')
-            
-            subprocess.run(["opusenc", inputFile, outputFile]) 
-            file = open(outputFile,mode='rb')
-            oggData = file.read()
+            input_file = os.path.join(tmp, 'input.wav')
+            tts.tts_to_file(text=text, file_path=input_file)
+            output_file = os.path.join(tmp, 'output.opus')
+
+            subprocess.run(["opusenc", input_file, output_file], check=True)
+            file = open(output_file,mode='rb')
+            ogg_data = file.read()
             file.close()
-        return oggData
-    
+        return ogg_data
+
     def matches(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.get_message_text(message)
-        return messageText.startswith(self.TTS_COMMAND)
-    
+        message_text = messenger.get_message_text(message)
+        return message_text.startswith(self.TTS_COMMAND)
+
     def process(self, messenger: MessengerInterface, message: dict):
-        messageText = messenger.get_message_text(message)
-        if messageText.startswith(self.TTS_COMMAND):
+        message_text = messenger.get_message_text(message)
+        if message_text.startswith(self.TTS_COMMAND):
             messenger.mark_in_progress_0(message)
-            text = messageText[len(self.TTS_COMMAND)+1:]
-            audioData = self._textToVorbisAudio(text)
-            
+            text = message_text[len(self.TTS_COMMAND)+1:]
+            audio_data = self._text_to_vorbis_audio(text)
+
             if messenger.is_group_message(message):
-                messenger.audioToGroup(message, audioData)
+                messenger.send_audio_to_group(message, audio_data)
             else:
-                messenger.audioToIndividual(message, audioData)
+                messenger.send_audio_to_individual(message, audio_data)
 
             messenger.mark_in_progress_done(message)

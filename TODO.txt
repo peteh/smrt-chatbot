@@ -6,3 +6,4 @@ proper error handling for all processing steps with exceptions
 Fix model storage in docker container
 Fix database storage by making it configurable maybe? 
 Switch to new wppconnect version
+Add language detection to language sensitive commands

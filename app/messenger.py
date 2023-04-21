@@ -1,5 +1,6 @@
 """Messenger implementations for various messengers like Whatsapp. """
 from abc import ABC, abstractmethod
+from typing import Tuple
 import base64
 import requests
 
@@ -27,11 +28,11 @@ class MessengerInterface(ABC):
         """Checks if a message is a group message"""
 
     @abstractmethod
-    def message_to_group(self, group_message: dict, text: str):
+    def send_message_to_group(self, group_message: dict, text: str):
         """Sends a message to the group of the original message. """
 
     @abstractmethod
-    def message_to_individual(self, message: dict, text: str):
+    def send_message_to_individual(self, message: dict, text: str):
         """Sends a message to the sender the given message. """
 
     @abstractmethod
@@ -39,36 +40,45 @@ class MessengerInterface(ABC):
         """Deletes a message from the server"""
 
     @abstractmethod
-    def hasAudioData(self, message: dict):
-        pass
+    def has_audio_data(self, message: dict):
+        """Returns true if the message is an audio message. """
 
     @abstractmethod
-    def is_asking_bot(self, message: dict):
-        pass
+    def is_bot_mentioned(self, message: dict):
+        """Returns true if the bot is mentioned in the message. """
 
     @abstractmethod
     def get_message_text(self, message: dict) -> str:
-        pass
-    
-    @abstractmethod
-    def imageToGroup(self, group_message, fileName, binaryData, caption = ""):
-        pass
+        """Returns the text of the given message. """
 
     @abstractmethod
-    def imageToIndividual(self, message, fileName, binaryData, caption = ""):
-        pass
+    def send_image_to_group(self, group_message: dict, file_name: str,
+                            binary_data: bytes, caption: str = ""):
+        """Sends an image to the group of the original message. """
 
     @abstractmethod
-    def audioToGroup(self, group_message, binaryData):
-        pass
-
-    @abstractmethod  
-    def audioToIndividual(self, message, binaryData):
-        pass
+    def send_image_to_individual(self, message, file_name, binary_data, caption = ""):
+        """Sends an image to the sender of the original message in a direct chat. """
 
     @abstractmethod
-    def downloadMedia(self, message):
-        pass
+    def send_audio_to_group(self, group_message, binary_data):
+        """Sends an audio message to the group of the original message. """
+
+    @abstractmethod
+    def send_audio_to_individual(self, message, binary_data):
+        """Sends an audio message to the sender of the original message in a direct chat. """
+
+    @abstractmethod
+    def download_media(self, message: dict) -> Tuple[str, bytes]:
+        """Downloads and returns the media from a given message in the 
+
+        Args:
+            message (dict): The original message to respond to
+
+        Returns:
+            Tuple[str, bytes]: mime type and binary data of the downloaded media
+        """
+
 
 class Whatsapp(MessengerInterface):
     """Messenger implemenation based on wpp-server whatsapp"""
@@ -77,40 +87,50 @@ class Whatsapp(MessengerInterface):
     REACT_CHECKMARK = "\u2714\ufe0f"
     REACT_FAIL = "\u274c"
 
+    DEFAULT_TIMEOUT = 60
+
     def __init__(self, server: str, session: str, api_key: str):
         self._server = server
         self._session = session
         self._api_key = api_key
-        self._headers = {"Authorization": "Bearer %s" % (self._api_key)}
+        self._headers = {"Authorization": f"Bearer {self._api_key}"}
+
+    def _endpoint_url(self, endpoint, endpoint_param = None) -> str:
+        if endpoint is not None:
+            return f"{self._server}/api/{self._session}/{endpoint}/{endpoint_param}"
+        return f"{self._server}/api/{self._session}/{endpoint}"
 
     def start_session(self):
         """Starts a session at wpp-connect server"""
-        url = "%s/api/%s/start-session" % (self._server, self._session)
         data = {
             #'web-hook': 'http://smrt:9000/incoming'
         }
-        response = requests.post(url, json=data, headers=self._headers)
+        response = requests.post(self._endpoint_url("start-session"),
+                                 json=data,
+                                 headers=self._headers,
+                                 timeout=self.DEFAULT_TIMEOUT)
         print(response.json())
 
     def _send_message(self, recipient: str, is_group, text: str):
-        url = "%s/api/%s/send-message" % (self._server, self._session)
-        print(url)
-        print(self._api_key)
         data = {
             "phone": recipient,
             "message": text,
             "isGroup": is_group
         }
-        response = requests.post(url, json=data, headers=self._headers)
-        print(response.json())
+        requests.post(self._endpoint_url("send-message"),
+                      json=data,
+                      headers=self._headers,
+                      timeout=self.DEFAULT_TIMEOUT)
 
-    def _react(self, messageId, reactionText):
-        url = "%s/api/%s/react-message" % (self._server, self._session)
+    def _react(self, message_id, reaction_text):
         data = {
-            "msgId": messageId,
-            "reaction": reactionText
+            "msgId": message_id,
+            "reaction": reaction_text
         }
-        response = requests.post(url, json=data, headers=self._headers)
+        requests.post(self._endpoint_url("react-message"),
+                      json=data,
+                      headers=self._headers,
+                      timeout=self.DEFAULT_TIMEOUT)
 
     def mark_in_progress_0(self, message: dict):
         self._react(message['id'], self.REACT_HOURGLASS_FULL)
@@ -127,26 +147,28 @@ class Whatsapp(MessengerInterface):
     def is_group_message(self, message: dict):
         return 'isGroupMsg' in message and message['isGroupMsg'] is True
 
-    def message_to_group(self, group_message: dict, text: str):
+    def send_message_to_group(self, group_message: dict, text: str):
         self._send_message(group_message['chatId'], True, text)
 
-    def message_to_individual(self, message: dict, text: str):
+    def send_message_to_individual(self, message: dict, text: str):
         self._send_message(message['sender']['id'], False, text)
 
     def delete_message(self, message: dict):
-        url = "%s/api/%s/delete-message" % (self._server, self._session)
         is_group = self.is_group_message(message)
-        recpipient = message['chatId'] if is_group else message['sender']['id'] 
+        recpipient = message['chatId'] if is_group else message['sender']['id']
         data = {
             "phone": recpipient,
             "messageId": message['id'],
             "isGroup": is_group
         }
-        response = requests.post(url, json=data, headers=self._headers)
+        response = requests.post(self._endpoint_url("delete-message"),
+                                 json=data,
+                                 headers=self._headers,
+                                 timeout=self.DEFAULT_TIMEOUT)
         print(response.json())
 
-    def _sendImage(self, recipient: str, is_group: bool, file_name: str, binary_data, caption: str):
-        url = "%s/api/%s/send-image" % (self._server, self._session)
+    def _send_image(self, recipient: str, is_group: bool,
+                    file_name: str, binary_data, caption: str):
         base64data = base64.b64encode(binary_data).decode('utf-8')
         if file_name.endswith('.webp'):
             data_type="image/webp"
@@ -155,41 +177,45 @@ class Whatsapp(MessengerInterface):
 
         data = {
             "phone": recipient,
-            "base64": "data:%s;base64,%s" % (data_type, base64data),
+            "base64": f"data:{data_type};base64,{base64data}",
             "filename": file_name,
             "message": caption,
             "isGroup": is_group, 
         }
-        response = requests.post(url, json=data, headers=self._headers)
+        requests.post(self._endpoint_url("send-image"),
+                      json=data,
+                      headers=self._headers,
+                      timeout=self.DEFAULT_TIMEOUT)
 
-    def imageToGroup(self, group_message, fileName, binaryData, caption = ""):
-        self._sendImage(group_message['chatId'], True, fileName, binaryData, caption)
+    def send_image_to_group(self, group_message, file_name, binary_data, caption = ""):
+        self._send_image(group_message['chatId'], True, file_name, binary_data, caption)
 
-    def imageToIndividual(self, message, fileName, binaryData, caption = ""):
-        self._sendImage(message['sender']['id'], False, fileName, binaryData, caption)
+    def send_image_to_individual(self, message, file_name, binary_data, caption = ""):
+        self._send_image(message['sender']['id'], False, file_name, binary_data, caption)
 
-    def audioToGroup(self, group_message, binaryData):
-        self._sendAudio(group_message['chatId'], True, binaryData)
+    def send_audio_to_group(self, group_message, binary_data):
+        self._send_audio(group_message['chatId'], True, binary_data)
 
-    def audioToIndividual(self, message, binaryData):
-        self._sendAudio(message['sender']['id'], False, binaryData)
+    def send_audio_to_individual(self, message, binary_data):
+        self._send_audio(message['sender']['id'], False, binary_data)
 
-    def _sendAudio(self, recipient: str, isGroup: bool, binaryData):
-        url = "%s/api/%s/send-voice-base64" % (self._server, self._session)
-        base64data = base64.b64encode(binaryData).decode('utf-8')
+    def _send_audio(self, recipient: str, is_group: bool, binary_data):
+        base64data = base64.b64encode(binary_data).decode('utf-8')
 
         data = {
             "phone": recipient,
-            "base64Ptt": "data:audio/ogg;base64,%s" % base64data,
-            "isGroup": isGroup, 
+            "base64Ptt": f"data:audio/ogg;base64,{base64data}",
+            "isGroup": is_group, 
         }
-        headers = {"Authorization": "Bearer %s" % (self._api_key)}
-        response = requests.post(url, json=data, headers=headers)
+        requests.post(self._endpoint_url("send-voice-base64"),
+                      json=data,
+                      headers=self._headers,
+                      timeout=self.DEFAULT_TIMEOUT)
 
-    def hasAudioData(self, message: dict):
+    def has_audio_data(self, message: dict):
         return 'mimetype' in message and message['mimetype'] == "audio/ogg; codecs=opus"
 
-    def is_asking_bot(self, message: dict):
+    def is_bot_mentioned(self, message: dict):
         # TODO: extract this somehow
         return 'mentionedJidList' in message \
             and len(message['mentionedJidList']) == 1 \
@@ -199,14 +225,14 @@ class Whatsapp(MessengerInterface):
         return message['content']
 
 
-    def downloadMedia(self, message):
+    def download_media(self, message):
         msg_id = message['id']
-        url = "%s/api/%s/get-media-by-message/%s" % (self._server, self._session, msg_id)
-        response = requests.get(url, headers=self._headers)
+        response = requests.get(self._endpoint_url("get-media-by-message", msg_id),
+                                headers=self._headers,
+                                timeout=self.DEFAULT_TIMEOUT)
 
-        jsonResponse = response.json()
-        data = jsonResponse['base64']        
+        json_response = response.json()
+        data = json_response['base64']
         decoded = base64.b64decode(data)
-        mimeType = jsonResponse['mimetype']
-
-        return (mimeType, decoded)
+        mime_type = json_response['mimetype']
+        return (mime_type, decoded)

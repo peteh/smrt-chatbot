@@ -1,14 +1,18 @@
+"""Tests for QuestionBots. """
 import unittest
 import questionbot
 from decouple import config
 
 class QuestionBotTest(unittest.TestCase):
-    def _testQuestionbot(self, questionBot: questionbot.QuestionBotInterface):
+    """Test Cases for Questionbots"""
+
+    def _test_questionbot(self, question_bot: questionbot.QuestionBotInterface):
         # arrange
-        prompt = "Tell me the meeting time in the format HH:mm from the following text by just stating the answer: We will meet at half past 3 in the afternoon. "
+        prompt = "Tell me the meeting time in the format HH:mm from the following text by just \
+            stating the answer: We will meet at half past 3 in the afternoon. "
 
         # act
-        answer = questionBot.answer(prompt)
+        answer = question_bot.answer(prompt)
 
         # assert
         self.assertIsNotNone(answer)
@@ -16,28 +20,38 @@ class QuestionBotTest(unittest.TestCase):
         self.assertIn("15:30", answer['text'])
         self.assertGreaterEqual(answer['cost'], 0)
 
-    def test_BingGPT(self):
-        questionBot = questionbot.QuestionBotBingGPT()
-        self._testQuestionbot(questionBot)
-    
-    def test_QuestionBotRevChatGPT(self):
-        questionBot = questionbot.QuestionBotRevChatGPT(cookie = config('CHATGPT_COOKIE'))
-        self._testQuestionbot(questionBot)
+    def test_binggpt(self):
+        # arrange
+        question_bot = questionbot.QuestionBotBingGPT()
+        
+        # act, assert
+        self._test_questionbot(question_bot)
 
-    def test_QuestionBotOpenAIAPI(self):
-        questionBot = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
-        self._testQuestionbot(questionBot) 
-    
-    def test_FallbackQuestionbot(self):
+    def test_revchatgpt(self):
+        # arrange
+        question_bot = questionbot.QuestionBotRevChatGPT(cookie = config('CHATGPT_COOKIE'))
+
+        # act, assert
+        self._test_questionbot(question_bot)
+
+    def test_openai_api(self):
+        # arrange
+        question_bot = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
+
+        # act, assert
+        self._test_questionbot(question_bot)
+
+    def test_fallback_questionbot(self):
+        # TODO: use simpler mocks for this
         # arrange
         class ExceptionQuestionBot(questionbot.QuestionBotInterface):
             def answer(self, prompt: str):
                 raise Exception("Epic Fail")
-        
+
         class NoneQuestionBot(questionbot.QuestionBotInterface):
             def answer(self, prompt: str):
                 return None
-            
+
         class GoodQuestionBot(questionbot.QuestionBotInterface):
             def answer(self, prompt: str):
                 return {
@@ -45,10 +59,10 @@ class QuestionBotTest(unittest.TestCase):
                     "cost": 0
                 }
         bots = [ExceptionQuestionBot(), NoneQuestionBot(), GoodQuestionBot()]
-        questionBot = questionbot.FallbackQuestionbot(bots)
+        question_bot = questionbot.FallbackQuestionbot(bots)
 
         # act
-        answer = questionBot.answer("yolo")
+        answer = question_bot.answer("yolo")
 
         # assert
         self.assertIsNotNone(answer)
@@ -57,4 +71,3 @@ class QuestionBotTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
