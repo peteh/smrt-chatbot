@@ -24,7 +24,7 @@ class TextToImageTest(unittest.TestCase):
     
     def test_StableDiffusionAIOrg(self):
         textToImage = texttoimage.StableDiffusionAIOrg()
-        textToImage.setStoreFiles(True)
+        textToImage.set_store_files(True)
         self._testTextToImage(textToImage)
     
     def test_BingImageProcessor(self):

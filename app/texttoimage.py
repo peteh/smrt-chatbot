@@ -1,18 +1,22 @@
-import requests
+"""Text to image implementations. """
 import time
 import json
 import logging
+from typing import List, Tuple
 from abc import ABC, abstractmethod
+import requests
 
 class ImagePromptInterface(ABC):
-
+    """Interface to turn prompts into a list of pictures. """
     @abstractmethod
-    def process(self, prompt):
-        pass
+    def process(self, prompt) -> List[Tuple[str,str]]:
+        """Processes prompts and turns them to images"""
 
-DEFAULT_NEGATIVE_PROMPT = "blender, cropped, lowres, poorly drawn face, out of frame, poorly drawn hands, blurry, bad art, blurred, text, watermark, disfigured, deformed, closed eyes"
 
-class ReplicateAPI(ABC):
+DEFAULT_NEGATIVE_PROMPT = "blender, cropped, lowres, poorly drawn face, out of frame, poorly \
+    drawn hands, blurry, bad art, blurred, text, watermark, disfigured, deformed, closed eyes"
+
+class ReplicateAPI(ImagePromptInterface):
     def __init__(self, model, modelVersion) -> None:
         self._model = model
         self._modelVersion = modelVersion
@@ -85,7 +89,8 @@ class ReplicateAPI(ABC):
 class StableDiffusionAPI(ReplicateAPI):
 
     def __init__(self):
-        super().__init__('stability-ai/stable-diffusion', 'db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf')
+        super().__init__('stability-ai/stable-diffusion',
+                         'db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf')
 
     def _generatePrompt(self, prompt: str) -> dict:
         return {
@@ -102,7 +107,8 @@ class StableDiffusionAPI(ReplicateAPI):
 class Kandinsky2API(ReplicateAPI):
 
     def __init__(self):
-        super().__init__('ai-forever/kandinsky-2', '65a15f6e3c538ee4adf5142411455308926714f7d3f5c940d9f7bc519e0e5c1a')
+        super().__init__('ai-forever/kandinsky-2',
+                         '65a15f6e3c538ee4adf5142411455308926714f7d3f5c940d9f7bc519e0e5c1a')
 
     def _generatePrompt(self, prompt: str) -> dict:
         return {
@@ -117,100 +123,98 @@ class Kandinsky2API(ReplicateAPI):
             }
 
 
-import json
-import time
 import base64
 import websockets.sync.client as wsclient
 class StableDiffusionAIOrg(ImagePromptInterface):
+    """Implementation to get interfaces from stabediffusionai.org. """
     WEBSOCKET_TIMEOUT = 600
     WEBSOCKET_MAXSIZE = 1024*1024*50
+
     def __init__(self) -> None:
         super().__init__()
-        #self._negativePrompt = "ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft"
-        self._negativePrompt = DEFAULT_NEGATIVE_PROMPT
-        
-        self._storeFiles = False
+        self._negative_prompt = DEFAULT_NEGATIVE_PROMPT
+        self._store_files = False
 
-    def setStoreFiles(self, store: bool):
-        self._storeFiles = store
+    def set_store_files(self, store: bool):
+        self._store_files = store
 
     def process(self, prompt):
         try:
-            apiUrl = "wss://api.stablediffusionai.org/v1/txt2img"
-            ws = wsclient.connect(apiUrl, max_size=self.WEBSOCKET_MAXSIZE)
+            api_url = "wss://api.stablediffusionai.org/v1/txt2img"
+            web_sock = wsclient.connect(api_url, max_size=self.WEBSOCKET_MAXSIZE)
 
-            jsonPrompt = {"prompt":prompt,
-                        "negative_prompt": self._negativePrompt,
+            json_prompt = {"prompt":prompt,
+                        "negative_prompt": self._negative_prompt,
                         "width":512,
                         "height":512}
-            jsonPromptStr = json.dumps(jsonPrompt)
-            ws.send(jsonPromptStr)
+            json_prompt_str = json.dumps(json_prompt)
+            web_sock.send(json_prompt_str)
 
-            response = json.loads(ws.recv())
+            response = json.loads(web_sock.recv())
             while response['success'] == 'ttl_remaining':
-                ws.close()
-                timeToWait = response['time']
-                print("Wait time - waiting for %d seconds to retry" % (timeToWait))
-                time.sleep(timeToWait)
+                web_sock.close()
+                time_to_wait = response['time']
+                print(f"Wait time - waiting for {time_to_wait} seconds to retry")
+                time.sleep(time_to_wait)
 
-                ws = wsclient.connect(apiUrl, max_size=self.WEBSOCKET_MAXSIZE)
-                ws.send(jsonPromptStr)
-                response = json.loads(ws.recv())
+                web_sock = wsclient.connect(api_url, max_size=self.WEBSOCKET_MAXSIZE)
+                web_sock.send(json_prompt_str)
+                response = json.loads(web_sock.recv())
 
             if response['success'] != 'process':
                 print("Unexpected error")
                 print(response)
-                ws.close()
+                web_sock.close()
                 return None
             print("In progress")
-            startTime = time.time()
+            start_time = time.time()
             
-            response = json.loads(ws.recv())
-            if response['success'] != True:
+            response = json.loads(web_sock.recv())
+            if not response['success']:
                 print("Unexpected error")
                 print(response)
-                ws.close()
+                web_sock.close()
                 return None
-            ws.close()
-            endTime = time.time()
-            processTime = endTime - startTime
-            print("Processing took %.2fs" % (processTime))
+            web_sock.close()
+            end_time = time.time()
+            process_time = end_time - start_time
+            print(f"Processing took {process_time:.2f}s")
 
             print("Successfully downloaded images")
             #f = open("response.json", "w")
             #f.write(json.dumps(response, indent = 4))
             #f.close()
-            numImages = len(response['images'])
+            num_images = len(response['images'])
             images = []
-            for i in range(numImages):
-                imageName = "image%d.png" % (i+1)
-                imageData = response['images'][i]
-                base64encoded = imageData.split(',')[1].strip()
+            for i in range(num_images):
+                image_name = f"image{i+1}.png"
+                image_data = response['images'][i]
+                base64encoded = image_data.split(',')[1].strip()
                 binary = base64.b64decode(base64encoded)
-                images.append((imageName, binary))
-                if self._storeFiles:
-                    f = open(imageName, "wb")
-                    f.write(binary)
-                    f.close()
+                images.append((image_name, binary))
+                if self._store_files:
+                    with open(image_name, "wb") as file:
+                        file.write(binary)
             return images
-        except Exception as e:
-            logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
         return None
     
 
 
 class StableHordeTextToImage(ImagePromptInterface):
-    def __init__(self, apiKey) -> None:
+    """Image prompt generation using stablehorde.net API"""
+    def __init__(self, api_key) -> None:
         super().__init__()
         self._headers = {
-            "apikey": apiKey
+            "apikey": api_key
         }
         self._negativePrompt = DEFAULT_NEGATIVE_PROMPT
 
-    def _requestJob(self, prompt) -> str: 
+    def _request_job(self, prompt) -> str: 
         url = 'https://stablehorde.net/api/v2/generate/async'
-        fullPrompt = prompt if len(self._negativePrompt) == 0 else "%s ### %s" % (prompt, self._negativePrompt)
-        jsonRequest = {
+        full_prompt = prompt if len(self._negativePrompt) == 0 else "%s ### %s" % (prompt, self._negativePrompt)
+        json_request = {
             "censor_nsfw": False,
             "failed": False,
             "gathered": False,
@@ -236,110 +240,119 @@ class StableHordeTextToImage(ImagePromptInterface):
                 "tiling": False,
                 "width": 512
             },
-            "prompt": fullPrompt,
+            "prompt": full_prompt,
             "r2": True,
             "shared": False,
             "trusted_workers": False
         }
 
-        r = requests.post(url, headers=self._headers, json=jsonRequest)
-        responseJson = r.json()
-        requestId = responseJson['id']
-        return requestId
+        response = requests.post(url,
+                          headers=self._headers,
+                          json=json_request,
+                          timeout=1200)
+        response_json = response.json()
+        request_id = response_json['id']
+        return request_id
     
-    def _waitForJobToFinish(self, requestId):
+    def _wait_for_job_to_finish(self, request_id):
         # TODO: maybe timeout
 
-        checkUrl = 'https://stablehorde.net/api/v2/generate/check/%s' % (requestId)
+        check_url = f'https://stablehorde.net/api/v2/generate/check/{request_id}'
         while True:
-            r = requests.get(checkUrl, headers=self._headers)
-            responseJson = r.json()
-            print(r.json())
+            response = requests.get(check_url,
+                             headers=self._headers,
+                             timeout=20)
+            response_json = response.json()
+            print(response_json)
 
-            waitTime = responseJson['wait_time']
-            if waitTime > 0:
-                print("Sleeping for %d seconds to wait for processing" % (waitTime))
-                time.sleep(waitTime)
+            wait_time = response_json['wait_time']
+            if wait_time > 0:
+                print(f"Sleeping for {wait_time} seconds to wait for processing")
+                time.sleep(wait_time)
             time.sleep(2)
-            if(responseJson['done'] == True):
-                if(responseJson['finished'] == 1):
+            if response_json['done']:
+                if response_json['finished'] == 1:
                     return True
                 return False
         return False
-    
-    def _downloadFiles(self, requestId):
-        downloadUrl = 'https://stablehorde.net/api/v2/generate/status/%s' % (requestId)
-        r = requests.get(downloadUrl, headers=self._headers)
-        responseJson = r.json()
+
+    def _download_files(self, request_id):
+        download_url = f'https://stablehorde.net/api/v2/generate/status/{request_id}'
+        response = requests.get(download_url,
+                                headers=self._headers,
+                                timeout=1200)
+        response_json = response.json()
         images = []
-        
+
         count = 0
-        for imageStatus in responseJson['generations']:
+        for image_status in response_json['generations']:
             count += 1
-            imageUrl = imageStatus['img']
-            imageName = "image%d.webp" % (count)
-            binary = requests.get(imageUrl).content
-            images.append((imageName, binary))
+            image_url = image_status['img']
+            image_name = f"image{count}.webp"
+            binary = requests.get(image_url,timeout=1200).content
+            images.append((image_name, binary))
             #f = open(imageName, "wb")
             #f.write(binary)
             #f.close()
         return images
 
     def process(self, prompt):
-        requestId = self._requestJob(prompt)
-        print("ID: %s" % (requestId))
+        request_id = self._request_job(prompt)
+        print(f"ID: {request_id}")
 
-        success = self._waitForJobToFinish(requestId)
+        success = self._wait_for_job_to_finish(request_id)
 
         if not success:
             print("Failed to get images")
             return None
-        return self._downloadFiles(requestId)
+        return self._download_files(request_id)
 
 import BingImageCreator
 class BingImageProcessor(ImagePromptInterface):
-    def __init__(self, cookiePath = "cookie.json") -> None:
+    """Prompt based image generator based on Microsoft Bing's creator"""
+    def __init__(self, cookie_path = "cookie.json") -> None:
         try:
-            with open(cookiePath, "r", encoding="utf-8") as f:
+            with open(cookie_path, "r", encoding="utf-8") as f:
                 cookies = json.load(f)
                 for cookie in cookies:
                     if cookie['name'] == "_U":
                         self._cookie = cookie['value']
-        except FileNotFoundError as e:
-            raise FileNotFoundError("Cookie file not found") from e
-    
+        except FileNotFoundError as ex:
+            raise FileNotFoundError("Cookie file not found") from ex
+
     def process(self, prompt):
         try:
-            imageGen = BingImageCreator.ImageGen(self._cookie)
-            imageUrls = imageGen.get_images(prompt)
-            imgNum = 0
+            image_gen = BingImageCreator.ImageGen(self._cookie)
+            image_urls = image_gen.get_images(prompt)
+            img_num = 0
             images = []
-            for imageUrl in imageUrls:
-                imgNum += 1
-                r = requests.get(imageUrl)
-                images.append(("image%d.jpg" % imgNum, r.content))
+            for image_url in image_urls:
+                img_num += 1
+                response = requests.get(image_url, timeout=1200)
+                images.append((f"image{img_num}.jpg" , response.content))
             if images is None or len(images) == 0:
                 return images
             return images
-        except Exception as e:
-            logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)
         print("Failed to get an image")
         return None
-    
-from typing import List
+
+
 class FallbackTextToImageProcessor(ImagePromptInterface):
+    """Image processor that tries a list of image processor until one succeeds. """
     def __init__(self, processors: List[ImagePromptInterface]) -> None:
         super().__init__()
         self._processors = processors
-    
+
     def process(self, prompt):
         for processor in self._processors:
             try:
                 images = processor.process(prompt)
                 if images is not None:
                     return images
-            except Exception as e:
-                logging.critical(e, exc_info=True)  # log exception info at CRITICAL log level
+            except Exception as ex:
+                logging.critical(ex, exc_info=True)
                 continue
         print("Failed to get an image")
         return None

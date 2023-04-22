@@ -157,7 +157,7 @@ def testOpenAIWhisperTranscript():
     print(whisper.transcribe(data))
 
 def _testFasterWhisperPerformanceSingle(beamSize, threads, fileName):
-    whisper = FasterWhisperTranscript(model = "medium", beamSize = beamSize, threads=threads)
+    whisper = FasterWhisperTranscript(model = "medium", beam_size = beamSize, threads=threads)
     f = open(fileName, 'rb')
     data = f.read()
     f.close()

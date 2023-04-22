@@ -8,7 +8,7 @@ class TranscriptTest(unittest.TestCase):
     def test_faster_whisper_noisy(self):
         # arrange
         file_name = "samples/noisy.ogg"
-        whisper = transcript.FasterWhisperTranscript(model = "medium")
+        whisper = transcript.FasterWhisperTranscript(model = "medium", denoise=True)
         f = open(file_name, 'rb')
         data = f.read()
         f.close()
