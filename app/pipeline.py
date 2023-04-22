@@ -169,10 +169,12 @@ class VoiceMessagePipeline(PipelineInterface):
         transcript_text = transcript['text']
         words = transcript['words']
         language = transcript['language']
+
+        response_message = f"Transcribed (denoise: {self._transcriber.usesDenoise()}): \n{transcript_text}"
         if messenger.is_group_message(message):
-            messenger.send_message_to_group(message, f"Transcribed: \n{transcript_text}")
+            messenger.send_message_to_group(message, response_message)
         else:
-            messenger.send_message_to_individual(message, f"Transcribed: \n{transcript_text}")
+            messenger.send_message_to_individual(message, response_message)
 
         debug['transcript_language'] = language
         debug['transcript_language_probability'] = transcript['language_probability']
