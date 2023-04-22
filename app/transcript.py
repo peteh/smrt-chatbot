@@ -66,7 +66,7 @@ from denoiser import pretrained
 from denoiser.dsp import convert_audio
 class FasterWhisperTranscript(TranscriptInterface):
 
-    def __init__(self, model = "medium", beamSize = 5, threads = 4, denoise = True):
+    def __init__(self, model = "medium", beamSize = 5, threads = 4, denoise = False):
         self._beamSize = beamSize
         self._threads = threads
         self._model = model

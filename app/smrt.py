@@ -30,7 +30,6 @@ question_bot = questionbot.FallbackQuestionbot(bots)
 
 summarizer = summary.QuestionBotSummary(question_bot)
 voicePipeline = pipeline.VoiceMessagePipeline(transcriberDenoise, summarizer, CONFIG_MIN_WORDS_FOR_SUMMARY)
-voicePipelineNoDenoise = pipeline.VoiceMessagePipeline(transcriberNoDenoise, summarizer, CONFIG_MIN_WORDS_FOR_SUMMARY)
 groupMessagePipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
 articleSummaryPipeline = pipeline.ArticleSummaryPipeline(summarizer)
 
@@ -53,7 +52,6 @@ def return_response():
     if 'event' in message:
         if message['event'] == "onmessage":
             pipelines = [voicePipeline,
-                         voicePipelineNoDenoise,
                          groupMessagePipeline,
                          articleSummaryPipeline,
                          imagePipeline,
