@@ -116,11 +116,13 @@ class FallbackQuestionbot(QuestionBotInterface):
             count += 1
             try:
                 answer = bot.answer(prompt)
-                if answer is not None:
-                    if count > 1:
-                        num_question_bots = len(self._bots)
-                        answer['text'] += f" ({count}/{num_question_bots})"
-                    return answer
+                if answer is None:
+                    print(f"Chat bot {count} failed to answer, trying next")
+                    continue
+                if count > 1:
+                    num_question_bots = len(self._bots)
+                    answer['text'] += f" ({count}/{num_question_bots})"
+                return answer
             except Exception as ex:
                 logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
         return None
