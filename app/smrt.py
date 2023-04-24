@@ -61,7 +61,8 @@ def return_response():
 
             for pipe in pipelines:
                 if pipe.matches(whatsapp, message):
-                    pipe.process(whatsapp, message) 
+                    print(f"{type(pipe).__name__} matches, processing")
+                    pipe.process(whatsapp, message)
             # delete message from phone after processing
             #whatsapp.deleteMessage(message)
 
