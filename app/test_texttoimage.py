@@ -55,7 +55,7 @@ class TextToImageTest(unittest.TestCase):
     def test_Kandinsky2API(self):
         textToImage = texttoimage.Kandinsky2API()
         self._testTextToImage(textToImage)
-    
+
     @unittest.skip("No quota left on account")
     def test_StableDiffusionAPI(self):
         textToImage = texttoimage.StableDiffusionAPI()

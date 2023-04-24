@@ -171,7 +171,7 @@ class VoiceMessagePipeline(PipelineInterface):
         words = transcript['words']
         language = transcript['language']
 
-        response_message = f"Transcribed (denoise: {self._transcriber.uses_denoise()}): \n{transcript_text}"
+        response_message = f"Transcribed: \n{transcript_text}"
         if messenger.is_group_message(message):
             messenger.send_message_to_group(message, response_message)
         else:

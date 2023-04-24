@@ -17,70 +17,68 @@ DEFAULT_NEGATIVE_PROMPT = "blender, cropped, lowres, poorly drawn face, out of f
     drawn hands, blurry, bad art, blurred, text, watermark, disfigured, deformed, closed eyes"
 
 class ReplicateAPI(ImagePromptInterface):
-    def __init__(self, model, modelVersion) -> None:
+    def __init__(self, model, model_version) -> None:
         self._model = model
-        self._modelVersion = modelVersion
-    
-    def _getModelUrl(self):
+        self._model_version = model_version
+
+    def _get_model_url(self):
         return 'https://replicate.com/%s' \
         % (self._model)
-    
-    def _generatePredictUrl(self):
-        # POST https://replicate.com/api/models/stability-ai/stable-diffusion/versions/db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf/predictions
+
+    def _generate_predict_url(self):
         return 'https://replicate.com/api/models/%s/versions/%s/predictions' \
-        % (self._model, self._modelVersion)
-    
-    def _generatePredictUrlForUuid(self, uuid):
+        % (self._model, self._model_version)
+
+    def _generate_predict_url_for_uuid(self, uuid):
         return 'https://replicate.com/api/models/%s/versions/%s/predictions/%s' \
-        % (self._model, self._modelVersion, uuid)
-    
+        % (self._model, self._model_version, uuid)
+
     @abstractmethod
-    def _generatePrompt(self, prompt: str) -> dict:
+    def _generate_prompt(self, prompt: str) -> dict:
         pass
-    
+
     def process(self, prompt):
-        s = requests.Session()
-        
-        s.headers.update({'Referer': self._getModelUrl()})
+        session = requests.Session()
+        session.headers.update({'Referer': self._get_model_url()})
 
         # TODO: extract to constructor or something
-        s.headers.update({'X-CSRFToken': "9D5vvVyFmxiydLtV7qSM6DDYTwIDl7u0"})
-        s.cookies.set("csrftoken", "9D5vvVyFmxiydLtV7qSM6DDYTwIDl7u0", domain="replicate.com")
-        s.cookies.set("replicate_anonymous_id", "d140b681-5aee-4741-8ea0-fea46aae20ea", domain="replicate.com")
-        s.cookies.set("sessionid", "50bub2y2fbf9c6yx0pj1wl2kk9wz6dot", domain="replicate.com")
-        
-        r = s.get(self._getModelUrl())
+        session.headers.update({'X-CSRFToken': "9D5vvVyFmxiydLtV7qSM6DDYTwIDl7u0"})
+        session.cookies.set("csrftoken", "9D5vvVyFmxiydLtV7qSM6DDYTwIDl7u0", domain="replicate.com")
+        session.cookies.set("replicate_anonymous_id", "d140b681-5aee-4741-8ea0-fea46aae20ea",
+                            domain="replicate.com")
+        session.cookies.set("sessionid", "50bub2y2fbf9c6yx0pj1wl2kk9wz6dot", domain="replicate.com")
 
-        data = self._generatePrompt(prompt)
-        s.headers.update({'Referer': self._generatePredictUrl()})
-        r = s.post(self._generatePredictUrl(), json = data)
-        jsonResponse = r.json()
-        
-        if 'uuid' not in jsonResponse:
-            s.close()
+        response = session.get(self._get_model_url())
+
+        data = self._generate_prompt(prompt)
+        session.headers.update({'Referer': self._generate_predict_url()})
+        response = session.post(self._generate_predict_url(), json = data)
+        json_response = response.json()
+
+        if 'uuid' not in json_response:
+            session.close()
             print("No uuid in server response")
-            print(json.dumps(jsonResponse, indent = 4))
+            print(json.dumps(json_response, indent = 4))
             return None
-        
-        uuid = jsonResponse['uuid']
-        predictUrlForUuid = self._generatePredictUrlForUuid(uuid)
+
+        uuid = json_response['uuid']
+        predict_url_for_uuid = self._generate_predict_url_for_uuid(uuid)
 
         for i in range(0, 10):
-            r = s.get(predictUrlForUuid)
-            jsonResponse = r.json()
-            status = jsonResponse['prediction']['status']
+            response = session.get(predict_url_for_uuid)
+            json_response = response.json()
+            status = json_response['prediction']['status']
             print(status)
             if status == 'succeeded':
                 #open text file
                 #text_file = open("response.json", "w")
                 #text_file.write(json.dumps(jsonResponse, indent = 4))
                 #text_file.close()
-                r = requests.get(jsonResponse['prediction']['output_files'][0], allow_redirects=True)
+                response = requests.get(json_response['prediction']['output_files'][0], allow_redirects=True)
                 #imageFile = open("image.png", "wb")
                 #imageFile.write(r.content)
                 #imageFile.close()
-                return ("image.png", r.content)
-                break
+                return ("image.png", response.content)
 
             #print(json.dumps(r.json(), indent = 4))
             time.sleep(2)
@@ -92,7 +90,7 @@ class StableDiffusionAPI(ReplicateAPI):
         super().__init__('stability-ai/stable-diffusion',
                          'db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf')
 
-    def _generatePrompt(self, prompt: str) -> dict:
+    def _generate_prompt(self, prompt: str) -> dict:
         return {
                 "inputs": {
                     "guidance_scale": 7.5,
@@ -110,7 +108,7 @@ class Kandinsky2API(ReplicateAPI):
         super().__init__('ai-forever/kandinsky-2',
                          '65a15f6e3c538ee4adf5142411455308926714f7d3f5c940d9f7bc519e0e5c1a')
 
-    def _generatePrompt(self, prompt: str) -> dict:
+    def _generate_prompt(self, prompt: str) -> dict:
         return {
                 "inputs": {
                     "guidance_scale": 4,
