@@ -29,8 +29,8 @@ bots = [
 question_bot = questionbot.FallbackQuestionbot(bots)
 
 summarizer = summary.QuestionBotSummary(question_bot)
-voicePipeline = pipeline.VoiceMessagePipeline(transcriberDenoise, summarizer, CONFIG_MIN_WORDS_FOR_SUMMARY)
-groupMessagePipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
+voice_pipeline = pipeline.VoiceMessagePipeline(transcriberDenoise, summarizer, CONFIG_MIN_WORDS_FOR_SUMMARY)
+group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
 articleSummaryPipeline = pipeline.ArticleSummaryPipeline(summarizer)
 
 processors = [texttoimage.BingImageProcessor(),
@@ -38,7 +38,7 @@ processors = [texttoimage.BingImageProcessor(),
               texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
 image_api = texttoimage.FallbackTextToImageProcessor(processors)
 
-imagePipeline = pipeline.ImagePromptPipeline(image_api)
+image_pipeline = pipeline.ImagePromptPipeline(image_api)
 ttsPipeline = pipeline.TextToSpeechPipeline()
 grammarPipeline = pipeline.GrammarPipeline(question_bot)
 tinderPipeline = pipeline.TinderPipelinePipelineInterface(question_bot)
@@ -51,10 +51,10 @@ def return_response():
 
     if 'event' in message:
         if message['event'] == "onmessage":
-            pipelines = [voicePipeline,
-                         groupMessagePipeline,
+            pipelines = [voice_pipeline,
+                         group_message_pipeline,
                          articleSummaryPipeline,
-                         imagePipeline,
+                         image_pipeline,
                          ttsPipeline,
                          grammarPipeline,
                          tinderPipeline]

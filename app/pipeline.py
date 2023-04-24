@@ -44,10 +44,11 @@ class PipelineHelper():
     """Helper functions for pipelines"""
     @staticmethod
     def extract_command(data: str):
-        """Extracts commands from a text"""
+        """Extracts commands from a text, returns empty string if there 
+        is no command inside"""
         left_over = data.strip()
         if not left_over.startswith("#"):
-            return None
+            return ""
         length = 0
         for i in range(1, len(left_over)):
             if left_over[i].isalpha():
@@ -55,7 +56,7 @@ class PipelineHelper():
             else:
                 break
         if length == 0:
-            return None
+            return ""
         command = left_over[1:1 + length]
         return command
 

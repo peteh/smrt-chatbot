@@ -222,7 +222,9 @@ class Whatsapp(MessengerInterface):
             and message['mentionedJidList'] == '4917658696957@c.us'
 
     def get_message_text(self, message: dict):
-        return message['content']
+        if 'content' in message and message['content'] is not None:
+            return message['content']
+        return ""
 
 
     def download_media(self, message):
