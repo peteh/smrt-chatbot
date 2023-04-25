@@ -13,35 +13,37 @@ import questionbot
 
 app = Flask(__name__)
 
-transcriberDenoise = transcript.FasterWhisperTranscript(denoise=True)
-transcriberNoDenoise = transcript.FasterWhisperTranscript(denoise=False)
-
 whatsapp = messenger.Whatsapp(config("WPPCONNECT_SERVER"), "smrt", config('WPPCONNECT_APIKEY'))
 CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
 # TODO: prepare for docker
 database = db.Database("data.sqlite")
+
 bots = [
         questionbot.QuestionBotRevChatGPT(config("CHATGPT_COOKIE")),
         questionbot.QuestionBotBingGPT(),
         questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         ]
-
 question_bot = questionbot.FallbackQuestionbot(bots)
 
 summarizer = summary.QuestionBotSummary(question_bot)
-voice_pipeline = pipeline.VoiceMessagePipeline(transcriberDenoise, summarizer, CONFIG_MIN_WORDS_FOR_SUMMARY)
+
+transcriber = transcript.FasterWhisperTranscript(denoise=False)
+voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
+                                               summarizer,
+                                               CONFIG_MIN_WORDS_FOR_SUMMARY)
+
 group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
-articleSummaryPipeline = pipeline.ArticleSummaryPipeline(summarizer)
+article_summary_pipeline = pipeline.ArticleSummaryPipeline(summarizer)
 
 processors = [texttoimage.BingImageProcessor(),
               texttoimage.StableDiffusionAIOrg(),
               texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
 image_api = texttoimage.FallbackTextToImageProcessor(processors)
-
 image_pipeline = pipeline.ImagePromptPipeline(image_api)
-ttsPipeline = pipeline.TextToSpeechPipeline()
-grammarPipeline = pipeline.GrammarPipeline(question_bot)
-tinderPipeline = pipeline.TinderPipelinePipelineInterface(question_bot)
+
+tts_pipeline = pipeline.TextToSpeechPipeline()
+grammar_pipeline = pipeline.GrammarPipeline(question_bot)
+tinder_pipeline = pipeline.TinderPipelinePipelineInterface(question_bot)
 
 @app.route('/incoming', methods=['POST'])
 def return_response():
@@ -53,11 +55,11 @@ def return_response():
         if message['event'] == "onmessage":
             pipelines = [voice_pipeline,
                          group_message_pipeline,
-                         articleSummaryPipeline,
+                         article_summary_pipeline,
                          image_pipeline,
-                         ttsPipeline,
-                         grammarPipeline,
-                         tinderPipeline]
+                         tts_pipeline,
+                         grammar_pipeline,
+                         tinder_pipeline]
 
             for pipe in pipelines:
                 if pipe.matches(whatsapp, message):

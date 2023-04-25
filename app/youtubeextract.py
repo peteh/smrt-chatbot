@@ -1,14 +1,15 @@
+"""Youtube extractor for links and subtitles"""
+import urllib.parse
 import youtube_transcript_api
 import youtube_transcript_api.formatters
-import urllib.parse
-
 
 class YoutubeExtract():
+    """Extracts youtube subtitles from links. """
     def __init__(self, link: str) -> None:
         self._link = link
 
     @staticmethod
-    def _extractYoutubeVideoId(link):
+    def _extract_youtube_video_id(link):
         """
         Examples:
         - http://youtu.be/SA2iWivDJiE
@@ -29,15 +30,28 @@ class YoutubeExtract():
                 return query.path.split('/')[2]
         # fail?
         return None
-    
-    @staticmethod
-    def isYoutubeLink(link: str) -> bool:
-        return YoutubeExtract._extractYoutubeVideoId(link) is not None
 
-    def getScript(self):
-        videoId = self._extractYoutubeVideoId(self._link)
-        transcript = youtube_transcript_api.YouTubeTranscriptApi.get_transcript(videoId, languages=['en', 'de'])
-        textFormatter = youtube_transcript_api.formatters.TextFormatter()
-        
-        text = textFormatter.format_transcript(transcript)
+    @staticmethod
+    def is_youtube_link(link: str) -> bool:
+        """Checks if a link is a youtube link
+
+        Args:
+            link (str): The link to check
+
+        Returns:
+            bool: True if the link is a youtube link. 
+        """
+        return YoutubeExtract._extract_youtube_video_id(link) is not None
+
+    def get_script(self) -> str:
+        """Gets the script from the youtube link. 
+
+        Returns:
+            str: script of the youtube video. 
+        """
+        video_id = self._extract_youtube_video_id(self._link)
+        transcript = youtube_transcript_api.YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'de'])
+        text_formatter = youtube_transcript_api.formatters.TextFormatter()
+
+        text = text_formatter.format_transcript(transcript)
         return text

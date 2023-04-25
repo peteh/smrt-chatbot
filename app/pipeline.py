@@ -337,7 +337,7 @@ class ArticleSummaryPipeline(PipelineInterface):
 
     def _process_youtube(self, link):
         processor = youtubeextract.YoutubeExtract(link)
-        text = processor.getScript()
+        text = processor.get_script()
         text_length = len(text)
         print(f"Length of youtube transcript: {text_length}")
         # reducing to the last 10k letters to limit input for summary
@@ -356,7 +356,7 @@ class ArticleSummaryPipeline(PipelineInterface):
 
         try:
             for link in links:
-                if youtubeextract.YoutubeExtract.isYoutubeLink(link):
+                if youtubeextract.YoutubeExtract.is_youtube_link(link):
                     summarized_text = self._process_youtube(link)
                 else:
                     summarized_text = self._process_article(link)

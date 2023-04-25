@@ -134,7 +134,26 @@ class StableDiffusionAIOrg(ImagePromptInterface):
         self._store_files = False
 
     def set_store_files(self, store: bool):
+        """Enables or disables storing of generated files
+
+        Args:
+            store (bool): True to enable storing of generated files
+        """
         self._store_files = store
+
+    def _decode_images(self, response: dict) -> List[Tuple[str, str]]:
+        num_images = len(response['images'])
+        images = []
+        for i in range(num_images):
+            image_name = f"image{i+1}.png"
+            image_data = response['images'][i]
+            base64encoded = image_data.split(',')[1].strip()
+            binary = base64.b64decode(base64encoded)
+            images.append((image_name, binary))
+            if self._store_files:
+                with open(image_name, "wb") as file:
+                    file.write(binary)
+        return images
 
     def process(self, prompt):
         try:
@@ -166,7 +185,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
                 return None
             print("In progress")
             start_time = time.time()
-            
+
             response = json.loads(web_sock.recv())
             if not response['success']:
                 print("Unexpected error")
@@ -174,30 +193,18 @@ class StableDiffusionAIOrg(ImagePromptInterface):
                 web_sock.close()
                 return None
             web_sock.close()
-            end_time = time.time()
-            process_time = end_time - start_time
+            process_time = time.time() - start_time
             print(f"Processing took {process_time:.2f}s")
 
             print("Successfully downloaded images")
             #f = open("response.json", "w")
             #f.write(json.dumps(response, indent = 4))
             #f.close()
-            num_images = len(response['images'])
-            images = []
-            for i in range(num_images):
-                image_name = f"image{i+1}.png"
-                image_data = response['images'][i]
-                base64encoded = image_data.split(',')[1].strip()
-                binary = base64.b64decode(base64encoded)
-                images.append((image_name, binary))
-                if self._store_files:
-                    with open(image_name, "wb") as file:
-                        file.write(binary)
-            return images
+            return self._decode_images(response)
         except Exception as ex:
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
         return None
-    
+
 
 
 class StableHordeTextToImage(ImagePromptInterface):
@@ -211,7 +218,8 @@ class StableHordeTextToImage(ImagePromptInterface):
 
     def _request_job(self, prompt) -> str: 
         url = 'https://stablehorde.net/api/v2/generate/async'
-        full_prompt = prompt if len(self._negativePrompt) == 0 else "%s ### %s" % (prompt, self._negativePrompt)
+        full_prompt = prompt if len(self._negativePrompt) == 0 \
+            else f"{prompt} ### {self._negativePrompt}"
         json_request = {
             "censor_nsfw": False,
             "failed": False,
@@ -251,10 +259,9 @@ class StableHordeTextToImage(ImagePromptInterface):
         response_json = response.json()
         request_id = response_json['id']
         return request_id
-    
+
     def _wait_for_job_to_finish(self, request_id):
         # TODO: maybe timeout
-
         check_url = f'https://stablehorde.net/api/v2/generate/check/{request_id}'
         while True:
             response = requests.get(check_url,
@@ -272,7 +279,6 @@ class StableHordeTextToImage(ImagePromptInterface):
                 if response_json['finished'] == 1:
                     return True
                 return False
-        return False
 
     def _download_files(self, request_id):
         download_url = f'https://stablehorde.net/api/v2/generate/status/{request_id}'

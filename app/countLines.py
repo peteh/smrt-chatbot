@@ -1,6 +1,7 @@
 import os
 
 def countlines(start, lines=0, header=True, begin_start=None):
+    """Counts line numbers and skips files starting with test_"""
     if header:
         print('{:>10} |{:>10} | {:<20}'.format('ADDED', 'TOTAL', 'FILE'))
         print('{:->11}|{:->11}|{:->20}'.format('', '', ''))
