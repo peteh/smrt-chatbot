@@ -1,6 +1,6 @@
 FROM python:3.10-bullseye
 VOLUME /storage/
-RUN mkdir -p /root/.cache/huggingface/ && ln -s /storage/ /root/.cache/huggingface
+RUN mkdir -p /root/.cache && ln -s /storage /root/.cache/huggingface
 RUN apt-get update && apt-get install -y opus-tools espeak
 RUN mkdir /models
 WORKDIR /app
