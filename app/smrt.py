@@ -16,7 +16,7 @@ app = Flask(__name__)
 whatsapp = messenger.Whatsapp(config("WPPCONNECT_SERVER"), "smrt", config('WPPCONNECT_APIKEY'))
 CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
 # TODO: prepare for docker
-database = db.Database("data.sqlite")
+database = db.Database("data")
 
 bots = [
         questionbot.QuestionBotRevChatGPT(config("CHATGPT_COOKIE")),
