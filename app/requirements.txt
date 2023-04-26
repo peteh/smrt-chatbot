@@ -5,7 +5,6 @@ openai
 python-decouple
 EdgeGPT
 faster_whisper
-GoogleBard
 revChatGPT
 trafilatura
 youtube-transcript-api
