@@ -120,16 +120,19 @@ class GrammarPipeline(PipelineInterface):
         message_text = messenger.get_message_text(message)
         if self.GRAMMAR_COMMAND in command:
             text = message_text[len(self.GRAMMAR_COMMAND)+1:]
-            prompt = f"Enhance the quality of the text below. Grammar, punctuation, spelling, \
-        word choice and style should be examined in detail. Additionally, the style and \
-        tone must be improved to ensure the writing is polished, error-free, and \
-        easy to read: \n\n{text}"
+            prompt = \
+f"Enhance the quality of the text below. Grammar, punctuation, spelling, \
+word choice and style should be examined in detail. Additionally, the style and \
+tone must be improved to ensure the writing is polished, error-free, and \
+easy to read: \n\n{text}"
 
         elif self.GRAMMATIK_COMMAND in command:
             text = message_text[len(self.GRAMMATIK_COMMAND)+1:]
-            prompt = f"Verbessere die Qualität des folgenden Textes. Grammatik, Interpunktion, \
-        Rechtschreibung, Wortwahl und Stil soll besonders beachtet werden. Außerdem soll Stil und Ton so verbessert werden, \
-        dass einen eleganter, fehlerfreier und einfach zu lesender Text entsteht: \n\n{text}"
+            prompt = \
+f"Verbessere die Qualität des folgenden Textes. Grammatik, Interpunktion, \
+Rechtschreibung, Wortwahl und Stil soll besonders beachtet werden. Außerdem \
+soll Stil und Ton so verbessert werden, dass einen eleganter, fehlerfreier \
+und einfach zu lesender Text entsteht: \n\n{text}"
         else:
             # skip
             return
@@ -258,8 +261,9 @@ class GroupMessageQuestionPipeline(PipelineInterface):
         # TODO: make number configurable
         (chat_text, _) = self._get_chat_text(message['chatId'], 100)
         print(chat_text)
-        prompt = f"Der folgende Text beinhaltet eine Konversation mehrere Individuen, \
-            beantworte folgende Frage zu dieser Konversation: {question}\n\nText:\n{chat_text}"
+        prompt = \
+f"Der folgende Text beinhaltet eine Konversation mehrere Individuen, \
+beantworte folgende Frage zu dieser Konversation: {question}\n\nText:\n{chat_text}"
         answer = self._question_bot.answer(prompt)
         answer_text = answer['text']
         print(f"Answer: {answer_text}")
@@ -499,11 +503,13 @@ class TinderPipelinePipelineInterface(PipelineInterface):
         (_, context, tinder_message) = PipelineHelper.extract_command_full(
             messenger.get_message_text(message))
         messenger.mark_in_progress_0(message)
-        prompt = f"Schreibe eine kurze, lockere, lustige Anwort auf folgende Nachricht \
-            von einem Mädchen: \n{tinder_message}"
+        prompt = \
+f"Schreibe eine kurze, lockere, lustige Anwort auf folgende Nachricht \
+von einem Mädchen: \n{tinder_message}"
         if context != "":
-            prompt = f"Schreibe eine kurze, lockere, lustige Anwort auf folgende Nachricht \
-            von einem Mädchen (Kontext: {context}): \n{tinder_message}"
+            prompt = \
+f"Schreibe eine kurze, lockere, lustige Anwort auf folgende Nachricht \
+von einem Mädchen (Kontext: {context}): \n{tinder_message}"
         answer = self._question_bot.answer(prompt)
         if answer is None:
             messenger.mark_in_progress_fail(message)
