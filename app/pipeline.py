@@ -572,7 +572,7 @@ class Helpipeline(PipelineInterface):
     def process(self, messenger: MessengerInterface, message: dict):
         messenger.mark_in_progress_0(message)
 
-        response_text = "*My name is Echo, these are the things I can do: *"
+        response_text = "My name is Echo, these are the things I can do: "
         for pipe in self._pipelines:
             help_text = pipe.get_help_text()
             if len(help_text) > 0:
