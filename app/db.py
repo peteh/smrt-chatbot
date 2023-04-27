@@ -53,7 +53,8 @@ class Database:
                                  (group_id, count)):
             entry = {
                 "group_id": row['group_id'],
-                "sender": row['sender']
+                "sender": row['sender'],
+                "message": row['message']
             }
             return_list.append(entry)
         return_list.reverse()
