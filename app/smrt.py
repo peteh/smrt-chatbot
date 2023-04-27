@@ -19,8 +19,8 @@ CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
 database = db.Database("data")
 
 bots = [
-        questionbot.QuestionBotRevChatGPT(config("CHATGPT_COOKIE")),
         questionbot.QuestionBotBingGPT(),
+        questionbot.QuestionBotRevChatGPT(config("CHATGPT_COOKIE")),
         questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         ]
 question_bot = questionbot.FallbackQuestionbot(bots)
