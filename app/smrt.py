@@ -46,6 +46,18 @@ tts_pipeline = pipeline.TextToSpeechPipeline()
 grammar_pipeline = pipeline.GrammarPipeline(question_bot)
 tinder_pipeline = pipeline.TinderPipelinePipelineInterface(question_bot)
 
+pipelines = [voice_pipeline,
+            group_message_pipeline,
+            article_summary_pipeline,
+            image_pipeline,
+            tts_pipeline,
+            grammar_pipeline,
+            tinder_pipeline,
+            gpt_pipeline]
+
+help_pipeline = pipeline.Helpipeline(pipelines)
+pipelines.append(help_pipeline)
+
 @app.route('/incoming', methods=['POST'])
 def return_response():
     """Handles new incoming messages from wpp-server"""
@@ -54,15 +66,6 @@ def return_response():
 
     if 'event' in message:
         if message['event'] == "onmessage":
-            pipelines = [voice_pipeline,
-                         group_message_pipeline,
-                         article_summary_pipeline,
-                         image_pipeline,
-                         tts_pipeline,
-                         grammar_pipeline,
-                         tinder_pipeline,
-                         gpt_pipeline]
-
             for pipe in pipelines:
                 if pipe.matches(whatsapp, message):
                     print(f"{type(pipe).__name__} matches, processing")

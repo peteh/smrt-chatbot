@@ -33,15 +33,25 @@ class PipelineInterface(ABC):
     """Generic pipeline interface to process messages. """
 
     @abstractmethod
-    def matches(self, messenger: MessengerInterface, message: dict):
+    def matches(self, messenger: MessengerInterface, message: dict) -> bool:
         """Should return true if the message should be processed by the pipeline. """
 
     @abstractmethod
-    def process(self, messenger: MessengerInterface, message: dict):
+    def process(self, messenger: MessengerInterface, message: dict) -> None:
         """Processes a message by the pipeline. """
+
+    #@abstractmethod
+    def get_help_text(self) -> str:
+        """Returns the help text for the pipeline. 
+
+        Returns:
+            str: help text of the pipeline
+        """
+        return ""
 
 class PipelineHelper():
     """Helper functions for pipelines"""
+
     @staticmethod
     def extract_command(data: str):
         """Extracts commands from a text, returns empty string if there 
@@ -137,6 +147,13 @@ class GrammarPipeline(PipelineInterface):
             messenger.send_message_to_individual(message, answer_text)
         messenger.mark_in_progress_done(message)
 
+    def get_help_text(self) -> str:
+        return \
+"""*Grammar*
+_#grammatik German Text_ corrects German language
+_#grammar English Text_ corrects English language
+"""
+
 
 class VoiceMessagePipeline(PipelineInterface):
     """A pipe that converts audio messages to text and summarizes them. """
@@ -204,7 +221,10 @@ class VoiceMessagePipeline(PipelineInterface):
             messenger.send_message_to_group(message, debug_text)
         else:
             messenger.send_message_to_individual(message, debug_text)
-
+    def get_help_text(self) -> str:
+        return \
+"""*Voice message transcription*
+Forward voice messages to the bot to transcribe them"""
 
 # TODO split into message storage pipeline and command pipeline
 class GroupMessageQuestionPipeline(PipelineInterface):
@@ -505,6 +525,33 @@ class GptPipeline(PipelineInterface):
             return
 
         response_text = answer['text']
+        if messenger.is_group_message(message):
+            messenger.send_message_to_group(message, response_text)
+        else:
+            messenger.send_message_to_individual(message, response_text)
+
+        messenger.mark_in_progress_done(message)
+
+class Helpipeline(PipelineInterface):
+    """A pipeline to write answers to tinder messages. """
+    HELP_COMMAND = "help"
+
+    def __init__(self, pipelines: List[PipelineInterface]) -> None:
+        super().__init__()
+        self._pipelines = pipelines
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        command = PipelineHelper.extract_command(messenger.get_message_text(message))
+        return self.HELP_COMMAND in command
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        messenger.mark_in_progress_0(message)
+
+        response_text = ""
+        for pipe in self._pipelines:
+            help_text = pipe.get_help_text()
+            if len(help_text) > 0:
+                response_text = f"{response_text}\n{help_text}"
         if messenger.is_group_message(message):
             messenger.send_message_to_group(message, response_text)
         else:
