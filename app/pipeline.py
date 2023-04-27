@@ -150,8 +150,7 @@ class GrammarPipeline(PipelineInterface):
         return \
 """*Grammar*
 _#grammatik German Text_ corrects German language
-_#grammar English Text_ corrects English language
-"""
+_#grammar English Text_ corrects English language"""
 
 
 class VoiceMessagePipeline(PipelineInterface):
@@ -222,8 +221,8 @@ class VoiceMessagePipeline(PipelineInterface):
             messenger.send_message_to_individual(message, debug_text)
     def get_help_text(self) -> str:
         return \
-"""*Voice message transcription*
-Forward voice messages to the bot to transcribe them"""
+"""*Voice Message Transcription*
+Forward voice messages to the bot to transcribe them. """
 
 # TODO split into message storage pipeline and command pipeline
 class GroupMessageQuestionPipeline(PipelineInterface):
@@ -397,7 +396,7 @@ class ArticleSummaryPipeline(PipelineInterface):
         messenger.mark_in_progress_done(message)
     def get_help_text(self) -> str:
         return \
-"""*Article and Youtube Video  Summary*
+"""*Article and Youtube Video Summary*
 Sending a link or youtube video to the bot will generate a summary"""
 
 class ImagePromptPipeline(PipelineInterface):
@@ -573,7 +572,7 @@ class Helpipeline(PipelineInterface):
     def process(self, messenger: MessengerInterface, message: dict):
         messenger.mark_in_progress_0(message)
 
-        response_text = ""
+        response_text = "*My name is Echo, these are the things I can do: *"
         for pipe in self._pipelines:
             help_text = pipe.get_help_text()
             if len(help_text) > 0:
