@@ -482,3 +482,32 @@ class TinderPipelinePipelineInterface(PipelineInterface):
             messenger.send_message_to_individual(message, response_text)
 
         messenger.mark_in_progress_done(message)
+
+class GptPipeline(PipelineInterface):
+    """A pipeline to write answers to tinder messages. """
+    GPT_COMMAND = "gpt"
+
+    def __init__(self, question_bot: QuestionBotInterface) -> None:
+        super().__init__()
+        self._question_bot = question_bot
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        command = PipelineHelper.extract_command(messenger.get_message_text(message))
+        return self.GPT_COMMAND in command
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        (_, _, prompt) = PipelineHelper.extract_command_full(
+            messenger.get_message_text(message))
+        messenger.mark_in_progress_0(message)
+        answer = self._question_bot.answer(prompt)
+        if answer is None:
+            messenger.mark_in_progress_fail(message)
+            return
+
+        response_text = answer['text']
+        if messenger.is_group_message(message):
+            messenger.send_message_to_group(message, response_text)
+        else:
+            messenger.send_message_to_individual(message, response_text)
+
+        messenger.mark_in_progress_done(message)

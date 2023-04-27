@@ -20,11 +20,9 @@ class PipelineHelperTests(unittest.TestCase):
         time.sleep(1)
         database.add_group_message("abc", "Pete3", "lalala3")
         time.sleep(1)
+        rows = database.get_group_messages("abc", 2)
 
         # assert
-        rows = database.get_group_messages("abc", 2)
-        for row in rows:
-            print(row['sender'])
         self.assertEqual(rows[0]["sender"], "Pete2")
         self.assertEqual(rows[1]["sender"], "Pete3")
         # cleanup

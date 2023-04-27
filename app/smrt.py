@@ -31,6 +31,7 @@ transcriber = transcript.FasterWhisperTranscript(denoise=False)
 voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
                                                summarizer,
                                                CONFIG_MIN_WORDS_FOR_SUMMARY)
+gpt_pipeline = pipeline.GptPipeline(question_bot)
 
 group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
 article_summary_pipeline = pipeline.ArticleSummaryPipeline(summarizer)
@@ -59,7 +60,8 @@ def return_response():
                          image_pipeline,
                          tts_pipeline,
                          grammar_pipeline,
-                         tinder_pipeline]
+                         tinder_pipeline,
+                         gpt_pipeline]
 
             for pipe in pipelines:
                 if pipe.matches(whatsapp, message):
