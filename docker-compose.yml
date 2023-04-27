@@ -7,4 +7,4 @@ services:
       - WPPCONNECT_SERVER=http://yourserver:21465
       - MIN_WORDS_FOR_SUMMARY=10
       volumes:
-      - ./storage:/storage/
+      - ./storage/:/storage/
