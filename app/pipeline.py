@@ -40,14 +40,13 @@ class PipelineInterface(ABC):
     def process(self, messenger: MessengerInterface, message: dict) -> None:
         """Processes a message by the pipeline. """
 
-    #@abstractmethod
+    @abstractmethod
     def get_help_text(self) -> str:
         """Returns the help text for the pipeline. 
 
         Returns:
             str: help text of the pipeline
         """
-        return ""
 
 class PipelineHelper():
     """Helper functions for pipelines"""
@@ -314,6 +313,11 @@ class GroupMessageQuestionPipeline(PipelineInterface):
             # TODO: filter messages with command
             self._database.add_group_message(message['chatId'], push_name, message_text)
 
+    def get_help_text(self) -> str:
+        return \
+"""*Group Summary*
+_#summary [num]_ Summarizes the last _num_ messages
+_#question Question?_ answers questions to the last messages in the group"""
 
 class ArticleSummaryPipeline(PipelineInterface):
     """Summarizes an article or a youtube video. """
@@ -322,7 +326,7 @@ class ArticleSummaryPipeline(PipelineInterface):
 
     def __init__(self, summarizer: SummaryInterface):
         self._summarizer = summarizer
-        self._link_regex = re.compile('((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)',
+        self._link_regex = re.compile(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)',
                                       re.DOTALL)
         self._language = "en"
 
@@ -391,7 +395,10 @@ class ArticleSummaryPipeline(PipelineInterface):
         else:
             messenger.send_message_to_individual(message, total_summary)
         messenger.mark_in_progress_done(message)
-
+    def get_help_text(self) -> str:
+        return \
+"""*Article and Youtube Video  Summary*
+Sending a link or youtube video to the bot will generate a summary"""
 
 class ImagePromptPipeline(PipelineInterface):
     """Pipe to turn prompts into images. """
@@ -426,6 +433,10 @@ class ImagePromptPipeline(PipelineInterface):
 
         messenger.mark_in_progress_done(message)
 
+    def get_help_text(self) -> str:
+        return \
+"""*Image Generation*
+_#image prompt_ Generates images based on the given prompt"""
 
 class TextToSpeechPipeline(PipelineInterface):
     """Pipe to generate a voice messages based on input text. """
@@ -468,6 +479,10 @@ class TextToSpeechPipeline(PipelineInterface):
             messenger.send_audio_to_individual(message, audio_data)
 
         messenger.mark_in_progress_done(message)
+    def get_help_text(self) -> str:
+        return \
+"""*Text to Speech*
+_#tts text_ Generates a voice message with the given text"""
 
 class TinderPipelinePipelineInterface(PipelineInterface):
     """A pipeline to write answers to tinder messages. """
@@ -503,8 +518,14 @@ class TinderPipelinePipelineInterface(PipelineInterface):
 
         messenger.mark_in_progress_done(message)
 
+    def get_help_text(self) -> str:
+        return \
+"""*Tinder Help*
+_#tinder[(Context)] message_ Proposes a response to a message from a girl. Additional context can be given to adapt the message. """
+
+
 class GptPipeline(PipelineInterface):
-    """A pipeline to write answers to tinder messages. """
+    """A pipeline to talk to gpt models. """
     GPT_COMMAND = "gpt"
 
     def __init__(self, question_bot: QuestionBotInterface) -> None:
@@ -531,6 +552,11 @@ class GptPipeline(PipelineInterface):
             messenger.send_message_to_individual(message, response_text)
 
         messenger.mark_in_progress_done(message)
+    def get_help_text(self) -> str:
+        return \
+"""*ChatGPT*
+_#gpt prompt_ Allows you to talk to GPT, the bot does not have memory of previous messages though. """
+
 
 class Helpipeline(PipelineInterface):
     """A pipeline to write answers to tinder messages. """
@@ -556,5 +582,7 @@ class Helpipeline(PipelineInterface):
             messenger.send_message_to_group(message, response_text)
         else:
             messenger.send_message_to_individual(message, response_text)
-
         messenger.mark_in_progress_done(message)
+
+    def get_help_text(self) -> str:
+        return ""
