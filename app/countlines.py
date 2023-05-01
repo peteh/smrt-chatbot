@@ -1,6 +1,8 @@
+"""Counts the lines of the project."""
+
 import os
 
-def countlines(start, lines=0, header=True, begin_start=None):
+def count_lines(start, lines=0, header=True, begin_start=None):
     """Counts line numbers and skips files starting with test_"""
     if header:
         print('{:>10} |{:>10} | {:<20}'.format('ADDED', 'TOTAL', 'FILE'))
@@ -27,7 +29,7 @@ def countlines(start, lines=0, header=True, begin_start=None):
     for thing in os.listdir(start):
         thing = os.path.join(start, thing)
         if os.path.isdir(thing):
-            lines = countlines(thing, lines, header=False, begin_start=start)
+            lines = count_lines(thing, lines, header=False, begin_start=start)
 
     return lines
-print(countlines("./app/"))
+print(count_lines("./app/"))
