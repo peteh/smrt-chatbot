@@ -1,7 +1,7 @@
 """Youtube extractor for links and subtitles"""
 import urllib.parse
-import youtube_transcript_api
-import youtube_transcript_api.formatters
+import youtube_transcript_api as yt
+import youtube_transcript_api.formatters as ytformatters
 
 class YoutubeExtract():
     """Extracts youtube subtitles from links. """
@@ -50,8 +50,8 @@ class YoutubeExtract():
             str: script of the youtube video. 
         """
         video_id = self._extract_youtube_video_id(self._link)
-        transcript = youtube_transcript_api.YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'de'])
-        text_formatter = youtube_transcript_api.formatters.TextFormatter()
+        transcript = yt.YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'de'])
+        text_formatter = ytformatters.TextFormatter()
 
         text = text_formatter.format_transcript(transcript)
         return text
