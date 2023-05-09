@@ -557,7 +557,7 @@ class GptPipeline(PipelineInterface):
         if cmd in self.GPT3_COMMAND:
             bot = self._gpt3
         if cmd in self.GPT4_COMMAND:
-            bot = self._gpt3
+            bot = self._gpt4
 
         messenger.mark_in_progress_0(message)
         answer = bot.answer(prompt)
