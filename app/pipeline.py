@@ -17,7 +17,7 @@ from transcript import TranscriptInterface
 from messenger import MessengerInterface
 from questionbot import QuestionBotInterface
 import texttoimage
-
+import utils
 
 
 # article summary pipeline
@@ -214,14 +214,16 @@ class VoiceMessagePipeline(PipelineInterface):
             else:
                 messenger.send_message_to_individual(message, f"Summary: \n{summary_text}")
         messenger.mark_in_progress_done(message)
-        debug_text = "Debug: \n"
-        for debug_key, debug_value in debug.items():
-            debug_text += debug_key + ": " + str(debug_value) + "\n"
-        debug_text = debug_text.strip()
-        if messenger.is_group_message(message):
-            messenger.send_message_to_group(message, debug_text)
-        else:
-            messenger.send_message_to_individual(message, debug_text)
+        if utils.is_debug():
+            debug_text = "Debug: \n"
+            for debug_key, debug_value in debug.items():
+                debug_text += debug_key + ": " + str(debug_value) + "\n"
+            debug_text = debug_text.strip()
+            if messenger.is_group_message(message):
+                messenger.send_message_to_group(message, debug_text)
+            else:
+                messenger.send_message_to_individual(message, debug_text)
+
     def get_help_text(self) -> str:
         return \
 """*Voice Message Transcription*
@@ -296,11 +298,12 @@ beantworte folgende Frage zu dieser Konversation: {question}\n\nText:\n{chat_tex
         summary_text = f"Summary (last {actual_message_count} messages)\n{summary['text']}"
         messenger.send_message_to_group(message, summary_text)
         messenger.mark_in_progress_done(message)
-        debug_text = "Debug: \n"
-        for debug_key, debug_value in debug.items():
-            debug_text += debug_key + ": " + str(debug_value) + "\n"
-        debug_text = debug_text.strip()
-        messenger.send_message_to_group(message, debug_text)
+        if utils.is_debug():
+            debug_text = "Debug: \n"
+            for debug_key, debug_value in debug.items():
+                debug_text += debug_key + ": " + str(debug_value) + "\n"
+            debug_text = debug_text.strip()
+            messenger.send_message_to_group(message, debug_text)
 
     def process(self, messenger: MessengerInterface, message: dict):
         # TODO: abstract this
@@ -532,20 +535,32 @@ _#tinder[(Context)] message_ Proposes a response to a message from a girl. Addit
 class GptPipeline(PipelineInterface):
     """A pipeline to talk to gpt models. """
     GPT_COMMAND = "gpt"
+    GPT3_COMMAND = "gpt3"
+    GPT4_COMMAND = "gpt4"
 
-    def __init__(self, question_bot: QuestionBotInterface) -> None:
+    def __init__(self, question_bot: QuestionBotInterface,
+                 gpt3: QuestionBotInterface,
+                 gpt4: QuestionBotInterface) -> None:
         super().__init__()
         self._question_bot = question_bot
+        self._gpt3 = gpt3
+        self._gpt4 = gpt4
 
     def matches(self, messenger: MessengerInterface, message: dict):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return self.GPT_COMMAND in command
 
     def process(self, messenger: MessengerInterface, message: dict):
-        (_, _, prompt) = PipelineHelper.extract_command_full(
+        (cmd, _, prompt) = PipelineHelper.extract_command_full(
             messenger.get_message_text(message))
+        bot = self._question_bot
+        if cmd in self.GPT3_COMMAND:
+            bot = self._gpt3
+        if cmd in self.GPT4_COMMAND:
+            bot = self._gpt3
+
         messenger.mark_in_progress_0(message)
-        answer = self._question_bot.answer(prompt)
+        answer = bot.answer(prompt)
         if answer is None:
             messenger.mark_in_progress_fail(message)
             return
@@ -560,7 +575,9 @@ class GptPipeline(PipelineInterface):
     def get_help_text(self) -> str:
         return \
 """*ChatGPT*
-_#gpt prompt_ Allows you to talk to GPT, the bot does not have memory of previous messages though. """
+_#gpt prompt_ Allows you to talk to GPT, the bot does not have memory of previous messages though. 
+_#gpt3 prompt_ Force gpt3
+_#gpt4 prompt_ Force gpt4"""
 
 
 class Helpipeline(PipelineInterface):

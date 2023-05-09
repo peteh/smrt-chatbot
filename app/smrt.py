@@ -17,9 +17,11 @@ whatsapp = messenger.Whatsapp(config("WPPCONNECT_SERVER"), "smrt", config('WPPCO
 CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
 database = db.Database("data")
 
+questionbot_bing = questionbot.QuestionBotBingGPT()
+questionbot_revchatgpt = questionbot.QuestionBotRevChatGPT(config("CHATGPT_COOKIE"))
 bots = [
-        questionbot.QuestionBotRevChatGPT(config("CHATGPT_COOKIE")),
-        questionbot.QuestionBotBingGPT(),
+        questionbot_revchatgpt,
+        questionbot_bing,
         questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         ]
 question_bot = questionbot.FallbackQuestionbot(bots)
@@ -30,7 +32,7 @@ transcriber = transcript.FasterWhisperTranscript(denoise=False)
 voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
                                                summarizer,
                                                CONFIG_MIN_WORDS_FOR_SUMMARY)
-gpt_pipeline = pipeline.GptPipeline(question_bot)
+gpt_pipeline = pipeline.GptPipeline(question_bot, questionbot_revchatgpt, questionbot_bing)
 
 group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
 article_summary_pipeline = pipeline.ArticleSummaryPipeline(summarizer)
