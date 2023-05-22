@@ -36,6 +36,18 @@ class PipelineHelperTests(unittest.TestCase):
         self.assertEqual(params, "parameters, params")
         self.assertEqual(text, "")
 
+    def test_command_extraction_when_contains_gpt3_prompt_then_extract_cmd_and_prompt(self):
+        # arrange
+        command_text = "#gpt3 Test prompt"
+
+        # act
+        (command, params, text) = pipeline.PipelineHelper.extract_command_full(command_text)
+
+        # assert
+        self.assertEqual(command, "gpt3")
+        self.assertEqual(params, "")
+        self.assertEqual(text, "Test prompt")
+
     def test_command_extraction_when_contains_only_text_then_extract_only_text(self):
         # arrange
         command_text = "#tinder lol ol oalsdsfdsd"

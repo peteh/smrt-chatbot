@@ -5,7 +5,7 @@ import unittest
 import db
 import utils
 
-class PipelineHelperTests(unittest.TestCase):
+class DatabaseTests(unittest.TestCase):
     """Test cases for db class"""
 
     def test_listing_when_more_data_inserted_then_read_newest(self):

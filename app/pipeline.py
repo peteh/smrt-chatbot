@@ -60,7 +60,7 @@ class PipelineHelper():
             return ""
         length = 0
         for i in range(1, len(left_over)):
-            if left_over[i].isalpha():
+            if left_over[i].isalnum():
                 length += 1
             else:
                 break
@@ -77,7 +77,7 @@ class PipelineHelper():
             return None
         length = 0
         for i in range(1, len(left_over)):
-            if left_over[i].isalpha():
+            if left_over[i].isalnum():
                 length += 1
             else:
                 break
@@ -554,9 +554,9 @@ class GptPipeline(PipelineInterface):
         (cmd, _, prompt) = PipelineHelper.extract_command_full(
             messenger.get_message_text(message))
         bot = self._question_bot
-        if cmd in self.GPT3_COMMAND:
+        if cmd == self.GPT3_COMMAND:
             bot = self._gpt3
-        if cmd in self.GPT4_COMMAND:
+        if cmd == self.GPT4_COMMAND:
             bot = self._gpt4
 
         messenger.mark_in_progress_0(message)
