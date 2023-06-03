@@ -10,5 +10,9 @@
     "python.testing.unittestEnabled": true,
     "python.linting.pylintArgs": [
         "--generated-members=numpy.* ,torch.*"
-        ]
+        ],
+        "[python]": {
+            "editor.defaultFormatter": "ms-python.black-formatter"
+        },
+        "python.formatting.provider": "none"
 }

@@ -244,7 +244,7 @@ class GroupMessageQuestionPipeline(PipelineInterface):
 
     def matches(self, messenger: MessengerInterface, message: dict):
         # TODO: abstract chat type
-        return messenger.is_group_message(message) and message['type']=='chat'
+        return messenger.is_group_message(message) and messenger.get_message_text(message) != ""
 
     def _get_chat_text(self, identifier, max_message_count):
         chat_text = ""
@@ -261,7 +261,8 @@ class GroupMessageQuestionPipeline(PipelineInterface):
         question = message_text[len(self.QUESTION_COMMAND)+1:]
         print(f"Question: {question}")
         # TODO: make number configurable
-        (chat_text, _) = self._get_chat_text(message['chatId'], 100)
+        chat_id = messenger.get_chat_id(message)
+        (chat_text, _) = self._get_chat_text(chat_id, 100)
         print(chat_text)
         prompt = \
 f"Der folgende Text beinhaltet eine Konversation mehrere Individuen, \
@@ -275,6 +276,7 @@ beantworte folgende Frage zu dieser Konversation: {question}\n\nText:\n{chat_tex
     def _process_summary_command(self, messenger: MessengerInterface, message: dict):
         debug = {}
         message_text = messenger.get_message_text(message)
+        chat_id = messenger.get_chat_id(message)
         messenger.mark_in_progress_0(message)
         # TODO: put to configuration
         max_message_count = 20
@@ -282,7 +284,7 @@ beantworte folgende Frage zu dieser Konversation: {question}\n\nText:\n{chat_tex
         if len(command) > 1:
             max_message_count = int(command[1])
 
-        (chat_text, actual_message_count) = self._get_chat_text(message['chatId'],
+        (chat_text, actual_message_count) = self._get_chat_text(chat_id,
                                                                 max_message_count)
 
         start = time.time()
@@ -307,8 +309,11 @@ beantworte folgende Frage zu dieser Konversation: {question}\n\nText:\n{chat_tex
 
     def process(self, messenger: MessengerInterface, message: dict):
         # TODO: abstract this
-        push_name = message['sender']['pushname']
+        push_name = messenger.get_sender_name(message)
         message_text = messenger.get_message_text(message)
+        # TODO: force messenger to make it unique or do we add meta information to make it unique here
+        # e.g. numbers are not unique as identifiers in different messengers
+        chat_id = messenger.get_chat_id(message)
 
         if message_text.startswith(self.QUESTION_COMMAND):
             self._process_question_command(messenger, message)
@@ -317,7 +322,7 @@ beantworte folgende Frage zu dieser Konversation: {question}\n\nText:\n{chat_tex
             self._process_summary_command(messenger, message)
         else:
             # TODO: filter messages with command
-            self._database.add_group_message(message['chatId'], push_name, message_text)
+            self._database.add_group_message(chat_id, push_name, message_text)
 
     def get_help_text(self) -> str:
         return \

@@ -12,3 +12,4 @@ TTS
 websockets
 BingImageCreator
 denoiser
+poe-api

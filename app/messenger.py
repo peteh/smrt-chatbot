@@ -40,16 +40,39 @@ class MessengerInterface(ABC):
         """Deletes a message from the server"""
 
     @abstractmethod
-    def has_audio_data(self, message: dict):
+    def has_audio_data(self, message: dict) -> bool:
         """Returns true if the message is an audio message. """
 
     @abstractmethod
-    def is_bot_mentioned(self, message: dict):
+    def is_bot_mentioned(self, message: dict) -> bool:
         """Returns true if the bot is mentioned in the message. """
 
     @abstractmethod
     def get_message_text(self, message: dict) -> str:
         """Returns the text of the given message. """
+    
+    @abstractmethod
+    def get_chat_id(self, message: dict) -> str:
+        """Returns a unique identifier to identify the chat, e.g. a group id or sender id
+
+        Args:
+            message (dict): The received message
+
+        Returns:
+            str: The unique identifier of the chat
+        """
+        
+
+    @abstractmethod
+    def get_sender_name(self, message: dict) -> str:
+        """Returns the name of the sender of the message
+
+        Args:
+            message (dict): the received message
+
+        Returns:
+            str: The name of the sender
+        """
 
     @abstractmethod
     def send_image_to_group(self, group_message: dict, file_name: str,
@@ -226,6 +249,11 @@ class Whatsapp(MessengerInterface):
             return message['content']
         return ""
 
+    def get_chat_id(self, message: dict) -> str:
+        return message['chatId']
+
+    def get_sender_name(self, message: dict):
+        return message['sender']['pushname']
 
     def download_media(self, message):
         msg_id = message['id']
@@ -238,3 +266,215 @@ class Whatsapp(MessengerInterface):
         decoded = base64.b64decode(data)
         mime_type = json_response['mimetype']
         return (mime_type, decoded)
+
+
+class SignalMessenger(MessengerInterface):
+    """Interface for messengers to communicate with the underlying framework. """
+    DEFAULT_TIMEOUT = 60
+    REACT_HOURGLASS_HALF = "\u231b"
+    REACT_HOURGLASS_FULL = "\u23f3"
+    REACT_CHECKMARK = "\u2714\ufe0f"
+    REACT_FAIL = "\u274c"
+
+    def __init__(self, number: str, host:str, port: int) -> None:
+        super().__init__()
+        self._number = number
+        self._host = host
+        self._port = port
+        self._group_cache = {}
+
+    def get_host(self) -> str:
+        return self._host
+
+    def get_port(self) -> int:
+        return self._port
+    
+    def get_number(self) -> str:
+        return self._number
+
+    def _endpoint_url(self, endpoint, endpoint_param = None) -> str:
+        if endpoint_param is not None:
+            return f"http://{self._host}:{self._port}/{endpoint}/{endpoint_param}"
+        return f"http://{self._host}:{self._port}/{endpoint}"
+
+    def _react(self, message: dict, reaction_text):
+        data = {
+            "reaction": reaction_text,
+            # TODO: probably have to figure out group messages
+            "recipient": message["envelope"]["sourceNumber"],
+            "target_author": message["envelope"]["sourceNumber"],
+            "timestamp": message["envelope"]["timestamp"]
+        }
+
+        requests.post(self._endpoint_url("v1/reactions", self._number),
+                      json=data,
+                      timeout=self.DEFAULT_TIMEOUT)
+
+    def mark_in_progress_0(self, message: dict):
+        self._react(message, self.REACT_HOURGLASS_FULL)
+
+    def mark_in_progress_50(self, message: dict):
+        self._react(message, self.REACT_HOURGLASS_HALF)
+
+    def mark_in_progress_done(self, message: dict):
+        self._react(message, self.REACT_CHECKMARK)
+
+    def mark_in_progress_fail(self, message: dict):
+        self._react(message, self.REACT_FAIL)
+
+    def is_group_message(self, message: dict):
+        return ("dataMessage" in message["envelope"] \
+            and "groupInfo" in message["envelope"]["dataMessage"])
+
+    def _update_group_cache(self):
+        response = requests.get(self._endpoint_url("v1/groups", self._number),
+                                timeout=self.DEFAULT_TIMEOUT)
+        groups = response.json()
+        for group in groups:
+            self._group_cache[group["internal_id"]] = group["id"]
+
+    def send_message_to_group(self, group_message: dict, text: str):
+        internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
+        if internal_id not in self._group_cache:
+            self._update_group_cache()
+        data = {
+            "message": text,
+            "number": self._number,
+            "recipients": [
+                self._group_cache[internal_id]
+            ]
+        }
+        requests.post(self._endpoint_url("v2/send"),
+                      json=data,
+                      timeout=self.DEFAULT_TIMEOUT)
+
+    def send_message_to_individual(self, message: dict, text: str):
+        data = {
+            "message": text,
+            "number": self._number,
+            "recipients": [
+                message["envelope"]["sourceNumber"]
+            ]
+        }
+        requests.post(self._endpoint_url("v2/send"),
+                      json=data,
+                      timeout=self.DEFAULT_TIMEOUT)
+
+    def delete_message(self, message: dict):
+        pass
+
+    def has_audio_data(self, message: dict):
+        if "dataMessage" in message["envelope"] \
+            and "attachments" in message["envelope"]["dataMessage"]:
+            for attachment in message["envelope"]["dataMessage"]["attachments"]:
+                if attachment["contentType"] == "audio/aac":
+                    return True
+        return False
+
+    def is_bot_mentioned(self, message: dict):
+        # TODO
+        return False
+
+    def get_message_text(self, message: dict) -> str:
+        if "dataMessage" in message["envelope"] \
+            and "message" in message["envelope"]["dataMessage"] \
+            and message["envelope"]["dataMessage"]["message"] is not None:
+            return message["envelope"]["dataMessage"]["message"]
+        return ""
+
+    def get_chat_id(self, message: dict) -> str:
+        if self.is_group_message(message):
+            return message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
+        return message["envelope"]["sourceNumber"]
+
+    def get_sender_name(self, message: dict):
+        return message["envelope"]["sourceName"]
+
+    def send_image_to_group(self, group_message: dict, file_name: str,
+                            binary_data: bytes, caption: str = ""):
+        internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
+        if internal_id not in self._group_cache:
+            self._update_group_cache()
+        base64data = base64.b64encode(binary_data).decode('utf-8')
+        if file_name.endswith('.webp'):
+            data_type="image/webp"
+        else:
+            data_type="image/png"
+
+        data = {
+            "base64_attachments": [
+                f"data:{data_type};base64,{base64data}"
+            ],
+            "number": self._number,
+            "recipients": [
+                self._group_cache[internal_id]
+            ]
+        }
+        requests.post(self._endpoint_url("v2/send"),
+                      json=data,
+                      timeout=self.DEFAULT_TIMEOUT)
+
+    def send_image_to_individual(self, message, file_name, binary_data, caption = ""):
+        base64data = base64.b64encode(binary_data).decode('utf-8')
+        if file_name.endswith('.webp'):
+            data_type="image/webp"
+        else:
+            data_type="image/png"
+
+        data = {
+            "base64_attachments": [
+                f"data:{data_type};base64,{base64data}"
+            ],
+            "number": self._number,
+            "recipients": [
+                message["envelope"]["sourceNumber"]
+            ]
+        }
+        requests.post(self._endpoint_url("v2/send"),
+                      json=data,
+                      timeout=self.DEFAULT_TIMEOUT)
+
+    def send_audio_to_group(self, group_message, binary_data):
+        internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
+        if internal_id not in self._group_cache:
+            self._update_group_cache()
+        base64data = base64.b64encode(binary_data).decode('utf-8')
+        data = {
+            "base64_attachments": [
+                f"data:audio/ogg;base64,{base64data}"
+            ],
+            "number": self._number,
+            "recipients": [
+                self._group_cache[internal_id]
+            ]
+        }
+        requests.post(self._endpoint_url("v2/send"),
+                      json=data,
+                      timeout=self.DEFAULT_TIMEOUT)
+
+    def send_audio_to_individual(self, message, binary_data):
+        base64data = base64.b64encode(binary_data).decode('utf-8')
+        data = {
+            "base64_attachments": [
+                f"data:audio/ogg;base64,{base64data}"
+            ],
+            "number": self._number,
+            "recipients": [
+                message["envelope"]["sourceNumber"]
+            ]
+        }
+        requests.post(self._endpoint_url("v2/send"),
+                      json=data,
+                      timeout=self.DEFAULT_TIMEOUT)
+
+    def download_media(self, message: dict) -> Tuple[str, bytes]:
+        # TODO: looks like signal could return a list of attachments, thus we should have a list here too
+        # we will just get the first one here
+        if "dataMessage" in message["envelope"] and "attachments" in message["envelope"]["dataMessage"]:
+            attachment = message["envelope"]["dataMessage"]["attachments"][0]
+            content_type = attachment["contentType"]
+            attachment_id = attachment["id"]
+            response = requests.get(self._endpoint_url("v1/attachments", attachment_id),
+                            timeout=self.DEFAULT_TIMEOUT)
+            return (content_type, response.content)
+        return None
