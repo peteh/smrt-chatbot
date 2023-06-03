@@ -58,6 +58,7 @@ class MainPipeline():
         for pipe in self._pipelines:
             if pipe.matches(messenger_instance, message):
                 print(f"{type(pipe).__name__} matches, processing")
+                # TODO: allow multi thread processing
                 pipe.process(messenger_instance, message)
             # delete message from phone after processing
             #whatsapp.deleteMessage(message)
