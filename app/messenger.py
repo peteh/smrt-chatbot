@@ -298,10 +298,17 @@ class SignalMessenger(MessengerInterface):
         return f"http://{self._host}:{self._port}/{endpoint}"
 
     def _react(self, message: dict, reaction_text):
+        if self.is_group_message(message):
+            internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
+            if internal_id not in self._group_cache:
+                self._update_group_cache()
+            recipient = self._group_cache[internal_id]
+        else:
+            recipient = message["envelope"]["sourceNumber"]
         data = {
             "reaction": reaction_text,
             # TODO: probably have to figure out group messages
-            "recipient": message["envelope"]["sourceNumber"],
+            "recipient": recipient,
             "target_author": message["envelope"]["sourceNumber"],
             "timestamp": message["envelope"]["timestamp"]
         }
