@@ -126,7 +126,7 @@ class Whatsapp(MessengerInterface):
     def start_session(self):
         """Starts a session at wpp-connect server"""
         data = {
-            #'web-hook': 'http://smrt:9000/incoming'
+            #'web-hook': 'http://10.10.0.1:9000/incoming'
         }
         response = requests.post(self._endpoint_url("start-session"),
                                  json=data,
