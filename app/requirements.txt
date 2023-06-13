@@ -13,3 +13,4 @@ websockets
 BingImageCreator
 denoiser
 poe-api
+python-socketio[client]
