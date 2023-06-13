@@ -7,7 +7,7 @@ from typing import List
 import re
 
 import asyncio
-import EdgeGPT
+import EdgeGPT.EdgeGPT
 import revChatGPT.V1
 
 # openai api questionbot
@@ -49,13 +49,14 @@ class QuestionBotBingGPT(QuestionBotInterface):
             self._cookies = json.load(cookie_fp)
 
     async def _answer(self, prompt):
-        bot = EdgeGPT.Chatbot(cookies=self._cookies)
+        bot = await EdgeGPT.EdgeGPT.Chatbot.create(cookies=self._cookies)
         try:
-            response = await bot.ask(prompt=prompt,
-                                     conversation_style=EdgeGPT.ConversationStyle.creative,
-                                     wss_link="wss://sydney.bing.com/sydney/ChatHub")
-            #print(json.dumps(response, indent = 4))
-            text = response['item']['messages'][1]['text']
+            #response = await bot.ask(prompt=prompt,
+            #                         conversation_style=EdgeGPT.EdgeGPT.ConversationStyle.creative,
+            #                         wss_link="wss://sydney.bing.com/sydney/ChatHub")
+            response = await bot.ask(prompt, conversation_style=EdgeGPT.EdgeGPT.ConversationStyle.creative, simplify_response=True)
+            print(json.dumps(response, indent = 4))
+            text = response['text']
             first_sentence = text[:text.find(".")+1:]
             text = re.sub(r"\[\^[0-9]+\^\]", "", text)
             if "Bing" in first_sentence:
@@ -66,7 +67,8 @@ class QuestionBotBingGPT(QuestionBotInterface):
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
             return None
         finally:
-            await bot.close()
+            if bot is not None:
+                await bot.close()
 
         return {
             'text': text,
