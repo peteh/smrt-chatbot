@@ -6,7 +6,7 @@ import websockets.sync.client as wsclient
 import websockets.exceptions
 from messenger import SignalMessenger
 from main_pipeline import MainPipeline
-import socketio
+
 
 class SignalMessageQueue():
     """Implementation to get interfaces from stabediffusionai.org. """
@@ -19,17 +19,15 @@ class SignalMessageQueue():
         self._thread = None
 
     def get_messages(self):
-        api_url = f"http://{self._messenger.get_host()}:{self._messenger.get_port()}"
+        api_url = f"ws://{self._messenger.get_host()}:{self._messenger.get_port()}/v1/receive/{self._messenger.get_number()}"
         web_sock = None
 
         while True:
             try:
                 if web_sock is None:
-                    web_sock = socketio.Client()
-                    web_sock.connect(api_url)
+                    web_sock = wsclient.connect(api_url, max_size=self.WEBSOCKET_MAXSIZE)
                     logging.info("Connected to Signal Service")
-                #message = json.loads(web_sock.)
-                message = {}
+                message = json.loads(web_sock.recv())
                 print(message)
                 print(f"is_group_message: {self._messenger.is_group_message(message)}")
                 print(f"has_audio_data: {self._messenger.has_audio_data(message)}")
