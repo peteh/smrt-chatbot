@@ -315,18 +315,16 @@ import BingImageCreator
 class BingImageProcessor(ImagePromptInterface):
     """Prompt based image generator based on Microsoft Bing's creator"""
     def __init__(self, cookie_path = "cookie.json") -> None:
-        try:
-            with open(cookie_path, "r", encoding="utf-8") as f:
-                cookies = json.load(f)
-                for cookie in cookies:
-                    if cookie['name'] == "_U":
-                        self._cookie = cookie['value']
-        except FileNotFoundError as ex:
-            raise FileNotFoundError("Cookie file not found") from ex
+        self._cookie_path = cookie_path
 
     def process(self, prompt):
         try:
-            image_gen = BingImageCreator.ImageGen(self._cookie)
+            with open(self._cookie_path, "r", encoding="utf-8") as f:
+                cookies = json.load(f)
+                for cookie in cookies:
+                    if cookie['name'] == "_U":
+                        cookie_u = cookie['value']
+            image_gen = BingImageCreator.ImageGen(cookie_u)
             image_urls = image_gen.get_images(prompt)
             img_num = 0
             images = []

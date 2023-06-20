@@ -45,11 +45,12 @@ class QuestionBotBingGPT(QuestionBotInterface):
     """Question bot based on Microsoft's Bing search engine chat feature"""
 
     def __init__(self, cookie_path = "cookie.json") -> None:
-        with open(cookie_path, "r", encoding = "utf-8") as cookie_fp:
-            self._cookies = json.load(cookie_fp)
+        self._cookie_path = cookie_path
 
     async def _answer(self, prompt):
-        bot = await EdgeGPT.EdgeGPT.Chatbot.create(cookies=self._cookies)
+        with open(self._cookie_path, "r", encoding = "utf-8") as cookie_fp:
+            cookies = json.load(cookie_fp)
+        bot = await EdgeGPT.EdgeGPT.Chatbot.create(cookies=cookies)
         try:
             #response = await bot.ask(prompt=prompt,
             #                         conversation_style=EdgeGPT.EdgeGPT.ConversationStyle.creative,
