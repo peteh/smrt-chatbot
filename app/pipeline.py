@@ -330,6 +330,7 @@ beantworte folgende Frage zu dieser Konversation: {question}\n\nText:\n{chat_tex
 _#summary [num]_ Summarizes the last _num_ messages
 _#question Question?_ answers questions to the last messages in the group"""
 
+import requests
 class ArticleSummaryPipeline(PipelineInterface):
     """Summarizes an article or a youtube video. """
 
@@ -354,15 +355,14 @@ class ArticleSummaryPipeline(PipelineInterface):
 
     def _process_article(self, link: str):
         config = trafilatura.settings.use_config()
+        # pretend we are google bot, so we don't get annoying cookie shit
         config.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
-
-        downloaded = trafilatura.fetch_url(link)
-        if downloaded is None:
-            print("Failed to retrieve article, skipping")
-            return ""
+        headers={'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
+        session = requests.Session()
+        response = session.get(link, headers=headers)
 
         # extract information from HTML
-        extracted_text = trafilatura.extract(downloaded, config=config)
+        extracted_text = trafilatura.extract(response.content, config=config)
         summarized_text = self._summarizer.summarize(extracted_text, self._language)['text']
         print("==EXTRACTED==")
         print(extracted_text)
