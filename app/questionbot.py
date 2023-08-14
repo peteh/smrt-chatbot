@@ -49,7 +49,7 @@ class QuestionBotBingGPT(QuestionBotInterface):
 
     async def _answer(self, prompt):
         import EdgeGPT.constants
-        EdgeGPT.constants.HEADERS_INIT_CONVER["user-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
+        #EdgeGPT.constants.HEADERS_INIT_CONVER["user-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
         with open(self._cookie_path, "r", encoding = "utf-8") as cookie_fp:
             cookies = json.load(cookie_fp)
         bot = await EdgeGPT.EdgeGPT.Chatbot.create(cookies=cookies)
