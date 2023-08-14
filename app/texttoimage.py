@@ -146,7 +146,7 @@ class StableDiffusionAIOrg(ImagePromptInterface):
         images = []
         for i in range(num_images):
             image_name = f"image{i+1}.png"
-            image_data = response['images'][i]
+            image_data = response['images'][i]['image']
             base64encoded = image_data.split(',')[1].strip()
             binary = base64.b64decode(base64encoded)
             images.append((image_name, binary))
