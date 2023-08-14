@@ -324,7 +324,9 @@ class BingImageProcessor(ImagePromptInterface):
                 for cookie in cookies:
                     if cookie['name'] == "_U":
                         cookie_u = cookie['value']
-            image_gen = BingImageCreator.ImageGen(cookie_u)
+                    if cookie['name'] == "SRCHUSR":
+                        cookie_usr = cookie['value']
+            image_gen = BingImageCreator.ImageGen(cookie_u, cookie_usr)
             image_urls = image_gen.get_images(prompt)
             img_num = 0
             images = []
