@@ -117,6 +117,9 @@ class Whatsapp(MessengerInterface):
         self._session = session
         self._api_key = api_key
         self._headers = {"Authorization": f"Bearer {self._api_key}"}
+    
+    def get_server(self) -> str:
+        return self._server
 
     def _endpoint_url(self, endpoint, endpoint_param = None) -> str:
         if endpoint_param is not None:
