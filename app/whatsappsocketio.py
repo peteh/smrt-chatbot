@@ -54,5 +54,6 @@ class WhatsappMessageQueue():
 
         while True:
             time.sleep(1)
+        # TODO: reconnect handling
 
         self.sio.disconnect()

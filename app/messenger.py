@@ -24,8 +24,12 @@ class MessengerInterface(ABC):
         """Marks a message that the processing of said message failed. """
 
     @abstractmethod
-    def is_group_message(self, message: dict):
+    def is_group_message(self, message: dict) -> bool:
         """Checks if a message is a group message"""
+    
+    @abstractmethod
+    def is_self_message(self, message: dict) -> bool:
+        """checks if the message is a message from the bot itself"""
 
     @abstractmethod
     def send_message_to_group(self, group_message: dict, text: str):
@@ -172,6 +176,9 @@ class Whatsapp(MessengerInterface):
 
     def is_group_message(self, message: dict):
         return 'isGroupMsg' in message and message['isGroupMsg'] is True
+    
+    def is_self_message(self, message: dict):
+        return "fromMe" in message and message["fromMe"]
 
     def send_message_to_group(self, group_message: dict, text: str):
         self._send_message(group_message['chatId'], True, text)
@@ -335,6 +342,10 @@ class SignalMessenger(MessengerInterface):
     def is_group_message(self, message: dict):
         return ("dataMessage" in message["envelope"] \
             and "groupInfo" in message["envelope"]["dataMessage"])
+    
+    def is_self_message(self, message: dict):
+        # TODO: we currently don't get messages we send ourselves, but we could double check
+        return False
 
     def _update_group_cache(self):
         response = requests.get(self._endpoint_url("v1/groups", self._number),

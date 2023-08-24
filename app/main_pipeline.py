@@ -55,6 +55,13 @@ class MainPipeline():
         self._pipelines.append(help_pipeline)
 
     def process(self, messenger_instance: messenger.MessengerInterface, message: dict):
+        # filter own messages from the bot
+        if messenger_instance.is_self_message(message):
+            print(f"Skipped self message: {message}")
+            # skip, 
+            # TODO: maybe should delete later too? 
+            return
+            
         for pipe in self._pipelines:
             if pipe.matches(messenger_instance, message):
                 print(f"{type(pipe).__name__} matches, processing")
