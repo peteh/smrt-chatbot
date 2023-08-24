@@ -82,7 +82,7 @@ class ReplicateAPI(ImagePromptInterface):
 
             #print(json.dumps(r.json(), indent = 4))
             time.sleep(2)
-        return (None, None)
+        return None
 
 class StableDiffusionAPI(ReplicateAPI):
 
