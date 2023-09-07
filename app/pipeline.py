@@ -331,6 +331,7 @@ _#summary [num]_ Summarizes the last _num_ messages
 _#question Question?_ answers questions to the last messages in the group"""
 
 import requests
+import langid
 class ArticleSummaryPipeline(PipelineInterface):
     """Summarizes an article or a youtube video. """
 
@@ -363,7 +364,8 @@ class ArticleSummaryPipeline(PipelineInterface):
 
         # extract information from HTML
         extracted_text = trafilatura.extract(response.content, config=config)
-        summarized_text = self._summarizer.summarize(extracted_text, self._language)['text']
+        lang, conf = langid.classify(extracted_text)
+        summarized_text = self._summarizer.summarize(extracted_text, "de" if lang == "de" else self._language)['text']
         print("==EXTRACTED==")
         print(extracted_text)
         print("==SUMMARY==")
@@ -380,7 +382,8 @@ class ArticleSummaryPipeline(PipelineInterface):
         if len(text) > self.MAX_TRANSCRIPT_LENGTH:
             print(f"Transcript exceeding {self.MAX_TRANSCRIPT_LENGTH} letters, reducing...")
         text = text[-self.MAX_TRANSCRIPT_LENGTH:]
-        summarized_text = self._summarizer.summarize(text, self._language)['text']
+        lang, conf = langid.classify(text)
+        summarized_text = self._summarizer.summarize(text, "de" if lang == "de" else self._language)['text']
         return summarized_text
 
     def process(self, messenger: MessengerInterface, message: dict):
