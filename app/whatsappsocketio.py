@@ -1,17 +1,12 @@
 import logging
 import threading
 import time
-import json
-import websockets.sync.client as wsclient
-import websockets.exceptions
 from messenger import Whatsapp
 from main_pipeline import MainPipeline
 
 import socketio
 
 class WhatsappMessageQueue():
-    WEBSOCKET_TIMEOUT = 600
-    WEBSOCKET_MAXSIZE = 1024*1024*50
 
     def __init__(self, messenger_instance: Whatsapp, mainpipe: MainPipeline) -> None:
         self._messenger = messenger_instance
@@ -31,17 +26,17 @@ class WhatsappMessageQueue():
         self._thread.start()
 
     def on_connect(self):
-        print("Connected to server")
+        logging.info("Connected to server")
 
     def on_disconnect(self):
-        print("Disconnected from server")
+        logging.info("Disconnected from server")
 
     def on_message(self, data):
-        print("Received message:", data)
+        logging.info("Received message:", data)
         
     
     def on_new_message(self, data):
-        print("Received new message:", data)
+        logging.info("Received new message:", data)
         self._mainpipe.process(self._messenger, data['response'])
 
     def on_catch_all(self, identifier, data):
