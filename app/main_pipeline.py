@@ -15,8 +15,8 @@ class MainPipeline():
         questionbot_bing = questionbot.QuestionBotBingGPT()
         questionbot_revchatgpt = questionbot.QuestionBotRevChatGPT(config("CHATGPT_COOKIE"))
         bots = [
-                questionbot_revchatgpt,
-                questionbot_bing,
+                #questionbot_revchatgpt,
+                #questionbot_bing,
                 questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
