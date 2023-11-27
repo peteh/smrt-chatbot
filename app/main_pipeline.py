@@ -12,8 +12,6 @@ class MainPipeline():
         CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
         database = db.Database("data")
 
-        questionbot_bing = questionbot.QuestionBotBingGPT()
-        questionbot_revchatgpt = questionbot.QuestionBotRevChatGPT(config("CHATGPT_COOKIE"))
         bots = [
                 #questionbot_revchatgpt,
                 #questionbot_bing,
@@ -27,13 +25,13 @@ class MainPipeline():
         voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
                                                     summarizer,
                                                     CONFIG_MIN_WORDS_FOR_SUMMARY)
-        gpt_pipeline = pipeline.GptPipeline(question_bot, questionbot_revchatgpt, questionbot_bing)
+        # TODO: fix the different bots
+        gpt_pipeline = pipeline.GptPipeline(question_bot, question_bot, question_bot)
 
         group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
         article_summary_pipeline = pipeline.ArticleSummaryPipeline(summarizer)
 
-        processors = [texttoimage.BingImageProcessor(),
-                    texttoimage.StableDiffusionAIOrg(),
+        processors = [texttoimage.StableDiffusionAIOrg(),
                     texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
         image_api = texttoimage.FallbackTextToImageProcessor(processors)
         image_pipeline = pipeline.ImagePromptPipeline(image_api)
