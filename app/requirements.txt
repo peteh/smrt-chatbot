@@ -3,16 +3,11 @@ requests[socks]
 flask
 openai
 python-decouple
-EdgeGPT
 faster_whisper
-revChatGPT
 trafilatura
 youtube-transcript-api
 TTS
 websockets
-BingImageCreator
 denoiser
-poe-api
 python-socketio
-openai
 langid
