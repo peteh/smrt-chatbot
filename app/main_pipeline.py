@@ -14,7 +14,8 @@ class MainPipeline():
         questionbot_ollama = questionbot.QuestionBotOllama()
         questionbot_Openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         bots = [
-                questionbot_ollama, 
+                # TODO: add bot again
+                #questionbot_ollama, 
                 questionbot_Openai
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
