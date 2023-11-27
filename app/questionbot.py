@@ -49,7 +49,7 @@ class QuestionBotOllama(QuestionBotInterface):
                 "format": "json",
                 "stream": False}
 
-        response = requests.post('http://localhost:11434/api/generate', headers=headers, json=request)
+        response = requests.post(f"{server}/api/generate", headers=headers, json=request)
         response_json = response.json()
         if "error" in response_json: 
             logging.critical(f"Ollama API call error: {response_json['error']}")
