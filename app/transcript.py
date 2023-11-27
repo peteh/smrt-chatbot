@@ -3,7 +3,7 @@ import io
 from abc import ABC, abstractmethod
 
 import requests
-import openai
+from openai import OpenAI
 import faster_whisper
 
 
@@ -32,10 +32,10 @@ class OpenAIWhisperTranscript(TranscriptInterface):
         return False
 
     def transcribe(self, audio_data) -> dict:
-        openai.api_key = self._api_key
+        client = OpenAI(api_key=self._api_key)
         file_like = io.BytesIO(audio_data)
         file_like.name = "file.mp3"
-        transcript = openai.Audio.transcribe("whisper-1", file_like)
+        transcript = client.audio.transcribe("whisper-1", file_like)
         # TODO: map data
         return transcript
 

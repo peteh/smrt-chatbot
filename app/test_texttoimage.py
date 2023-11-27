@@ -27,10 +27,6 @@ class TextToImageTest(unittest.TestCase):
         textToImage.set_store_files(True)
         self._testTextToImage(textToImage)
     
-    def test_BingImageProcessor(self):
-        textToImage = texttoimage.BingImageProcessor()
-        self._testTextToImage(textToImage)
-    
     def test_FallbackProcessor(self):
         # arrange
         class ExceptionImageProcessor(texttoimage.ImagePromptInterface):

@@ -20,20 +20,6 @@ class QuestionBotTest(unittest.TestCase):
         self.assertIn("15:30", answer['text'])
         self.assertGreaterEqual(answer['cost'], 0)
 
-    def test_binggpt(self):
-        # arrange
-        question_bot = questionbot.QuestionBotBingGPT()
-        
-        # act, assert
-        self._test_questionbot(question_bot)
-
-    def test_revchatgpt(self):
-        # arrange
-        question_bot = questionbot.QuestionBotRevChatGPT(cookie = config('CHATGPT_COOKIE'))
-
-        # act, assert
-        self._test_questionbot(question_bot)
-
     def test_openai_api(self):
         # arrange
         question_bot = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
