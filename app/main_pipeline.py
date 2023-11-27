@@ -11,11 +11,11 @@ class MainPipeline():
     def __init__(self):
         CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
         database = db.Database("data")
-
+        questionbot_ollama = questionbot.QuestionBotOllama()
+        questionbot_Openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         bots = [
-                #questionbot_revchatgpt,
-                #questionbot_bing,
-                questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
+                questionbot_ollama, 
+                questionbot_Openai
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
 
@@ -26,7 +26,7 @@ class MainPipeline():
                                                     summarizer,
                                                     CONFIG_MIN_WORDS_FOR_SUMMARY)
         # TODO: fix the different bots
-        gpt_pipeline = pipeline.GptPipeline(question_bot, question_bot, question_bot)
+        gpt_pipeline = pipeline.GptPipeline(question_bot, questionbot_Openai, questionbot_Openai)
 
         group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
         article_summary_pipeline = pipeline.ArticleSummaryPipeline(summarizer)

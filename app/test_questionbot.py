@@ -8,7 +8,7 @@ class QuestionBotTest(unittest.TestCase):
 
     def _test_questionbot(self, question_bot: questionbot.QuestionBotInterface):
         # arrange
-        prompt = "Tell me the meeting time in the format HH:mm from the following text by just \
+        prompt = "Tell me the meeting time in the format HH:mm in 24h format from the following text by just \
             stating the answer: We will meet at half past 3 in the afternoon. "
 
         # act
@@ -23,6 +23,13 @@ class QuestionBotTest(unittest.TestCase):
     def test_openai_api(self):
         # arrange
         question_bot = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
+
+        # act, assert
+        self._test_questionbot(question_bot)
+    
+    def test_ollama(self):
+        # arrange
+        question_bot = questionbot.QuestionBotOllama()
 
         # act, assert
         self._test_questionbot(question_bot)

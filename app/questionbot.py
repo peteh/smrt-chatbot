@@ -3,12 +3,6 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List
 
-# bing gpt standard imports
-import re
-
-import asyncio
-import EdgeGPT.EdgeGPT
-import revChatGPT.V1
 
 # openai api questionbot
 from openai import OpenAI
@@ -40,6 +34,29 @@ class QuestionBotOpenAIAPI(QuestionBotInterface):
         return {
             'text': response, 
             'cost': cost
+        }
+
+import requests
+from decouple import config
+class QuestionBotOllama(QuestionBotInterface):
+    
+    
+    def answer(self, prompt: str):
+        headers = {}
+        server = config("OLLAMA_SERVER")
+        request = {"model": "llama2-uncensored",
+                "prompt": prompt,
+                "format": "json",
+                "stream": False}
+
+        response = requests.post('http://localhost:11434/api/generate', headers=headers, json=request)
+        response_json = response.json()
+        if "error" in response_json: 
+            logging.critical(f"Ollama API call error: {response_json['error']}")
+            return None
+        return {
+            'text': response_json['response'], 
+            'cost': 0
         }
 
 class FallbackQuestionbot(QuestionBotInterface):
