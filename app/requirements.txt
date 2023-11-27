@@ -10,4 +10,5 @@ TTS
 websockets
 denoiser
 python-socketio
+python-socketio[client]
 langid
