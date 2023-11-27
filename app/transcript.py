@@ -114,9 +114,9 @@ class FasterWhisperTranscript(TranscriptInterface):
         supported_languages = ['en', 'de', 'es', 'fr']
         if info.language not in supported_languages:
             print(f"Warning: language detected as '{info.language}', therefore we redo as 'en'")
-            audio_reader = io.BytesIO(audio_data)
+            audio_reader.seek(0)
             segments, info = model.transcribe(audio_reader, language='en', beam_size=5)
-
+        audio_reader.close()
         duration = 0.
         text = ""
         for segment in segments:
