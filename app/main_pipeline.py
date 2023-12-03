@@ -4,6 +4,7 @@ import messenger
 from decouple import config
 import db
 import pipeline
+import pipeline_tts
 import texttoimage
 import questionbot
 
@@ -37,7 +38,7 @@ class MainPipeline():
         image_api = texttoimage.FallbackTextToImageProcessor(processors)
         image_pipeline = pipeline.ImagePromptPipeline(image_api)
 
-        tts_pipeline = pipeline.TextToSpeechPipeline()
+        tts_pipeline = pipeline_tts.TextToSpeechPipeline()
         grammar_pipeline = pipeline.GrammarPipeline(question_bot)
         tinder_pipeline = pipeline.TinderPipelinePipelineInterface(question_bot)
 

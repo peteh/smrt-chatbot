@@ -25,8 +25,6 @@ import trafilatura
 from db import Database
 import youtubeextract
 
-# text to speech pipeline
-from TTS.api import TTS
 
 
 class PipelineInterface(ABC):
@@ -452,51 +450,6 @@ class ImagePromptPipeline(PipelineInterface):
 """*Image Generation*
 _#image prompt_ Generates images based on the given prompt"""
 
-class TextToSpeechPipeline(PipelineInterface):
-    """Pipe to generate a voice messages based on input text. """
-    TTS_COMMAND = "tts"
-
-    def __init__(self):
-        self._tts = None
-
-    def _get_tts(self):
-        # lazy loading
-        if self._tts is None:
-            self._tts = TTS("tts_models/de/thorsten/tacotron2-DDC")
-        return self._tts
-
-    def _text_to_vorbis_audio(self, text: str):
-        tts = self._get_tts()
-        with tempfile.TemporaryDirectory() as tmp:
-            input_file = os.path.join(tmp, 'input.wav')
-            tts.tts_to_file(text=text, file_path=input_file)
-            output_file = os.path.join(tmp, 'output.opus')
-
-            subprocess.run(["opusenc", input_file, output_file], check=True)
-            file = open(output_file,mode='rb')
-            ogg_data = file.read()
-            file.close()
-        return ogg_data
-
-    def matches(self, messenger: MessengerInterface, message: dict):
-        command = PipelineHelper.extract_command(messenger.get_message_text(message))
-        return self.TTS_COMMAND in command
-
-    def process(self, messenger: MessengerInterface, message: dict):
-        (_, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
-        messenger.mark_in_progress_0(message)
-        audio_data = self._text_to_vorbis_audio(text)
-
-        if messenger.is_group_message(message):
-            messenger.send_audio_to_group(message, audio_data)
-        else:
-            messenger.send_audio_to_individual(message, audio_data)
-
-        messenger.mark_in_progress_done(message)
-    def get_help_text(self) -> str:
-        return \
-"""*Text to Speech*
-_#tts text_ Generates a voice message with the given text"""
 
 class TinderPipelinePipelineInterface(PipelineInterface):
     """A pipeline to write answers to tinder messages. """
