@@ -16,10 +16,13 @@ class TextToSpeechPipeline(PipelineInterface):
     TTS_COMMAND = "tts"
     ARNY_COMMAND = "arny"
     ARNYDE_COMMAND = "arnyde"
+    ARNY2_COMMAND = "arny2"
+    ARNY2DE_COMMAND = "arny2de"
 
     def __init__(self):
         self._tts_thorsten = None
-        self._tts_arny = None
+        self._tts_arny1 = None
+        self._tts_arny2 = None
 
     def _get_tts_thorsten(self):
         # lazy loading
@@ -27,10 +30,15 @@ class TextToSpeechPipeline(PipelineInterface):
             self._tts_thorsten = ThorstenTtsVoice()
         return self._tts_thorsten
     
-    def _get_tts_arny(self):
-        if self._tts_arny is None: 
-            self._tts_arny = XttsModel(f"{utils.storage_path()}/custom_models/xtts_arny1")
-        return self._tts_arny
+    def _get_tts_arny1(self):
+        if self._tts_arny1 is None: 
+            self._tts_arny1 = XttsModel(f"{utils.storage_path()}/custom_models/xtts_arny1")
+        return self._tts_arny1
+    
+    def _get_tts_arny2(self):
+        if self._tts_arny2 is None: 
+            self._tts_arny2 = XttsModel(f"{utils.storage_path()}/custom_models/xtts_arny2")
+        return self._tts_arny2
 
     def _text_to_vorbis_audio(self, tts : TextToSpeechInterface, text: str, language: str):
         with tempfile.TemporaryDirectory() as tmp:
@@ -58,11 +66,17 @@ class TextToSpeechPipeline(PipelineInterface):
         
         tts = None
         if command == self.ARNY_COMMAND:
-            tts = self._get_tts_arny()
+            tts = self._get_tts_arny1()
             language = "en"
         elif command == self.ARNYDE_COMMAND:
-            tts = self._get_tts_arny()
+            tts = self._get_tts_arny1()
+            language = "de"
+        if command == self.ARNY2_COMMAND:
+            tts = self._get_tts_arny2()
             language = "en"
+        elif command == self.ARNY2DE_COMMAND:
+            tts = self._get_tts_arny2()
+            language = "de"
         else: 
             tts = self._get_tts_thorsten()
             language = "en"
