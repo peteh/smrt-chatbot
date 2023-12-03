@@ -40,16 +40,62 @@ import requests
 from decouple import config
 class QuestionBotOllama(QuestionBotInterface):
     
+    DEFAULT_MODEL = "llama2-uncensored"
+    #DEFAULT_MODEL = "falcon"
+    #DEFAULT_MODEL = "orca-mini"
+    THREADS = 6
+    
+    def __init__(self, model : str = None) -> None:
+        self._server = config("OLLAMA_SERVER")
+        self._headers = {}
+        
+        self._model = model if model is not None else self.DEFAULT_MODEL
+        
+        self._lazy_download_done = False
+        
+    
+    def _model_available(self, model_name: str):
+        response = requests.get(f"{self._server}/api/tags", headers=self._headers)
+        response_json = response.json()
+        for model in response_json["models"]:
+            if model["name"] == model_name or model["name"] == f"{model_name}:latest":
+                return True
+        return False
+    
+    def _model_download(self, model_name):
+        request = {
+            "name": model_name,
+            "stream": False
+            }
+        
+        response = requests.post(f"{self._server}/api/pull", headers=self._headers, json=request)
+        # TODO: json fails
+        response_json = response.json()
+        if "error" in response_json: 
+            logging.critical(f"Ollama API call error: {response_json['error']}")
+            return False
+        return True
     
     def answer(self, prompt: str):
-        headers = {}
-        server = config("OLLAMA_SERVER")
-        request = {"model": "llama2-uncensored",
-                "prompt": prompt,
-                "format": "json",
-                "stream": False}
+        # TODO: lazy load to download the model if not yet present on the server
+        if not self._lazy_download_done:
+            if not self._model_available(self._model):
+                self._model_download(self._model)
+            self._lazy_download_done = True
+        # TODO: use better threads
+        request = {
+            "model": self._model,
+            "prompt": prompt,
+            #"format": "json",
+            "stream": False,
+            #"raw": True,
+            "options": 
+                {
+                    "num_thread": self.THREADS,
+                }
+            }
 
-        response = requests.post(f"{server}/api/generate", headers=headers, json=request)
+        response = requests.post(f"{self._server}/api/generate", headers=self._headers, json=request)
         response_json = response.json()
         if "error" in response_json: 
             logging.critical(f"Ollama API call error: {response_json['error']}")
