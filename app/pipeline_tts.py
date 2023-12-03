@@ -18,6 +18,9 @@ class TextToSpeechPipeline(PipelineInterface):
     ARNYDE_COMMAND = "arnyde"
     ARNY2_COMMAND = "arny2"
     ARNY2DE_COMMAND = "arny2de"
+    
+    TTSMAX_COMMAND = "ttsmax"
+    TTSMAXDE_COMMAND = "ttsmaxde"
 
     def __init__(self):
         self._tts_thorsten = None
@@ -39,6 +42,11 @@ class TextToSpeechPipeline(PipelineInterface):
         if self._tts_arny2 is None: 
             self._tts_arny2 = XttsModel(f"{utils.storage_path()}/custom_models/xtts_arny2")
         return self._tts_arny2
+    
+    def _get_tts_max1(self):
+        if self._tts_max1 is None: 
+            self._tts_max1 = XttsModel(f"{utils.storage_path()}/custom_models/xtts_maxerndwein1")
+        return self._tts_max1
 
     def _text_to_vorbis_audio(self, tts : TextToSpeechInterface, text: str, language: str):
         with tempfile.TemporaryDirectory() as tmp:
@@ -57,7 +65,11 @@ class TextToSpeechPipeline(PipelineInterface):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return self.TTS_COMMAND in command \
             or self.ARNY_COMMAND in command \
-            or self.ARNYDE_COMMAND in command
+            or self.ARNYDE_COMMAND in command \
+            or self.ARNY2_COMMAND in command \
+            or self.ARNY2DE_COMMAND in command \
+            or self.TTSMAX_COMMAND in command \
+            or self.TTSMAXDE_COMMAND in command
 
     def process(self, messenger: MessengerInterface, message: dict):
         (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
@@ -76,6 +88,12 @@ class TextToSpeechPipeline(PipelineInterface):
             language = "en"
         elif command == self.ARNY2DE_COMMAND:
             tts = self._get_tts_arny2()
+            language = "de"
+        if command == self.TTSMAX_COMMAND:
+            tts = self._get_tts_max1()
+            language = "en"
+        elif command == self.TTSMAXDE_COMMAND:
+            tts = self._get_tts_max1()
             language = "de"
         else: 
             tts = self._get_tts_thorsten()
