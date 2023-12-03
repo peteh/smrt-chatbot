@@ -29,7 +29,7 @@ class TextToSpeechPipeline(PipelineInterface):
     
     def _get_tts_arny(self):
         if self._tts_arny is None: 
-            self._tts_arny = XttsModel(f"{config('STORAGE_PATH')}/custom_models/xtts_arny1", "Arnold Schwarzenegger Russia speech IN FULL_ Star urges Putin to end Ukraine invasion 128kbit_AAC_00000004.wav")
+            self._tts_arny = XttsModel(f"{config('STORAGE_PATH')}/custom_models/xtts_arny1")
         return self._tts_arny
 
     def _text_to_vorbis_audio(self, tts : TextToSpeechInterface, text: str, language: str):
