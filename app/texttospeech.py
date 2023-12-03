@@ -24,7 +24,7 @@ class TextToSpeechInterface(ABC):
 
 class ThorstenTtsVoice(TextToSpeechInterface):
     def __init__(self) -> None:
-        self._tts = TTS("tts_models/de/thorapp/pipeline.pysten/tacotron2-DDC")
+        self._tts = TTS("tts_models/de/thorsten/tacotron2-DDC")
     
     def tts(self, text: str, output_wav_file : str, language : str = None) -> bool:
         self._tts.tts_to_file(text=text, file_path=output_wav_file)
