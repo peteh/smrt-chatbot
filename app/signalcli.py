@@ -28,6 +28,7 @@ class SignalMessageQueue():
                     web_sock = wsclient.connect(api_url, max_size=self.WEBSOCKET_MAXSIZE)
                     logging.info("Connected to Signal Service")
                 message = json.loads(web_sock.recv())
+                # TODO: fix logs
                 print(message)
                 print(f"is_group_message: {self._messenger.is_group_message(message)}")
                 print(f"has_audio_data: {self._messenger.has_audio_data(message)}")
