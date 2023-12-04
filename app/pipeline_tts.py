@@ -26,6 +26,7 @@ class TextToSpeechPipeline(PipelineInterface):
         self._tts_thorsten = None
         self._tts_arny1 = None
         self._tts_arny2 = None
+        self._tts_max1 = None
 
     def _get_tts_thorsten(self):
         # lazy loading
