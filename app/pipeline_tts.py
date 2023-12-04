@@ -90,7 +90,7 @@ class TextToSpeechPipeline(PipelineInterface):
         elif command == self.ARNY2DE_COMMAND:
             tts = self._get_tts_arny2()
             language = "de"
-        if command == self.TTSMAX_COMMAND:
+        elif command == self.TTSMAX_COMMAND:
             tts = self._get_tts_max1()
             language = "en"
         elif command == self.TTSMAXDE_COMMAND:
