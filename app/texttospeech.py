@@ -7,6 +7,7 @@ from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
 import torchaudio
 from decouple import config
+import logging
 
 class TextToSpeechInterface(ABC):
     @abstractmethod
@@ -40,11 +41,11 @@ class XttsModel(TextToSpeechInterface):
         self._config.load_json(f"{self._model_path}/{xtts_config}")
         self._model = Xtts.init_from_config(self._config)
         self._language = default_lang
-        print("Loading XTTS model! ")
+        logging.info(f"Loading XTTS model: {self._model_path}")
         self._model.load_checkpoint(self._config, checkpoint_path=f"{self._model_path}/{xtts_checkpoint}", vocab_path=f"{self._model_path}/{xtts_vocab}", use_deepspeed=False)
         if torch.cuda.is_available():
                 self._model.cuda()
-        print("Model Loaded!")
+        logging.info("Model Loaded!")
     
     def tts(self, text: str, output_wav_file : str, language : str = None) -> bool:
         gpt_cond_latent, speaker_embedding = self._model.get_conditioning_latents(audio_path=f"{self._model_path}/{self._reference_wav}", 

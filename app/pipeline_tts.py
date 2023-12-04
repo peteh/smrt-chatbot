@@ -76,7 +76,7 @@ class TextToSpeechPipeline(PipelineInterface):
         (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
         messenger.mark_in_progress_0(message)
         language = None
-        
+        print(f"Command: {command}")
         tts = None
         if command == self.ARNY_COMMAND:
             tts = self._get_tts_arny1()
@@ -84,7 +84,7 @@ class TextToSpeechPipeline(PipelineInterface):
         elif command == self.ARNYDE_COMMAND:
             tts = self._get_tts_arny1()
             language = "de"
-        if command == self.ARNY2_COMMAND:
+        elif command == self.ARNY2_COMMAND:
             tts = self._get_tts_arny2()
             language = "en"
         elif command == self.ARNY2DE_COMMAND:
