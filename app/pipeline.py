@@ -75,7 +75,7 @@ class PipelineHelper():
             return None
         length = 0
         for i in range(1, len(left_over)):
-            if left_over[i].isalnum():
+            if left_over[i].isalnum() or left_over[i] == "_":
                 length += 1
             else:
                 break
