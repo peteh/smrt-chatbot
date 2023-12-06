@@ -63,7 +63,8 @@ class XttsModel(TextToSpeechInterface):
             length_penalty=self._model.config.length_penalty,
             repetition_penalty=self._model.config.repetition_penalty,
             top_k=self._model.config.top_k,
-            top_p=self._model.config.top_p
+            top_p=self._model.config.top_p,
+            enable_text_splitting = True
         )
         out["wav"] = torch.tensor(out["wav"]).unsqueeze(0)
         torchaudio.save(output_wav_file, out["wav"], 24000)
