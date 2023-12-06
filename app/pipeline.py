@@ -49,23 +49,7 @@ class PipelineInterface(ABC):
 class PipelineHelper():
     """Helper functions for pipelines"""
 
-    @staticmethod
-    def extract_command(data: str):
-        """Extracts commands from a text, returns empty string if there 
-        is no command inside"""
-        left_over = data.strip()
-        if not left_over.startswith("#"):
-            return ""
-        length = 0
-        for i in range(1, len(left_over)):
-            if left_over[i].isalnum():
-                length += 1
-            else:
-                break
-        if length == 0:
-            return ""
-        command = left_over[1:1 + length]
-        return command
+
 
     @staticmethod
     def extract_command_full(data: str) -> List[str]:
@@ -95,7 +79,13 @@ class PipelineHelper():
         left_over = left_over.strip()
         return (command, params, left_over)
 
-
+    @staticmethod
+    def extract_command(data: str):
+        """Extracts commands from a text, returns empty string if there 
+        is no command inside"""
+        (command, _, _) = PipelineHelper.extract_command_full(data)
+        return command
+    
 class GrammarPipeline(PipelineInterface):
     """A pipeline that checks incoming messages for grammar 
     and spelling mistakes and fixes them. """
