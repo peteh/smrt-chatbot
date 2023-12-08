@@ -12,7 +12,7 @@ class MainPipeline():
     def __init__(self):
         CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
         database = db.Database("data")
-        questionbot_summary = questionbot.QuestionBotOllama("falcon:instruct")
+        questionbot_summary = questionbot.QuestionBotOllama("orca2")
         questionbot_Openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         bots = [
                 # TODO: add bot again
