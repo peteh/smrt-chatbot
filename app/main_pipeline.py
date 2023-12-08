@@ -12,7 +12,7 @@ class MainPipeline():
     def __init__(self):
         CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
         database = db.Database("data")
-        questionbot_ollama = questionbot.QuestionBotOllama()
+        questionbot_summary = questionbot.QuestionBotOllama("falcon:instruct")
         questionbot_Openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         bots = [
                 # TODO: add bot again
@@ -21,7 +21,7 @@ class MainPipeline():
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
 
-        summarizer = summary.QuestionBotSummary(question_bot)
+        summarizer = summary.QuestionBotSummary(questionbot_summary)
 
         transcriber = transcript.FasterWhisperTranscript(denoise=False)
         voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
