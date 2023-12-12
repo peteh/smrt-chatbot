@@ -65,9 +65,11 @@ class TextToSpeechPipeline(PipelineInterface):
             # TODO build this with generic file names
             input_file = os.path.join(tmp, 'input.wav')
             tts.tts(text, input_file, language)
-            output_file = os.path.join(tmp, 'output.opus')
-
-            subprocess.run(["opusenc", input_file, output_file], check=True)
+            
+            #output_file = os.path.join(tmp, 'output.opus')
+            output_file = os.path.join(tmp, 'output.ogg')
+            #subprocess.run(["opusenc", input_file, output_file], check=True)
+            subprocess.run(["oggenc", "-o", output_file, input_file], check=True)
             file = open(output_file,mode='rb')
             ogg_data = file.read()
             file.close()
