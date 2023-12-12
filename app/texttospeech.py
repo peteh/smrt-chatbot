@@ -42,9 +42,10 @@ class XttsModel(TextToSpeechInterface):
         self._model = Xtts.init_from_config(self._config)
         self._language = default_lang
         logging.info(f"Loading XTTS model: {self._model_path}")
-        self._model.load_checkpoint(self._config, checkpoint_path=f"{self._model_path}/{xtts_checkpoint}", vocab_path=f"{self._model_path}/{xtts_vocab}", use_deepspeed=False)
+        #self._model.load_checkpoint(self._config, checkpoint_path=f"{self._model_path}/{xtts_checkpoint}", vocab_path=f"{self._model_path}/{xtts_vocab}", use_deepspeed=False)
+        self._model.load_checkpoint(self._config, checkpoint_dir=self._model_path, use_deepspeed=False)
         if torch.cuda.is_available():
-                self._model.cuda()
+            self._model.cuda()
         logging.info("Model Loaded!")
     
     def tts(self, text: str, output_wav_file : str, language : str = None) -> bool:
