@@ -91,11 +91,11 @@ class MessengerInterface(ABC):
         """Sends an image to the sender of the original message in a direct chat. """
 
     @abstractmethod
-    def send_audio_to_group(self, group_message, binary_data):
+    def send_audio_to_group(self, group_message: dict, audio_file_path: str):
         """Sends an audio message to the group of the original message. """
 
     @abstractmethod
-    def send_audio_to_individual(self, message, binary_data):
+    def send_audio_to_individual(self, message: dict, audio_file_path: str):
         """Sends an audio message to the sender of the original message in a direct chat. """
 
     @abstractmethod
@@ -229,22 +229,16 @@ class Whatsapp(MessengerInterface):
     def send_image_to_individual(self, message, file_name, binary_data, caption = ""):
         self._send_image(message['sender']['id'], False, file_name, binary_data, caption)
 
-    def send_audio_to_group(self, group_message, binary_data):
-        self._send_audio(group_message['chatId'], True, binary_data)
+    def send_audio_to_group(self, group_message, audio_file_path):
+        self._send_audio(group_message['chatId'], True, audio_file_path)
 
-    def send_audio_to_individual(self, message, binary_data):
-        self._send_audio(message['sender']['id'], False, binary_data)
+    def send_audio_to_individual(self, message, audio_file_path):
+        self._send_audio(message['sender']['id'], False, audio_file_path)
 
-    def _send_audio(self, recipient: str, is_group: bool, binary_data):
+    def _send_audio(self, recipient: str, is_group: bool, audio_file_path: str):
         with tempfile.TemporaryDirectory() as tmp:
-            # TODO build this with generic file names
-            input_file = os.path.join(tmp, 'input.wav')
-            file_in = open(input_file, mode='wb')
-            file_in.write(binary_data)
-            file_in.close()
-            
             output_file = os.path.join(tmp, 'output.opus')
-            subprocess.run(["opusenc", input_file, output_file], check=True)
+            subprocess.run(["opusenc", audio_file_path, output_file], check=True)
             file = open(output_file,mode='rb')
             binary_data = file.read()
             file.close()
@@ -470,16 +464,10 @@ class SignalMessenger(MessengerInterface):
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
     
-    def _send_audio(self, recipient, binary_data):
+    def _send_audio(self, recipient, audio_file_path):
         with tempfile.TemporaryDirectory() as tmp:
-            # TODO build this with generic file names
-            input_file = os.path.join(tmp, 'input.wav')
-            file_in = open(input_file, mode='wb')
-            file_in.write(binary_data)
-            file_in.close()
-            
             output_file = os.path.join(tmp, 'output.ogg')
-            subprocess.run(["oggenc", "-o", output_file, input_file], check=True)
+            subprocess.run(["oggenc", "-o", output_file, audio_file_path], check=True)
             file = open(output_file,mode='rb')
             binary_data = file.read()
             file.close()
@@ -497,14 +485,14 @@ class SignalMessenger(MessengerInterface):
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
 
-    def send_audio_to_group(self, group_message, binary_data):
+    def send_audio_to_group(self, group_message, audio_file_path):
         internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
         if internal_id not in self._group_cache:
             self._update_group_cache()
-        self._send_audio(self._group_cache[internal_id], binary_data)
+        self._send_audio(self._group_cache[internal_id], audio_file_path)
 
-    def send_audio_to_individual(self, message, binary_data):
-        self._send_audio(message["envelope"]["sourceNumber"], binary_data)
+    def send_audio_to_individual(self, message, audio_file_path):
+        self._send_audio(message["envelope"]["sourceNumber"], audio_file_path)
         
 
 

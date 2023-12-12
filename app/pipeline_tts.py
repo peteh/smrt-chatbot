@@ -59,21 +59,6 @@ class TextToSpeechPipeline(PipelineInterface):
         if self._tts_thorsten is None:
             self._tts_thorsten = ThorstenTtsVoice()
         return self._tts_thorsten
-    
-    def _text_to_vorbis_audio(self, tts : TextToSpeechInterface, text: str, language: str):
-        with tempfile.TemporaryDirectory() as tmp:
-            # TODO build this with generic file names
-            input_file = os.path.join(tmp, 'input.wav')
-            tts.tts(text, input_file, language)
-            
-            #output_file = os.path.join(tmp, 'output.opus')
-            output_file = os.path.join(tmp, 'output.ogg')
-            #subprocess.run(["opusenc", input_file, output_file], check=True)
-            subprocess.run(["oggenc", "-o", output_file, input_file], check=True)
-            file = open(output_file,mode='rb')
-            ogg_data = file.read()
-            file.close()
-        return ogg_data
 
     def matches(self, messenger: MessengerInterface, message: dict):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
@@ -95,17 +80,11 @@ class TextToSpeechPipeline(PipelineInterface):
             # TODO build this with generic file names
                 output_file = os.path.join(tmp, 'output.wav')
                 tts.tts(text, output_file, language)
-                
-                file = open(output_file,mode='rb')
-                wav_data = file.read()
-                file.close()
-                
-                # TODO change to file passing instead of memcopy
 
                 if messenger.is_group_message(message):
-                    messenger.send_audio_to_group(message, wav_data)
+                    messenger.send_audio_to_group(message, output_file)
                 else:
-                    messenger.send_audio_to_individual(message, wav_data)
+                    messenger.send_audio_to_individual(message, output_file)
 
                 messenger.mark_in_progress_done(message)
         except Exception as ex:
