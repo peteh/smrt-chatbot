@@ -466,15 +466,18 @@ class SignalMessenger(MessengerInterface):
     
     def _send_audio(self, recipient, audio_file_path):
         with tempfile.TemporaryDirectory() as tmp:
-            output_file = os.path.join(tmp, 'output.ogg')
-            subprocess.run(["oggenc", "-o", output_file, audio_file_path], check=True)
+            #output_file = os.path.join(tmp, 'output.ogg')
+            #subprocess.run(["oggenc", "-o", output_file, audio_file_path], check=True)
+            output_file = os.path.join(tmp, 'output.m4a')
+            subprocess.run(["ffmpeg", "-i", audio_file_path, "-c:a", "aac", output_file, ], check=True)
             file = open(output_file,mode='rb')
             binary_data = file.read()
             file.close()
         base64data = base64.b64encode(binary_data).decode('utf-8')
         data = {
             "base64_attachments": [
-                f"data:audio/ogg;base64,{base64data}"
+                #f"data:audio/ogg;base64,{base64data}"
+                f"data:audio/aac;base64,{base64data}"
             ],
             "number": self._number,
             "recipients": [
