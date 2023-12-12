@@ -469,39 +469,44 @@ class SignalMessenger(MessengerInterface):
         requests.post(self._endpoint_url("v2/send"),
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
+    
+    def _send_audio(self, recipient, binary_data):
+        with tempfile.TemporaryDirectory() as tmp:
+            # TODO build this with generic file names
+            input_file = os.path.join(tmp, 'input.wav')
+            file_in = open(input_file, mode='wb')
+            file_in.write(binary_data)
+            file_in.close()
+            
+            output_file = os.path.join(tmp, 'output.ogg')
+            subprocess.run(["oggenc", "-o", output_file, input_file], check=True)
+            file = open(output_file,mode='rb')
+            binary_data = file.read()
+            file.close()
+        base64data = base64.b64encode(binary_data).decode('utf-8')
+        data = {
+            "base64_attachments": [
+                f"data:audio/ogg;base64,{base64data}"
+            ],
+            "number": self._number,
+            "recipients": [
+                recipient
+            ]
+        }
+        requests.post(self._endpoint_url("v2/send"),
+                      json=data,
+                      timeout=self.DEFAULT_TIMEOUT)
 
     def send_audio_to_group(self, group_message, binary_data):
         internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
         if internal_id not in self._group_cache:
             self._update_group_cache()
-        base64data = base64.b64encode(binary_data).decode('utf-8')
-        data = {
-            "base64_attachments": [
-                f"data:audio/ogg;base64,{base64data}"
-            ],
-            "number": self._number,
-            "recipients": [
-                self._group_cache[internal_id]
-            ]
-        }
-        requests.post(self._endpoint_url("v2/send"),
-                      json=data,
-                      timeout=self.DEFAULT_TIMEOUT)
+        self._send_audio(self, self._group_cache[internal_id], binary_data)
 
     def send_audio_to_individual(self, message, binary_data):
-        base64data = base64.b64encode(binary_data).decode('utf-8')
-        data = {
-            "base64_attachments": [
-                f"data:audio/ogg;base64,{base64data}"
-            ],
-            "number": self._number,
-            "recipients": [
-                message["envelope"]["sourceNumber"]
-            ]
-        }
-        requests.post(self._endpoint_url("v2/send"),
-                      json=data,
-                      timeout=self.DEFAULT_TIMEOUT)
+        self._send_audio(self, message["envelope"]["sourceNumber"], binary_data)
+        
+
 
     def download_media(self, message: dict) -> Tuple[str, bytes]:
         # TODO: looks like signal could return a list of attachments, thus we should have a list here too
