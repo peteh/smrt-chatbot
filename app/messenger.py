@@ -2,6 +2,9 @@
 from abc import ABC, abstractmethod
 from typing import Tuple
 import base64
+import tempfile
+import os
+import subprocess
 import requests
 
 class MessengerInterface(ABC):
@@ -233,6 +236,18 @@ class Whatsapp(MessengerInterface):
         self._send_audio(message['sender']['id'], False, binary_data)
 
     def _send_audio(self, recipient: str, is_group: bool, binary_data):
+        with tempfile.TemporaryDirectory() as tmp:
+            # TODO build this with generic file names
+            input_file = os.path.join(tmp, 'input.wav')
+            file_in = open(input_file, mode='wb')
+            file_in.write(binary_data)
+            file_in.close()
+            
+            output_file = os.path.join(tmp, 'output.opus')
+            subprocess.run(["opusenc", input_file, output_file], check=True)
+            file = open(output_file,mode='rb')
+            binary_data = file.read()
+            file.close()
         base64data = base64.b64encode(binary_data).decode('utf-8')
 
         data = {

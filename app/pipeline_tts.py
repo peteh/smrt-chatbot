@@ -91,15 +91,23 @@ class TextToSpeechPipeline(PipelineInterface):
             else: 
                 tts = self._get_tts_thorsten()
                 language = "en"
+            with tempfile.TemporaryDirectory() as tmp:
+            # TODO build this with generic file names
+                output_file = os.path.join(tmp, 'output.wav')
+                tts.tts(text, output_file, language)
                 
-            audio_data = self._text_to_vorbis_audio(tts, text, language)
+                file = open(output_file,mode='rb')
+                wav_data = file.read()
+                file.close()
+                
+                # TODO change to file passing instead of memcopy
 
-            if messenger.is_group_message(message):
-                messenger.send_audio_to_group(message, audio_data)
-            else:
-                messenger.send_audio_to_individual(message, audio_data)
+                if messenger.is_group_message(message):
+                    messenger.send_audio_to_group(message, wav_data)
+                else:
+                    messenger.send_audio_to_individual(message, wav_data)
 
-            messenger.mark_in_progress_done(message)
+                messenger.mark_in_progress_done(message)
         except Exception as ex:
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
             messenger.mark_in_progress_fail(message)
