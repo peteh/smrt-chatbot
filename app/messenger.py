@@ -501,10 +501,10 @@ class SignalMessenger(MessengerInterface):
         internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
         if internal_id not in self._group_cache:
             self._update_group_cache()
-        self._send_audio(self, self._group_cache[internal_id], binary_data)
+        self._send_audio(self._group_cache[internal_id], binary_data)
 
     def send_audio_to_individual(self, message, binary_data):
-        self._send_audio(self, message["envelope"]["sourceNumber"], binary_data)
+        self._send_audio(message["envelope"]["sourceNumber"], binary_data)
         
 
 
