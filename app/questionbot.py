@@ -20,7 +20,7 @@ class QuestionBotImageInterface(ABC):
     """Interface for question bots"""
 
     @abstractmethod
-    def tanswer_image(self, prompt: str, image_path: str) -> dict:
+    def answer_image(self, prompt: str, image_path: str) -> dict:
         """Answers the prompt to the given image
 
         Args:
