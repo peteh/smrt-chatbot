@@ -9,6 +9,8 @@ from signalcli import SignalMessageQueue
 from whatsappsocketio import WhatsappMessageQueue
 import time
 
+logging.basicConfig(level=logging.DEBUG)
+
 whatsapp = messenger.Whatsapp(config("WPPCONNECT_SERVER"), "smrt", config('WPPCONNECT_APIKEY'))
 signalMessenger = messenger.SignalMessenger(config("SIGNAL_NUMBER"), config("SIGNAL_HOST"), int(config("SIGNAL_PORT")))
 
