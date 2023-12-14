@@ -1,6 +1,7 @@
 """Messenger implementations for various messengers like Whatsapp. """
 from abc import ABC, abstractmethod
 from typing import Tuple
+import logging
 import base64
 import tempfile
 import os
@@ -262,6 +263,7 @@ class Whatsapp(MessengerInterface):
         return 'mimetype' in message and message['mimetype'] == "audio/ogg; codecs=opus"
     
     def has_image_data(self, message: dict):
+        logging.info(f"Testing for image, mime-type: {message.get('mimetype')}")
         return 'mimetype' in message and \
             (message['mimetype'] == "image/png" \
                 or message['mimetype'] == "image/jpeg" \
