@@ -32,11 +32,11 @@ class WhatsappMessageQueue():
         logging.info("Disconnected from server")
 
     def on_message(self, data):
-        logging.info("Received message:", data)
+        logging.info(f"Received message: {data}")
         
     
     def on_new_message(self, data):
-        logging.info("Received new message:", data)
+        logging.info(f"Received new message: {data}")
         self._mainpipe.process(self._messenger, data['response'])
 
     def on_catch_all(self, identifier, data):
