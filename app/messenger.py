@@ -263,11 +263,12 @@ class Whatsapp(MessengerInterface):
         return 'mimetype' in message and message['mimetype'] == "audio/ogg; codecs=opus"
     
     def has_image_data(self, message: dict):
-        logging.info(f"Testing for image, mime-type: {message.get('mimetype')}")
-        return 'mimetype' in message and \
-            (message['mimetype'] == "image/png" \
-                or message['mimetype'] == "image/jpeg" \
-                or message['mimetype'] == "image/jpg")
+        #logging.info(f"Testing for image, mime-type: {message.get('mimetype')}")
+        #return 'mimetype' in message and \
+        #    (message['mimetype'] == "image/png" \
+        #        or message['mimetype'] == "image/jpeg" \
+        #        or message['mimetype'] == "image/jpg")
+        return message.get("type") == "image"
 
     def is_bot_mentioned(self, message: dict):
         # TODO: extract this somehow
@@ -276,9 +277,11 @@ class Whatsapp(MessengerInterface):
             and message['mentionedJidList'] == '4917658696957@c.us'
 
     def get_message_text(self, message: dict):
-        if 'content' in message and message['content'] is not None:
-            return message['content']
-        return ""
+        # if the message is of type image, then the text you sent is in the caption field
+        if message.get("type") == "image":
+            return message.get("caption", "")
+        # otherwise we can get the text from the content field
+        return message.get("caption", "")
 
     def get_chat_id(self, message: dict) -> str:
         return message['chatId']
