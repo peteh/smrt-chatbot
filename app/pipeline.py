@@ -456,7 +456,7 @@ class ImagePromptPipeline(PipelineInterface):
 
     def matches(self, messenger: MessengerInterface, message: dict):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
-        return messenger.has_image_data(message) and self.COMMAND in command
+        return self.COMMAND in command and messenger.has_image_data(message) 
 
     def process(self, messenger: MessengerInterface, message: dict):
         (_, _, prompt) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
