@@ -13,6 +13,7 @@ class MainPipeline():
         CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
         database = db.Database("data")
         questionbot_summary = questionbot.QuestionBotOllama("orca2")
+        questionbot_image = questionbot.QuestionBotOllama("llava")
         questionbot_Openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         bots = [
                 # TODO: add bot again
@@ -35,8 +36,11 @@ class MainPipeline():
 
         processors = [texttoimage.StableDiffusionAIOrg(),
                     texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
-        image_api = texttoimage.FallbackTextToImageProcessor(processors)
-        image_pipeline = pipeline.ImagePromptPipeline(image_api)
+        imagegen_api = texttoimage.FallbackTextToImageProcessor(processors)
+        imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
+        
+        image_prompt_pipeline = pipeline.ImagePromptPipeline(questionbot_image)
+        
 
         tts_pipeline = pipeline_tts.TextToSpeechPipeline()
         grammar_pipeline = pipeline.GrammarPipeline(question_bot)
@@ -45,11 +49,12 @@ class MainPipeline():
         self._pipelines = [voice_pipeline,
                     group_message_pipeline,
                     article_summary_pipeline,
-                    image_pipeline,
+                    imagegen_pipeline,
                     tts_pipeline,
                     grammar_pipeline,
                     tinder_pipeline,
-                    gpt_pipeline]
+                    gpt_pipeline,
+                    image_prompt_pipeline]
 
         help_pipeline = pipeline.Helpipeline(self._pipelines)
         self._pipelines.append(help_pipeline)

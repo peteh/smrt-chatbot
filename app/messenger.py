@@ -49,6 +49,10 @@ class MessengerInterface(ABC):
     @abstractmethod
     def has_audio_data(self, message: dict) -> bool:
         """Returns true if the message is an audio message. """
+    
+    @abstractmethod
+    def has_image_data(self, message: dict) -> bool:
+        """Returns true if the message contains an image. """
 
     @abstractmethod
     def is_bot_mentioned(self, message: dict) -> bool:
@@ -256,6 +260,12 @@ class Whatsapp(MessengerInterface):
 
     def has_audio_data(self, message: dict):
         return 'mimetype' in message and message['mimetype'] == "audio/ogg; codecs=opus"
+    
+    def has_image_data(self, message: dict):
+        return 'mimetype' in message and \
+            (message['mimetype'] == "image/png" \
+                or message['mimetype'] == "image/jpeg" \
+                or message['mimetype'] == "image/jpg")
 
     def is_bot_mentioned(self, message: dict):
         # TODO: extract this somehow
@@ -398,6 +408,16 @@ class SignalMessenger(MessengerInterface):
             and "attachments" in message["envelope"]["dataMessage"]:
             for attachment in message["envelope"]["dataMessage"]["attachments"]:
                 if attachment["contentType"] == "audio/aac":
+                    return True
+        return False
+    
+    def has_image_data(self, message: dict):
+        if "dataMessage" in message["envelope"] \
+            and "attachments" in message["envelope"]["dataMessage"]:
+            for attachment in message["envelope"]["dataMessage"]["attachments"]:
+                if attachment["contentType"] == "image/png" \
+                    or attachment["contentType"] == "image/jpeg" \
+                    or attachment["contentType"] == "image/jpg":
                     return True
         return False
 

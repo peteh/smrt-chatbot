@@ -3,6 +3,8 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List
 
+import base64
+import multiprocessing
 
 # openai api questionbot
 from openai import OpenAI
@@ -14,6 +16,20 @@ class QuestionBotInterface(ABC):
     def answer(self, prompt: str) -> dict:
         """Returns an answer to a prompt based on the underlying bots response"""
 
+class QuestionBotImageInterface(ABC):
+    """Interface for question bots"""
+
+    @abstractmethod
+    def tanswer_image(self, prompt: str, image_path: str) -> dict:
+        """Answers the prompt to the given image
+
+        Args:
+            prompt (str): The prompt to ask for the image
+            image_path (str): the path to the image
+
+        Returns:
+            dict: _description_
+        """
 
 class QuestionBotOpenAIAPI(QuestionBotInterface):
     """Question bot based on Open AI's offical api. """
@@ -38,7 +54,7 @@ class QuestionBotOpenAIAPI(QuestionBotInterface):
 
 import requests
 from decouple import config
-class QuestionBotOllama(QuestionBotInterface):
+class QuestionBotOllama(QuestionBotInterface, QuestionBotImageInterface):
     
     DEFAULT_MODEL = "llama2-uncensored"
     #DEFAULT_MODEL = "falcon"
@@ -76,8 +92,11 @@ class QuestionBotOllama(QuestionBotInterface):
             return False
         return True
     
+    def _get_num_threads(self):
+        return multiprocessing.cpu_count()
+        #return self.THREADS
+    
     def answer(self, prompt: str):
-        # TODO: lazy load to download the model if not yet present on the server
         if not self._lazy_download_done:
             if not self._model_available(self._model):
                 self._model_download(self._model)
@@ -91,8 +110,41 @@ class QuestionBotOllama(QuestionBotInterface):
             #"raw": True,
             "options": 
                 {
-                    "num_thread": self.THREADS,
+                    "num_thread": self._get_num_threads(),
                 }
+            }
+
+        response = requests.post(f"{self._server}/api/generate", headers=self._headers, json=request)
+        response_json = response.json()
+        if "error" in response_json: 
+            logging.critical(f"Ollama API call error: {response_json['error']}")
+            return None
+        return {
+            'text': response_json['response'], 
+            'cost': 0
+        }
+    
+    def answer_image(self, prompt: str, image_path: str):
+        if not self._lazy_download_done:
+            if not self._model_available(self._model):
+                self._model_download(self._model)
+            self._lazy_download_done = True
+        f = open(image_path, "rb")
+        binary_data = f.read()
+        f.close()
+        base64data = base64.b64encode(binary_data).decode('utf-8')
+        # TODO: use better threads
+        request = {
+            "model": self._model,
+            "prompt": prompt,
+            #"format": "json",
+            "stream": False,
+            #"raw": True,
+            "options": 
+                {
+                    "num_thread": self._get_num_threads(),
+                }, 
+            "images": [base64data]
             }
 
         response = requests.post(f"{self._server}/api/generate", headers=self._headers, json=request)

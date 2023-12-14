@@ -4,18 +4,15 @@ import logging
 import re
 from typing import List
 
-from abc import ABC, abstractmethod
-
-
-# text to speech pipeline standard imports
 import tempfile
 import os
-import subprocess
+
+from abc import ABC, abstractmethod
 
 from summary import SummaryInterface
 from transcript import TranscriptInterface
 from messenger import MessengerInterface
-from questionbot import QuestionBotInterface
+from questionbot import QuestionBotInterface, QuestionBotImageInterface
 import texttoimage
 import utils
 
@@ -412,7 +409,7 @@ class ArticleSummaryPipeline(PipelineInterface):
 """*Article and Youtube Video Summary*
 Sending a link or youtube video to the bot will generate a summary"""
 
-class ImagePromptPipeline(PipelineInterface):
+class ImageGenerationPipeline(PipelineInterface):
     """Pipe to turn prompts into images. """
     IMAGE_COMMAND = "image"
 
@@ -450,6 +447,47 @@ class ImagePromptPipeline(PipelineInterface):
 """*Image Generation*
 _#image prompt_ Generates images based on the given prompt"""
 
+class ImagePromptPipeline(PipelineInterface):
+    """Pipe to turn prompts into images. """
+    COMMAND = "llava"
+
+    def __init__(self, image_api: QuestionBotImageInterface):
+        self._image_api = image_api
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        command = PipelineHelper.extract_command(messenger.get_message_text(message))
+        return messenger.has_image_data(message) and self.COMMAND in command
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        (_, _, prompt) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+        messenger.mark_in_progress_0(message)
+        try:
+            content_type, binary_data = messenger.download_media(message)
+            with tempfile.TemporaryDirectory() as tmp:
+            # TODO build this with generic file names
+                image_file_path = os.path.join(tmp, 'image')
+                f = open(image_file_path, "wb")
+                f.write(binary_data)
+                f.close()
+                
+                response = self._image_api.answer_image(prompt, image_file_path)
+                response_msg = response.get("text")
+                if messenger.is_group_message(message):
+                    messenger.send_message_to_group(message, response_msg)
+                else:
+                    messenger.send_message_to_individual(message, response_msg)
+
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
+            messenger.mark_in_progress_fail(message)
+            return
+
+        messenger.mark_in_progress_done(message)
+
+    def get_help_text(self) -> str:
+        return \
+"""*Image Processing*
+_#llava prompt_ Answers question to a given image"""
 
 class TinderPipelinePipelineInterface(PipelineInterface):
     """A pipeline to write answers to tinder messages. """
