@@ -281,7 +281,7 @@ class Whatsapp(MessengerInterface):
         if message.get("type") == "image":
             return message.get("caption", "")
         # otherwise we can get the text from the content field
-        return message.get("caption", "")
+        return message.get("content", "")
 
     def get_chat_id(self, message: dict) -> str:
         return message['chatId']
