@@ -138,10 +138,7 @@ und einfach zu lesender Text entsteht: \n\n{text}"
             messenger.mark_in_progress_fail(message)
             return
         answer_text = answer['text']
-        if messenger.is_group_message(message):
-            messenger.send_message_to_group(message, answer_text)
-        else:
-            messenger.send_message_to_individual(message, answer_text)
+        messenger.reply_message(message, answer_text)
         messenger.mark_in_progress_done(message)
 
     def get_help_text(self) -> str:
@@ -185,10 +182,7 @@ class VoiceMessagePipeline(PipelineInterface):
         language = transcript['language']
 
         response_message = f"Transcribed: \n{transcript_text}"
-        if messenger.is_group_message(message):
-            messenger.send_message_to_group(message, response_message)
-        else:
-            messenger.send_message_to_individual(message, response_message)
+        messenger.reply_message(message, response_message)
 
         debug['transcript_language'] = language
         debug['transcript_language_probability'] = transcript['language_probability']
@@ -204,20 +198,15 @@ class VoiceMessagePipeline(PipelineInterface):
 
             summary_text = summary['text']
             debug['summary_cost'] = summary['cost']
-            if messenger.is_group_message(message):
-                messenger.send_message_to_group(message, f"Summary: \n{summary_text}")
-            else:
-                messenger.send_message_to_individual(message, f"Summary: \n{summary_text}")
+            messenger.reply_message(message, f"Summary: \n{summary_text}")
+
         messenger.mark_in_progress_done(message)
         if utils.is_debug():
             debug_text = "Debug: \n"
             for debug_key, debug_value in debug.items():
                 debug_text += debug_key + ": " + str(debug_value) + "\n"
             debug_text = debug_text.strip()
-            if messenger.is_group_message(message):
-                messenger.send_message_to_group(message, debug_text)
-            else:
-                messenger.send_message_to_individual(message, debug_text)
+            messenger.reply_message(message, debug_text)
 
     def get_help_text(self) -> str:
         return \
@@ -393,16 +382,13 @@ class ArticleSummaryPipeline(PipelineInterface):
                     summarized_text = self._process_youtube(link)
                 else:
                     summarized_text = self._process_article(link)
-                summary_part = f"{link}: \n{summarized_text}\n"
+                summary_part = f"{link} : \n{summarized_text}\n"
                 total_summary += summary_part
         except Exception as ex:
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
             messenger.mark_in_progress_fail(message)
             return
-        if messenger.is_group_message(message):
-            messenger.send_message_to_group(message, total_summary)
-        else:
-            messenger.send_message_to_individual(message, total_summary)
+        messenger.reply_message(message, total_summary)
         messenger.mark_in_progress_done(message)
     def get_help_text(self) -> str:
         return \
@@ -472,10 +458,7 @@ class ImagePromptPipeline(PipelineInterface):
                 
                 response = self._image_api.answer_image(prompt, image_file_path)
                 response_msg = response.get("text")
-                if messenger.is_group_message(message):
-                    messenger.send_message_to_group(message, response_msg)
-                else:
-                    messenger.send_message_to_individual(message, response_msg)
+                messenger.reply_message(message, response_msg)
 
         except Exception as ex:
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
@@ -518,10 +501,7 @@ von einem Mädchen (Kontext: {context}): \n{tinder_message}"
             return
 
         response_text = answer['text']
-        if messenger.is_group_message(message):
-            messenger.send_message_to_group(message, response_text)
-        else:
-            messenger.send_message_to_individual(message, response_text)
+        messenger.reply_message(message, response_text)
 
         messenger.mark_in_progress_done(message)
 
@@ -565,10 +545,7 @@ class GptPipeline(PipelineInterface):
             return
 
         response_text = answer['text']
-        if messenger.is_group_message(message):
-            messenger.send_message_to_group(message, response_text)
-        else:
-            messenger.send_message_to_individual(message, response_text)
+        messenger.reply_message(message, response_text)
 
         messenger.mark_in_progress_done(message)
     def get_help_text(self) -> str:
@@ -600,10 +577,6 @@ class Helpipeline(PipelineInterface):
             if len(help_text) > 0:
                 response_text = f"{response_text}\n{help_text}"
         messenger.reply_message(message, response_text)
-        #if messenger.is_group_message(message):
-        #    messenger.send_message_to_group(message, response_text)
-        #else:
-        #    messenger.send_message_to_individual(message, response_text)
         messenger.mark_in_progress_done(message)
 
     def get_help_text(self) -> str:
