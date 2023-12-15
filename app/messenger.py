@@ -427,7 +427,21 @@ class SignalMessenger(MessengerInterface):
                       timeout=self.DEFAULT_TIMEOUT)
     
     def reply_message(self, message: dict, text: str) -> None:
-        pass
+        if self.is_group_message(message):
+            pass
+        else:
+            data = {
+                "message": text,
+                "number": self._number,
+                "quote_author": message["envelope"]["sourceNumber"],
+                "quote_timestamp": message["envelope"]["timestamp"],
+                "recipients": [
+                    message["envelope"]["sourceNumber"]
+                ]
+            }
+            requests.post(self._endpoint_url("v2/send"),
+                        json=data,
+                        timeout=self.DEFAULT_TIMEOUT)
 
     def delete_message(self, message: dict):
         pass
