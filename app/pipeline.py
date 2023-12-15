@@ -599,10 +599,11 @@ class Helpipeline(PipelineInterface):
             help_text = pipe.get_help_text()
             if len(help_text) > 0:
                 response_text = f"{response_text}\n{help_text}"
-        if messenger.is_group_message(message):
-            messenger.send_message_to_group(message, response_text)
-        else:
-            messenger.send_message_to_individual(message, response_text)
+        messenger.reply_message(message, response_text)
+        #if messenger.is_group_message(message):
+        #    messenger.send_message_to_group(message, response_text)
+        #else:
+        #    messenger.send_message_to_individual(message, response_text)
         messenger.mark_in_progress_done(message)
 
     def get_help_text(self) -> str:

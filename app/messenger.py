@@ -44,6 +44,15 @@ class MessengerInterface(ABC):
         """Sends a message to the sender the given message. """
 
     @abstractmethod
+    def reply_message(self, message: dict, text: str) -> None:
+        """Responds to the given message. 
+
+        Args:
+            message (dict): The message to reply to
+            text (str): The reply message text
+        """
+    
+    @abstractmethod
     def delete_message(self, message: dict):
         """Deletes a message from the server"""
 
@@ -193,6 +202,18 @@ class Whatsapp(MessengerInterface):
 
     def send_message_to_individual(self, message: dict, text: str):
         self._send_message(message['sender']['id'], False, text)
+    
+    def reply_message(self, message: dict, text: str) -> None:
+        data = {
+            "phone": message['sender']['id'],
+            "message": text,
+            "isGroup": self.is_group_message(message), 
+            "messageId": message.get("id")
+        }
+        requests.post(self._endpoint_url("send-reply"),
+                      json=data,
+                      headers=self._headers,
+                      timeout=self.DEFAULT_TIMEOUT)
 
     def delete_message(self, message: dict):
         is_group = self.is_group_message(message)
@@ -404,6 +425,9 @@ class SignalMessenger(MessengerInterface):
         requests.post(self._endpoint_url("v2/send"),
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
+    
+    def reply_message(self, message: dict, text: str) -> None:
+        pass
 
     def delete_message(self, message: dict):
         pass
