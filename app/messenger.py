@@ -431,31 +431,22 @@ class SignalMessenger(MessengerInterface):
             internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
             if internal_id not in self._group_cache:
                 self._update_group_cache()
-            data = {
-                "message": text,
-                "number": self._number,
-                "quote_author": message["envelope"]["sourceNumber"],
-                "quote_timestamp": message["envelope"]["timestamp"],
-                "recipients": [
-                    self._group_cache[internal_id]
-                ]
-            }
-            requests.post(self._endpoint_url("v2/send"),
-                        json=data,
-                        timeout=self.DEFAULT_TIMEOUT)
+            recipient = self._group_cache[internal_id]
         else:
-            data = {
-                "message": text,
-                "number": self._number,
-                "quote_author": message["envelope"]["sourceNumber"],
-                "quote_timestamp": message["envelope"]["timestamp"],
-                "recipients": [
-                    message["envelope"]["sourceNumber"]
-                ]
-            }
-            requests.post(self._endpoint_url("v2/send"),
-                        json=data,
-                        timeout=self.DEFAULT_TIMEOUT)
+            recipient = message["envelope"]["sourceNumber"]
+
+        data = {
+            "message": text,
+            "number": self._number,
+            "quote_author": message["envelope"]["sourceNumber"],
+            "quote_timestamp": message["envelope"]["timestamp"],
+            "recipients": [
+                recipient
+            ]
+        }
+        requests.post(self._endpoint_url("v2/send"),
+                    json=data,
+                    timeout=self.DEFAULT_TIMEOUT)
 
     def delete_message(self, message: dict):
         pass
