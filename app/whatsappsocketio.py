@@ -12,14 +12,14 @@ class WhatsappMessageQueue():
         self._messenger = messenger_instance
         self._mainpipe = mainpipe
         self._thread = None
-        self.sio = socketio.Client()
+        self._sio = socketio.Client()
 
         # Register event handlers
-        self.sio.on('connect', self.on_connect)
-        self.sio.on('disconnect', self.on_disconnect)
-        self.sio.on('received-message', self.on_new_message)
-        self.sio.on('message', self.on_message)
-        self.sio.on('*', self.on_catch_all)
+        self._sio.on('connect', self.on_connect)
+        self._sio.on('disconnect', self.on_disconnect)
+        self._sio.on('received-message', self.on_new_message)
+        self._sio.on('message', self.on_message)
+        self._sio.on('*', self.on_catch_all)
     
     def run_async(self):
         self._thread = threading.Thread(target=self.run)
@@ -45,10 +45,10 @@ class WhatsappMessageQueue():
         pass
 
     def run(self):
-        self.sio.connect(self._messenger.get_server())
+        self._sio.connect(self._messenger.get_server())
 
         while True:
-            time.sleep(1)
+            time.sleep(3)
         # TODO: reconnect handling
 
-        self.sio.disconnect()
+        self._sio.disconnect()
