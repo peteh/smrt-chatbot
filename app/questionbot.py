@@ -6,9 +6,6 @@ from typing import List
 import base64
 import multiprocessing
 
-# openai api questionbot
-from openai import OpenAI
-
 class QuestionBotInterface(ABC):
     """Interface for question bots"""
 
@@ -39,13 +36,27 @@ class QuestionBotOpenAIAPI(QuestionBotInterface):
         self._cost_per_token = 0.002 / 1000.
 
     def answer(self, prompt: str):
-        client = OpenAI(api_key=self._api_key)
-        completion = client.chat.completions.create(model="gpt-3.5-turbo",
-                                                  messages=[{"role": "user",
-                                                             "content": prompt}])
-        usage = dict(completion).get('usage')
-        cost = usage.total_tokens * self._cost_per_token
-        response = completion.choices[0].message.content
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self._api_key}"
+        }
+
+        data = {
+            "model": "gpt-3.5-turbo",
+            "messages": [{"role": "user", "content": prompt}]
+        }
+
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code != 200:
+            logging.error(f"Error: {response.status_code}, {response.text}")
+            return None
+
+        completion = response.json()
+        print(completion)
+        usage = completion.get("usage")
+        cost = usage.get("total_tokens") * self._cost_per_token
+        response = completion.get("choices")[0].get("message").get("content")
         print(response)
         return {
             'text': response, 
@@ -179,6 +190,6 @@ class FallbackQuestionbot(QuestionBotInterface):
                     answer['text'] += f" ({count}/{num_question_bots})"
                 return answer
             except Exception as ex:
-                logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
+                logging.critical(ex, exc_info=True)
         return None
     

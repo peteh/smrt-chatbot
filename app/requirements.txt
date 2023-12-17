@@ -1,7 +1,6 @@
 requests
 requests[socks]
 flask
-openai
 python-decouple
 faster_whisper
 trafilatura
