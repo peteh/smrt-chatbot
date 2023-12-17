@@ -3,7 +3,6 @@ import io
 from abc import ABC, abstractmethod
 
 import requests
-from openai import OpenAI
 import faster_whisper
 
 
@@ -27,17 +26,30 @@ class OpenAIWhisperTranscript(TranscriptInterface):
     """Implementation based on OpenAI's web services. """
     def __init__(self, api_key):
         self._api_key = api_key
+        self._api_url = "https://api.openai.com/v1/audio/transcribe"
 
     def uses_denoise(self):
         return False
 
     def transcribe(self, audio_data) -> dict:
-        client = OpenAI(api_key=self._api_key)
-        file_like = io.BytesIO(audio_data)
-        file_like.name = "file.mp3"
-        transcript = client.audio.transcribe("whisper-1", file_like)
-        # TODO: map data
-        return transcript
+        headers = {
+            "Content-Type": "audio/mp3",
+            "Authorization": f"Bearer {self._api_key}"
+        }
+
+        files = {
+            "audio": ("file.mp3", io.BytesIO(audio_data), "audio/mp3")
+        }
+
+        response = requests.post(self._api_url, headers=headers, files=files)
+
+        if response.status_code == 200:
+            transcript = response.json()
+            # TODO: map data
+            return transcript
+        else:
+            print(f"Error: {response.status_code}, {response.text}")
+            return {}
 
 class WhisperTranscript(TranscriptInterface):
     """Implementation based on whisper asr webservice. """
