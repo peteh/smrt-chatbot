@@ -331,10 +331,15 @@ class BingImageProcessor(ImagePromptInterface):
             img_num = 0
             images = []
             for image_url in image_urls:
+                logging.debug(f"Image url: {image_url}")
+                print(f"Image url: {image_url}")
                 img_num += 1
                 response = requests.get(image_url, timeout=1200)
-                images.append((f"image{img_num}.jpg" , response.content))
+                # filter out these weird svg graphics
+                if len(response.content) > 3400:
+                    images.append((f"image{img_num}.jpg" , response.content))
             if images is None or len(images) == 0:
+                logging.error("Did not receive images from Bing")
                 return images
             return images
         except Exception as ex:
