@@ -313,6 +313,36 @@ class StableHordeTextToImage(ImagePromptInterface):
             return None
         return self._download_files(request_id)
 
+from diffusers import StableDiffusionPipeline
+import torch
+import io
+class DiffusersTextToImage(ImagePromptInterface):
+    """Image prompt generation using stablehorde.net API"""
+    def __init__(self) -> None:
+        self._negativePrompt = DEFAULT_NEGATIVE_PROMPT
+ 
+
+    def process(self, prompt):
+        model_id = "runwayml/stable-diffusion-v1-5"
+        pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_checker=None, use_safetensors=True)
+
+        prompt = "a photo of an astronaut riding a horse on mars"
+        img_num = 1
+        img_list = []
+        for image in pipe(prompt).images:
+            # Create a BytesIO object to store the PNG data
+            png_bytes_io = io.BytesIO()
+
+            # Save the Pillow image to the BytesIO object as PNG
+            image.save(png_bytes_io, format="PNG")
+            image.close()
+
+            # Get the PNG bytes from the BytesIO object
+            png_bytes = png_bytes_io.getvalue()
+            img_list.append((f"image{img_num}.png", png_bytes))
+            img_num += 1
+        return img_list
+
 import re_edge_gpt
 class BingImageProcessor(ImagePromptInterface):
     """Prompt based image generator based on Microsoft Bing's creator"""

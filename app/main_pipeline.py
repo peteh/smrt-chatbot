@@ -40,7 +40,8 @@ class MainPipeline():
         article_summary_pipeline = pipeline.ArticleSummaryPipeline(summarizer)
 
         processors = [texttoimage.BingImageProcessor(),
-                    texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
+                        texttoimage.DiffusersTextToImage(), 
+                        texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
         imagegen_api = texttoimage.FallbackTextToImageProcessor(processors)
         imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
         
