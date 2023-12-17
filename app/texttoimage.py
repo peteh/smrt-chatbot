@@ -313,7 +313,7 @@ class StableHordeTextToImage(ImagePromptInterface):
             return None
         return self._download_files(request_id)
 
-from diffusers import StableDiffusionPipeline
+from diffusers import StableDiffusionPipeline, DiffusionPipeline
 import torch
 import io
 class DiffusersTextToImage(ImagePromptInterface):
@@ -323,10 +323,11 @@ class DiffusersTextToImage(ImagePromptInterface):
  
 
     def process(self, prompt):
-        #model_id = "runwayml/stable-diffusion-v1-5"
-        model_id = "SG161222/Realistic_Vision_V6.0_B1_noVAE"
+        model_id = "runwayml/stable-diffusion-v1-5"
+        #model_id = "SG161222/Realistic_Vision_V6.0_B1_noVAE"
         #pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_checker=None, use_safetensors=True)
-        pipe = StableDiffusionPipeline.from_pretrained(model_id, safety_checker=None) 
+        #pipe = StableDiffusionPipeline.from_pretrained(model_id, safety_checker=None) 
+        pipe = DiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0", torch_dtype=torch.float16, use_safetensors=True, safety_checker=None, variant="fp16")
 
         img_num = 1
         img_list = []
