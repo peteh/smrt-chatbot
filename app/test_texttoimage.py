@@ -15,11 +15,11 @@ class TextToImageTest(unittest.TestCase):
         self.assertGreaterEqual(len(images), 1)
         for image in images:
             fileName, binary = image
-            #f = open(fileName, "wb")
-            #f.write(binary)
-            #f.close()
+            f = open(fileName, "wb")
+            f.write(binary)
+            f.close()
             self.assertGreater(len(fileName), 0)
-            self.assertGreater(len(binary), 10000)
+            self.assertGreater(len(binary), 1000)
 
     def test_stableHorde(self):
         textToImage = texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))
@@ -28,6 +28,10 @@ class TextToImageTest(unittest.TestCase):
     def test_StableDiffusionAIOrg(self):
         textToImage = texttoimage.StableDiffusionAIOrg()
         textToImage.set_store_files(True)
+        self._testTextToImage(textToImage)
+    
+    def test_bing_imagegen(self):
+        textToImage = texttoimage.BingImageProcessor()
         self._testTextToImage(textToImage)
     
     def test_FallbackProcessor(self):

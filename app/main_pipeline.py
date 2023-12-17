@@ -22,6 +22,7 @@ class MainPipeline():
         bots = [
                 # TODO: add bot again
                 #questionbot_ollama, 
+                questionbot_bing,
                 questionbot_Openai
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
@@ -38,7 +39,7 @@ class MainPipeline():
         group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
         article_summary_pipeline = pipeline.ArticleSummaryPipeline(summarizer)
 
-        processors = [texttoimage.StableDiffusionAIOrg(),
+        processors = [texttoimage.BingImageProcessor(),
                     texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
         imagegen_api = texttoimage.FallbackTextToImageProcessor(processors)
         imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
