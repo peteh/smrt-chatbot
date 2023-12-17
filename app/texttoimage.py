@@ -227,6 +227,7 @@ class StableHordeTextToImage(ImagePromptInterface):
             "index": 0,
             "jobId": "",
             "models": [
+                "ICBINP",
                 "Deliberate"
             ],
             "nsfw": True,
@@ -270,10 +271,11 @@ class StableHordeTextToImage(ImagePromptInterface):
             response_json = response.json()
             print(response_json)
 
-            wait_time = response_json['wait_time']
+            wait_time = response_json.get('wait_time', 0)
             if wait_time > 0:
-                print(f"Sleeping for {wait_time} seconds to wait for processing")
-                time.sleep(wait_time)
+                sleep_time = 10 if wait_time > 10 else wait_time
+                print(f"Sleeping for {sleep_time} seconds to wait for processing")
+                time.sleep(sleep_time)
             time.sleep(2)
             if response_json['done']:
                 if response_json['finished'] == 1:

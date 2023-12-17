@@ -5,7 +5,7 @@ from decouple import config
 class TextToImageTest(unittest.TestCase):
     def _testTextToImage(self, textToImage):
         # arrange
-        prompt = "A beatiful girl with green eyes"
+        prompt = "A red Porsche"
 
         # act
         images = textToImage.process(prompt)
@@ -15,6 +15,9 @@ class TextToImageTest(unittest.TestCase):
         self.assertGreaterEqual(len(images), 1)
         for image in images:
             fileName, binary = image
+            #f = open(fileName, "wb")
+            #f.write(binary)
+            #f.close()
             self.assertGreater(len(fileName), 0)
             self.assertGreater(len(binary), 10000)
 
