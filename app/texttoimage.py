@@ -327,7 +327,7 @@ class DiffusersTextToImage(ImagePromptInterface):
         #model_id = "SG161222/Realistic_Vision_V6.0_B1_noVAE"
         #pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_checker=None, use_safetensors=True)
         #pipe = StableDiffusionPipeline.from_pretrained(model_id, safety_checker=None) 
-        pipe = DiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0", variant="fp16", torch_dtype=torch.float16, use_safetensors=True, safety_checker=None, variant="fp16")
+        pipe = DiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0", use_safetensors=True, safety_checker=None)
 
         img_num = 1
         img_list = []
