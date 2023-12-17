@@ -1,3 +1,6 @@
+import logging
+import threading
+
 import summary
 import transcript
 import messenger
@@ -59,18 +62,19 @@ class MainPipeline():
         help_pipeline = pipeline.Helpipeline(self._pipelines)
         self._pipelines.append(help_pipeline)
 
+    def process_pipe(self, pipe: pipeline.PipelineInterface, messenger_instance: messenger.MessengerInterface, message: dict):
+        pipe.process(messenger_instance, message)
+        
     def process(self, messenger_instance: messenger.MessengerInterface, message: dict):
         # filter own messages from the bot
         if messenger_instance.is_self_message(message):
-            print(f"Skipped self message: {message}")
-            # skip, 
-            # TODO: maybe should delete later too? 
+            logging.debug(f"Skipped self message: {message}")
             return
-            
+        
         for pipe in self._pipelines:
             if pipe.matches(messenger_instance, message):
                 print(f"{type(pipe).__name__} matches, processing")
-                # TODO: allow multi thread processing
-                pipe.process(messenger_instance, message)
+                thread = threading.Thread(target=self.process_pipe, args=(pipe, messenger_instance, message))
+                thread.start()
             # delete message from phone after processing
             #whatsapp.deleteMessage(message)
