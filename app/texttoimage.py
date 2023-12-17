@@ -326,7 +326,6 @@ class DiffusersTextToImage(ImagePromptInterface):
         model_id = "runwayml/stable-diffusion-v1-5"
         pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_checker=None, use_safetensors=True)
 
-        prompt = "a photo of an astronaut riding a horse on mars"
         img_num = 1
         img_list = []
         for image in pipe(prompt).images:
