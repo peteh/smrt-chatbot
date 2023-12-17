@@ -325,7 +325,8 @@ class DiffusersTextToImage(ImagePromptInterface):
     def process(self, prompt):
         #model_id = "runwayml/stable-diffusion-v1-5"
         model_id = "SG161222/Realistic_Vision_V6.0_B1_noVAE"
-        pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_checker=None) #, use_safetensors=True)
+        #pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_checker=None, use_safetensors=True)
+        pipe = StableDiffusionPipeline.from_pretrained(model_id, safety_checker=None) 
 
         img_num = 1
         img_list = []
