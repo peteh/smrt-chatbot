@@ -62,6 +62,52 @@ class QuestionBotOpenAIAPI(QuestionBotInterface):
             'text': response, 
             'cost': cost
         }
+        
+
+
+import json
+import asyncio
+import re_edge_gpt
+import re
+class QuestionBotBingGPT(QuestionBotInterface):
+    """Question bot based on Microsoft's Bing search engine chat feature"""
+
+    def __init__(self, cookie_path = "cookie.json") -> None:
+        self._cookie_path = cookie_path
+
+    async def _answer(self, prompt):
+        #EdgeGPT.constants.HEADERS_INIT_CONVER["user-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
+        with open(self._cookie_path, "r", encoding = "utf-8") as cookie_fp:
+            cookies = json.load(cookie_fp)
+        #bot = await re_edge_gpt.Chatbot.create(cookies=cookies)
+        bot = await re_edge_gpt.Chatbot.create()
+        try:
+            #response = await bot.ask(prompt=prompt,
+            #                         conversation_style=EdgeGPT.EdgeGPT.ConversationStyle.creative,
+            #                         wss_link="wss://sydney.bing.com/sydney/ChatHub")
+            response = await bot.ask(prompt, conversation_style=re_edge_gpt.ConversationStyle.balanced, simplify_response=True)
+            print(json.dumps(response, indent = 4))
+            text = response['text']
+            first_sentence = text[:text.find(".")+1:]
+            text = re.sub(r"\[\^[0-9]+\^\]", "", text)
+            if "Bing" in first_sentence:
+                # we dropt the first sentence because is Bing introducing itself
+                text = text[text.find(".")+1:]
+            text = text.strip()
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
+            return None
+        finally:
+            if bot is not None:
+                await bot.close()
+
+        return {
+            'text': text,
+            'cost': 0
+        }
+
+    def answer(self, prompt: str):
+        return asyncio.run(self._answer(prompt))
 
 import requests
 from decouple import config

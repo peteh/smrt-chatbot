@@ -27,6 +27,13 @@ class QuestionBotTest(unittest.TestCase):
         # act, assert
         self._test_questionbot(question_bot)
     
+    def test_binggppt(self):
+        # arrange
+        question_bot = questionbot.QuestionBotBingGPT()
+
+        # act, assert
+        self._test_questionbot(question_bot)
+    
     def test_ollama(self):
         # arrange
         question_bot = questionbot.QuestionBotOllama()

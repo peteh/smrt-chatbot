@@ -18,6 +18,7 @@ class MainPipeline():
         questionbot_summary = questionbot.QuestionBotOllama("orca2")
         questionbot_image = questionbot.QuestionBotOllama("llava")
         questionbot_Openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
+        questionbot_bing = questionbot.QuestionBotBingGPT()
         bots = [
                 # TODO: add bot again
                 #questionbot_ollama, 
@@ -32,7 +33,7 @@ class MainPipeline():
                                                     summarizer,
                                                     CONFIG_MIN_WORDS_FOR_SUMMARY)
         # TODO: fix the different bots
-        gpt_pipeline = pipeline.GptPipeline(question_bot, questionbot_Openai, questionbot_Openai)
+        gpt_pipeline = pipeline.GptPipeline(question_bot, questionbot_Openai, questionbot_bing)
 
         group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
         article_summary_pipeline = pipeline.ArticleSummaryPipeline(summarizer)
