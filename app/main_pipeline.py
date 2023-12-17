@@ -15,7 +15,7 @@ class MainPipeline():
     def __init__(self):
         CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
         database = db.Database("data")
-        questionbot_summary = questionbot.QuestionBotOllama("orca2")
+        #questionbot_summary = questionbot.QuestionBotOllama("orca2")
         questionbot_image = questionbot.QuestionBotOllama("llava")
         questionbot_Openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         questionbot_bing = questionbot.QuestionBotBingGPT()
@@ -27,7 +27,7 @@ class MainPipeline():
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
 
-        summarizer = summary.QuestionBotSummary(questionbot_summary)
+        summarizer = summary.QuestionBotSummary(question_bot)
 
         transcriber = transcript.FasterWhisperTranscript(denoise=False)
         voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
