@@ -33,7 +33,8 @@ class MainPipeline():
         voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
                                                     summarizer,
                                                     CONFIG_MIN_WORDS_FOR_SUMMARY)
-        # TODO: fix the different bots
+        talk_pipeline = pipeline.TalkPipeline(questionbot_mixtral)
+
         gpt_pipeline = pipeline.GptPipeline(question_bot, questionbot_Openai, questionbot_bing)
 
         group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
@@ -60,7 +61,8 @@ class MainPipeline():
                     grammar_pipeline,
                     tinder_pipeline,
                     gpt_pipeline,
-                    image_prompt_pipeline]
+                    image_prompt_pipeline,
+                    talk_pipeline]
 
         help_pipeline = pipeline.Helpipeline(self._pipelines)
         self._pipelines.append(help_pipeline)

@@ -510,6 +510,20 @@ von einem Mädchen (Kontext: {context}): \n{tinder_message}"
 """*Tinder Help*
 _#tinder[(Context)] message_ Proposes a response to a message from a girl. Additional context can be given to adapt the message. """
 
+class TalkPipeline(PipelineInterface):
+    
+    def __init__(self, question_bot: QuestionBotInterface) -> None:
+        self._question_bot = question_bot
+    
+    def matches(self, messenger: MessengerInterface, message: dict) -> bool:
+        text = messenger.get_message_text(message)
+        return len(text) > 0 \
+            and not messenger.is_group_message(message) \
+            and text[0] != "#"
+    
+    def process(self, messenger: MessengerInterface, message: dict) -> None:
+        text, _ = self._question_bot.answer(messenger.get_message_text(message))
+        messenger.reply_message(message, text)
 
 class GptPipeline(PipelineInterface):
     """A pipeline to talk to gpt models. """
