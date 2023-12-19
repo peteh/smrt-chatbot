@@ -524,9 +524,9 @@ class TalkPipeline(PipelineInterface):
     def process(self, messenger: MessengerInterface, message: dict) -> None:
         try: 
             messenger.mark_in_progress_0(message)
-            text, _ = self._question_bot.answer(messenger.get_message_text(message))
+            answer = self._question_bot.answer(messenger.get_message_text(message))
             messenger.mark_in_progress_done(message)
-            messenger.reply_message(message, text)
+            messenger.reply_message(message, answer.get("text"))
         except Exception as ex:
             logging.critical(ex, exc_info=True)
             messenger.mark_in_progress_fail(message)
