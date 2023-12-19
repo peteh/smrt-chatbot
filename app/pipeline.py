@@ -531,6 +531,9 @@ class TalkPipeline(PipelineInterface):
             logging.critical(ex, exc_info=True)
             messenger.mark_in_progress_fail(message)
             return
+    
+    def get_help_text(self) -> str:
+        return None
 
 class GptPipeline(PipelineInterface):
     """A pipeline to talk to gpt models. """
@@ -595,7 +598,7 @@ class Helpipeline(PipelineInterface):
         response_text = "My name is Echo, these are the things I can do: "
         for pipe in self._pipelines:
             help_text = pipe.get_help_text()
-            if len(help_text) > 0:
+            if help_text is not None and  len(help_text) > 0:
                 response_text = f"{response_text}\n{help_text}"
         messenger.reply_message(message, response_text)
         messenger.mark_in_progress_done(message)
