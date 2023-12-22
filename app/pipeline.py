@@ -488,13 +488,17 @@ class TinderPipelinePipelineInterface(PipelineInterface):
         (_, context, tinder_message) = PipelineHelper.extract_command_full(
             messenger.get_message_text(message))
         messenger.mark_in_progress_0(message)
-        prompt = \
-f"Schreibe eine kurze, lockere, lustige Anwort auf folgende Nachricht \
-von einem Mädchen: \n{tinder_message}"
-        if context != "":
-            prompt = \
-f"Schreibe eine kurze, lockere, lustige Anwort auf folgende Nachricht \
-von einem Mädchen (Kontext: {context}): \n{tinder_message}"
+        lang, conf = langid.classify(tinder_message)
+        
+        if lang == "de":
+            prompt = f"Schreibe eine kurze, lockere, lustige Anwort auf folgende Nachricht von einem Mädchen: \n{tinder_message}"
+            if context != "":
+                prompt = f"Schreibe eine kurze, lockere, lustige Anwort auf folgende Nachricht von einem Mädchen (Kontext: {context}): \n{tinder_message}"
+        else:
+            prompt = f"Write a short, casual, funny response to the following message from a girl: \n{tinder_message}"
+            if context != "":
+                prompt = f"Write a short, casual, funny response to the following message from a girl. (Context: {context}): \n{tinder_message}"
+        
         answer = self._question_bot.answer(prompt)
         if answer is None:
             messenger.mark_in_progress_fail(message)
@@ -581,7 +585,7 @@ _#gpt4 prompt_ Force gpt4"""
 
 
 class Helpipeline(PipelineInterface):
-    """A pipeline to write answers to tinder messages. """
+    """A pipeline to print help messages. """
     HELP_COMMAND = "help"
 
     def __init__(self, pipelines: List[PipelineInterface]) -> None:
