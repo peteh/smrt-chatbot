@@ -229,6 +229,10 @@ Save the kittens."""
 class QuestionBotPhi(QuestionBotOllama):
     def __init__(self) -> None:
         super().__init__("phi")
+        
+class QuestionBotSolar(QuestionBotOllama):
+    def __init__(self) -> None:
+        super().__init__("solar")
 
 class FallbackQuestionbot(QuestionBotInterface):
     """A question bot implementation that tries multiple question bots 

@@ -16,6 +16,7 @@ class MainPipeline():
         CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
         database = db.Database("data")
         questionbot_mixtral = questionbot.QuestionBotDolphinMixtral()
+        questionbot_solar = questionbot.QuestionBotSolar()
         questionbot_phi = questionbot.QuestionBotPhi()
         questionbot_image = questionbot.QuestionBotOllama("llava")
         questionbot_Openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
@@ -28,7 +29,7 @@ class MainPipeline():
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
 
-        summarizer = summary.QuestionBotSummary(questionbot_mixtral)
+        summarizer = summary.QuestionBotSummary(questionbot_solar)
 
         transcriber = transcript.FasterWhisperTranscript(denoise=False)
         voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
