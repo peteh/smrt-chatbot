@@ -2,6 +2,7 @@
 import logging
 from abc import ABC, abstractmethod
 from typing import List
+import typing
 
 import base64
 import multiprocessing
@@ -64,6 +65,21 @@ class QuestionBotOpenAIAPI(QuestionBotInterface):
         }
         
 
+class ChatRole(typing.Enum):
+    SYSTEM = 1
+    ASSISTANT = 2
+    USER = 3
+
+class ChatHistoryEntry:
+    
+    ROLE_ASSISTANT = "assistant"
+    ROLE_USER = "user"
+    ROLE_SYSTEM = "system"
+    
+    def __init__(self, role: ChatRole, message: str):
+        # TODO: somehow integrate chat history
+        pass
+        
 
 import json
 import asyncio
@@ -80,7 +96,6 @@ class QuestionBotBingGPT(QuestionBotInterface):
         with open(self._cookie_path, "r", encoding = "utf-8") as cookie_fp:
             cookies = json.load(cookie_fp)
         bot = await re_edge_gpt.Chatbot.create(cookies=cookies)
-        #bot = await re_edge_gpt.Chatbot.create()
         try:
             response = await bot.ask(prompt, conversation_style=re_edge_gpt.ConversationStyle.balanced, simplify_response=True)
             print(json.dumps(response, indent = 4))
