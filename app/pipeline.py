@@ -163,50 +163,55 @@ class VoiceMessagePipeline(PipelineInterface):
         return messenger.has_audio_data(message)
 
     def process(self, messenger: MessengerInterface, message: dict):
-        print("Processing in Voice Pipeline")
-        debug = {}
-        messenger.mark_in_progress_0(message)
+        try:
+            print("Processing in Voice Pipeline")
+            debug = {}
+            messenger.mark_in_progress_0(message)
 
-        (_, decoded) = messenger.download_media(message)
-        if self._store_files:
-            with open('out.opus', 'wb') as output_file:
-                output_file.write(decoded)
-
-        start = time.time()
-        transcript = self._transcriber.transcribe(decoded)
-        end = time.time()
-        debug['transcript_time'] = end - start
-
-        transcript_text = transcript['text']
-        words = transcript['words']
-        language = transcript['language']
-
-        response_message = f"Transcribed: \n{transcript_text}"
-        messenger.reply_message(message, response_message)
-
-        debug['transcript_language'] = language
-        debug['transcript_language_probability'] = transcript['language_probability']
-        debug['transcript_words'] = transcript['words']
-        debug['transcript_cost'] = transcript['cost']
-        if words > self._min_words_for_summary:
-            messenger.mark_in_progress_50(message)
+            (_, decoded) = messenger.download_media(message)
+            if self._store_files:
+                with open('out.opus', 'wb') as output_file:
+                    output_file.write(decoded)
 
             start = time.time()
-            summary = self._summarizer.summarize(transcript_text, language)
+            transcript = self._transcriber.transcribe(decoded)
             end = time.time()
-            debug['summary_time'] = end - start
+            debug['transcript_time'] = end - start
 
-            summary_text = summary['text']
-            debug['summary_cost'] = summary['cost']
-            messenger.reply_message(message, f"Summary: \n{summary_text}")
+            transcript_text = transcript['text']
+            words = transcript['words']
+            language = transcript['language']
 
-        messenger.mark_in_progress_done(message)
-        if utils.is_debug():
-            debug_text = "Debug: \n"
-            for debug_key, debug_value in debug.items():
-                debug_text += debug_key + ": " + str(debug_value) + "\n"
-            debug_text = debug_text.strip()
-            messenger.reply_message(message, debug_text)
+            response_message = f"Transcribed: \n{transcript_text}"
+            messenger.reply_message(message, response_message)
+
+            debug['transcript_language'] = language
+            debug['transcript_language_probability'] = transcript['language_probability']
+            debug['transcript_words'] = transcript['words']
+            debug['transcript_cost'] = transcript['cost']
+            if words > self._min_words_for_summary:
+                messenger.mark_in_progress_50(message)
+
+                start = time.time()
+                summary = self._summarizer.summarize(transcript_text, language)
+                end = time.time()
+                debug['summary_time'] = end - start
+
+                summary_text = summary['text']
+                debug['summary_cost'] = summary['cost']
+                messenger.reply_message(message, f"Summary: \n{summary_text}")
+
+            messenger.mark_in_progress_done(message)
+            if utils.is_debug():
+                debug_text = "Debug: \n"
+                for debug_key, debug_value in debug.items():
+                    debug_text += debug_key + ": " + str(debug_value) + "\n"
+                debug_text = debug_text.strip()
+                messenger.reply_message(message, debug_text)
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)
+            messenger.mark_in_progress_fail(message)
+            return
 
     def get_help_text(self) -> str:
         return \
@@ -385,7 +390,7 @@ class ArticleSummaryPipeline(PipelineInterface):
                 summary_part = f"{link} : \n{summarized_text}\n"
                 total_summary += summary_part
         except Exception as ex:
-            logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
+            logging.critical(ex, exc_info=True)
             messenger.mark_in_progress_fail(message)
             return
         messenger.reply_message(message, total_summary)
