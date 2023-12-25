@@ -2,7 +2,8 @@
 import logging
 from abc import ABC, abstractmethod
 from typing import List
-import typing
+from enum import Enum
+
 
 import base64
 import multiprocessing
@@ -65,7 +66,7 @@ class QuestionBotOpenAIAPI(QuestionBotInterface):
         }
         
 
-class ChatRole(typing.Enum):
+class ChatRole(Enum):
     SYSTEM = 1
     ASSISTANT = 2
     USER = 3
