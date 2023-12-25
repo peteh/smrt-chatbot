@@ -228,7 +228,7 @@ Save the kittens."""
 
 class QuestionBotPhi(QuestionBotOllama):
     def __init__(self) -> None:
-        super().__init__("phi")
+        super().__init__("dolphin-phi")
         
 class QuestionBotSolar(QuestionBotOllama):
     def __init__(self) -> None:
