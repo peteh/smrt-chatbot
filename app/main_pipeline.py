@@ -29,7 +29,7 @@ class MainPipeline():
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
 
-        summarizer = summary.QuestionBotSummary(bots)
+        summarizer = summary.QuestionBotSummary(question_bot)
 
         transcriber = transcript.FasterWhisperTranscript(denoise=False)
         voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
