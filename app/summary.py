@@ -22,14 +22,14 @@ class QuestionBotSummary(SummaryInterface):
         if language == 'de':
             prompt = \
 f"Fasse die wichtigsten Punkte des folgenden Textes mit den \
-wichtigsten Stichpunkten und so kurz wie möglich auf Deutsch zusammen, \
+wichtigsten Stichpunkten und so kurz wie möglich in Deutsch zusammen, \
 hebe dabei besonders Daten und Zeiten hervor, wenn sie vorhanden sind.\n\n\
-Text:\n{text}"
+Text:\n{text}\nZusammenfassung (Deutsch):\n"
         else:
             prompt = \
 f"Summarize the most important points in the following text in a few \
 bullet points as short as possible, emphasize dates and time if they are \
-present in the text. \n\nText:\n{text}"
+present in the text. \n\nText:\n{text}\nZusammenfassung (English):\n"
         print("======= PROMPT: ==== \n" + prompt)
 
         response = self._bot.answer(prompt=prompt)
