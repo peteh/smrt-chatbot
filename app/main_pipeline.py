@@ -54,7 +54,8 @@ class MainPipeline():
         tts_pipeline = pipeline_tts.TextToSpeechPipeline()
         grammar_pipeline = pipeline.GrammarPipeline(question_bot)
         tinder_pipeline = pipeline.TinderPipelinePipelineInterface(question_bot)
-
+        help_pipeline = pipeline.Helpipeline()
+        
         self._pipelines = [voice_pipeline,
                     group_message_pipeline,
                     article_summary_pipeline,
@@ -64,10 +65,11 @@ class MainPipeline():
                     tinder_pipeline,
                     gpt_pipeline,
                     image_prompt_pipeline,
-                    talk_pipeline]
+                    talk_pipeline, 
+                    help_pipeline]
+        talk_pipeline.set_pipelines(self._pipelines)
+        help_pipeline.set_pipelines(self._pipelines)
 
-        help_pipeline = pipeline.Helpipeline(self._pipelines)
-        self._pipelines.append(help_pipeline)
 
     def process_pipe(self, pipe: pipeline.PipelineInterface, messenger_instance: messenger.MessengerInterface, message: dict):
         pipe.process(messenger_instance, message)

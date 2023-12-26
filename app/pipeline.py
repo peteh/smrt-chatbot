@@ -523,6 +523,10 @@ class TalkPipeline(PipelineInterface):
     
     def __init__(self, question_bot: QuestionBotInterface) -> None:
         self._question_bot = question_bot
+        self._pipelines = []
+    
+    def set_pipelines(self, pipelines: List[PipelineInterface]):
+        self._pipelines = pipelines
     
     def matches(self, messenger: MessengerInterface, message: dict) -> bool:
         text = messenger.get_message_text(message)
@@ -531,9 +535,16 @@ class TalkPipeline(PipelineInterface):
             and text[0] != "#"
     
     def process(self, messenger: MessengerInterface, message: dict) -> None:
+        system_message = "Your name is Echo, an AI assistant for chat messages. Messages with # as a prefix are used as commands. "
+        for pipe in self._pipelines:
+            help_text = pipe.get_help_text()
+            if help_text is not None and  len(help_text) > 0:
+                commands_text = f"{commands_text}\n{help_text}"
+        user_prompt = messenger.get_message_text(message)
+        prompt = f"{system_message}\nYour commands are: {commands_text}\n\nAnswer this prompt: {user_prompt}"
         try: 
             messenger.mark_in_progress_0(message)
-            answer = self._question_bot.answer(messenger.get_message_text(message))
+            answer = self._question_bot.answer(prompt)
             messenger.mark_in_progress_done(message)
             messenger.reply_message(message, answer.get("text"))
         except Exception as ex:
@@ -593,8 +604,11 @@ class Helpipeline(PipelineInterface):
     """A pipeline to print help messages. """
     HELP_COMMAND = "help"
 
-    def __init__(self, pipelines: List[PipelineInterface]) -> None:
+    def __init__(self) -> None:
         super().__init__()
+        self._pipelines = []
+    
+    def set_pipelines(self, pipelines: List[PipelineInterface]):
         self._pipelines = pipelines
 
     def matches(self, messenger: MessengerInterface, message: dict):
@@ -613,4 +627,6 @@ class Helpipeline(PipelineInterface):
         messenger.mark_in_progress_done(message)
 
     def get_help_text(self) -> str:
-        return ""
+        return \
+"""*Help*
+_#help_ Shows this help text"""
