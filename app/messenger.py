@@ -472,8 +472,14 @@ class SignalMessenger(MessengerInterface):
         return False
 
     def is_bot_mentioned(self, message: dict):
-        # TODO
+        if "dataMessage" in message["envelope"] \
+            and "mentions" in message["envelope"]["dataMessage"]:
+            # TODO: extract the number
+            for mention in message["envelope"]["dataMessage"]["mentions"]:
+                if mention.get("number") == "+4917677919607":
+                    return True
         return False
+                
 
     def get_message_text(self, message: dict) -> str:
         if "dataMessage" in message["envelope"] \
