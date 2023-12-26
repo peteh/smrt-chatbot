@@ -536,10 +536,11 @@ class TalkPipeline(PipelineInterface):
     
     def process(self, messenger: MessengerInterface, message: dict) -> None:
         system_message = "Your name is Echo, an AI assistant for chat messages. Messages with # as a prefix are used as commands. "
+        commands_text = ""
         for pipe in self._pipelines:
             help_text = pipe.get_help_text()
             if help_text is not None and  len(help_text) > 0:
-                commands_text = f"{commands_text}\n{help_text}"
+                commands_text += f"\n{help_text}"
         user_prompt = messenger.get_message_text(message)
         prompt = f"{system_message}\nYour commands are: {commands_text}\n\nAnswer this prompt: {user_prompt}"
         try: 
