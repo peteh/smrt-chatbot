@@ -1,6 +1,8 @@
 """Implemenations of text summarizers. """
+import logging
 from abc import ABC, abstractmethod
 from questionbot import QuestionBotInterface
+
 
 class SummaryInterface(ABC):
     """Summarizer Interface for different implementations. """
@@ -30,7 +32,8 @@ Text:\n{text}\nZusammenfassung (Deutsch):\n"
 f"Summarize the most important points in the following text in a few \
 bullet points as short as possible, emphasize dates and time if they are \
 present in the text. \n\nText:\n{text}\nZusammenfassung (English):\n"
-        print("======= PROMPT: ==== \n" + prompt)
+        
+        logging.debug("======= PROMPT: ==== \n" + prompt)
 
         response = self._bot.answer(prompt=prompt)
         return response
