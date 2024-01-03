@@ -16,7 +16,7 @@ class MainPipeline():
         CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
         database = db.Database("data")
         questionbot_mixtral = questionbot.QuestionBotDolphinMixtral()
-        questionbot_mistral = questionbot.QuestionBotDolphinMixtral()
+        questionbot_mistral = questionbot.QuestionBotMistral()
         questionbot_solar = questionbot.QuestionBotSolar()
         questionbot_phi = questionbot.QuestionBotPhi()
         questionbot_image = questionbot.QuestionBotOllama("llava")
