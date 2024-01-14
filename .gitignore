@@ -3,10 +3,13 @@ app/.venv
 .venv
 *.pyc
 app/cookie.json
+cookie.json
+app/cookie_bard.json
+cookie_bard.json
 app/models
 models/*
 docker-compose.override.yml
-cookie.json
 samples/*
 out.ogg
 data.sqlite
+
