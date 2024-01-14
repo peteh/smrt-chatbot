@@ -584,7 +584,10 @@ class GptPipeline(PipelineInterface):
 
     def matches(self, messenger: MessengerInterface, message: dict):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
-        return self.GPT_COMMAND in command
+        return self.GPT_COMMAND in command \
+                or self.GPT3_COMMAND in command \
+                or self.GPT4_COMMAND in command \
+                or self.BARD_COMMAND in command
 
     def process(self, messenger: MessengerInterface, message: dict):
         (cmd, _, prompt) = PipelineHelper.extract_command_full(
