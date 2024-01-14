@@ -613,10 +613,10 @@ class GptPipeline(PipelineInterface):
     def get_help_text(self) -> str:
         return \
 """*ChatGPT*
-_#gpt prompt_ Allows you to talk to GPT, the bot does not have memory of previous messages though. 
-_#gpt3 prompt_ Force gpt3
-_#gpt4 prompt_ Force gpt4"""
-
+_#gpt [prompt]_ Allows you to talk to GPT, the bot does not have memory of previous messages though. 
+_#gpt3 [prompt]_ Force gpt3
+_#gpt4 [prompt]_ Force gpt4
+_#bard [prompt]_ Force Google Bard"""
 
 class Helpipeline(PipelineInterface):
     """A pipeline to print help messages. """
