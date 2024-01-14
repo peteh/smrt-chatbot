@@ -122,6 +122,38 @@ class QuestionBotBingGPT(QuestionBotInterface):
     def answer(self, prompt: str):
         return asyncio.run(self._answer(prompt))
 
+from bard_webapi import BardClient
+
+class QuestionBotBard(QuestionBotInterface):
+    def __init__(self, cookie_path = "cookie_bard.json") -> None:
+        self._cookie_path = cookie_path
+    
+    def get_cookie_value(self, cookies, cookie_name):
+        for cookie in cookies: 
+            if cookie.get("name") == cookie_name:
+                return cookie.get("value")
+
+    async def _answer(self, prompt):
+        with open(self._cookie_path, "r", encoding = "utf-8") as cookie_fp:
+            cookies = json.load(cookie_fp)
+        
+        Secure_1PSID = self.get_cookie_value(cookies, "__Secure-1PSID")
+        Secure_1PSIDTS = self.get_cookie_value(cookies, "__Secure-1PSIDTS")
+
+        client = BardClient(Secure_1PSID, Secure_1PSIDTS, proxy=None)
+        await client.init()
+        
+        response = await client.generate_content(prompt)
+        return response
+
+    def answer(self, prompt: str):
+        response = asyncio.run(self._answer(prompt))
+        return {
+            'text': response.text,
+            'cost': 0
+        }
+
+
 import requests
 from decouple import config
 class QuestionBotOllama(QuestionBotInterface, QuestionBotImageInterface):

@@ -22,10 +22,12 @@ class MainPipeline():
         questionbot_image = questionbot.QuestionBotOllama("llava")
         questionbot_Openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         questionbot_bing = questionbot.QuestionBotBingGPT()
+        questionbot_bard = questionbot.QuestionBotBard()
         bots = [
                 # TODO: add bot again
                 #questionbot_ollama, 
                 questionbot_bing,
+                questionbot_bard, 
                 questionbot_Openai
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
@@ -38,7 +40,7 @@ class MainPipeline():
                                                     CONFIG_MIN_WORDS_FOR_SUMMARY)
         talk_pipeline = pipeline.TalkPipeline(questionbot_mistral)
 
-        gpt_pipeline = pipeline.GptPipeline(question_bot, questionbot_Openai, questionbot_bing)
+        gpt_pipeline = pipeline.GptPipeline(question_bot, questionbot_Openai, questionbot_bing, questionbot_bard)
 
         group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
         article_summary_pipeline = pipeline.ArticleSummaryPipeline(summarizer)

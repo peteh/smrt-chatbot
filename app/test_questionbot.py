@@ -40,6 +40,13 @@ class QuestionBotTest(unittest.TestCase):
 
         # act, assert
         self._test_questionbot(question_bot)
+    
+    def test_bard(self):
+        # arrange
+        question_bot = questionbot.QuestionBotBard()
+
+        # act, assert
+        self._test_questionbot(question_bot)
 
     def test_fallback_questionbot(self):
         # TODO: use simpler mocks for this

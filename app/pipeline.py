@@ -342,12 +342,21 @@ class ArticleSummaryPipeline(PipelineInterface):
         message_text = messenger.get_message_text(message)
         links = self._extract_urls(message_text)
         return len(links) > 0
+    
+    def use_google_bot(self, url):
+        no_google_urls = ["reddit.com"]
+        for no_google_url in no_google_urls:
+            if no_google_url in url:
+                return False
+        return True
 
     def _process_article(self, link: str):
         config = trafilatura.settings.use_config()
         # pretend we are google bot, so we don't get annoying cookie shit
         config.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
-        headers={'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
+        headers = {}
+        if self.use_google_bot(link):
+            headers={'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
         session = requests.Session()
         response = session.get(link, headers=headers)
 
@@ -561,14 +570,17 @@ class GptPipeline(PipelineInterface):
     GPT_COMMAND = "gpt"
     GPT3_COMMAND = "gpt3"
     GPT4_COMMAND = "gpt4"
+    BARD_COMMAND = "bard"
 
     def __init__(self, question_bot: QuestionBotInterface,
                  gpt3: QuestionBotInterface,
-                 gpt4: QuestionBotInterface) -> None:
+                 gpt4: QuestionBotInterface, 
+                 bard: QuestionBotInterface) -> None:
         super().__init__()
         self._question_bot = question_bot
         self._gpt3 = gpt3
         self._gpt4 = gpt4
+        self._bard = bard
 
     def matches(self, messenger: MessengerInterface, message: dict):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
@@ -582,6 +594,8 @@ class GptPipeline(PipelineInterface):
             bot = self._gpt3
         if cmd == self.GPT4_COMMAND:
             bot = self._gpt4
+        if cmd == self.BARD_COMMAND:
+            bot = self._bard
 
         messenger.mark_in_progress_0(message)
         answer = bot.answer(prompt)
