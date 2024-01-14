@@ -600,16 +600,18 @@ class GptPipeline(PipelineInterface):
         if cmd == self.BARD_COMMAND:
             bot = self._bard
 
-        messenger.mark_in_progress_0(message)
         answer = bot.answer(prompt)
-        if answer is None:
+        try: 
+            messenger.mark_in_progress_0(message)
+            answer = bot.answer(prompt)
+            messenger.mark_in_progress_done(message)
+            messenger.reply_message(message, answer.get("text"))
+            messenger.mark_in_progress_done(message)
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)
             messenger.mark_in_progress_fail(message)
             return
 
-        response_text = answer['text']
-        messenger.reply_message(message, response_text)
-
-        messenger.mark_in_progress_done(message)
     def get_help_text(self) -> str:
         return \
 """*ChatGPT*
