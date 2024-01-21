@@ -1,15 +1,12 @@
 """Main application"""
-import json
+import time
 import logging
-from flask import Flask, request, Response
 import messenger
 from decouple import config
 from main_pipeline import MainPipeline
 from signalcli import SignalMessageQueue
 from whatsappsocketio import WhatsappMessageQueue
-import time
-import sys
-
+from senate_stocks import SenateStockNotification
 logging.basicConfig(level=logging.DEBUG)
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -25,15 +22,21 @@ signalMessenger = messenger.SignalMessenger(config("SIGNAL_NUMBER"), config("SIG
 
 mainpipe = MainPipeline()
 
-queue = SignalMessageQueue(signalMessenger, mainpipe)
-queue.run_async()
+signal_queue = SignalMessageQueue(signalMessenger, mainpipe)
 whatsapp_queue = WhatsappMessageQueue(whatsapp, mainpipe)
+
+stock_notifier = SenateStockNotification(whatsapp)
+
+
+signal_queue.run_async()
 whatsapp_queue.run_async()
+stock_notifier.run_async()
 try:
     whatsapp.start_session()
-    pass
 except:
     logging.warn("Could not start Whatsapp session")
+
+
 while(True):
     time.sleep(1)
 
