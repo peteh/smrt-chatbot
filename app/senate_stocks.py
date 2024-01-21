@@ -1,9 +1,9 @@
-import requests
-from datetime import datetime
-import json
-import threading
 import time
+from datetime import datetime
+import threading
 import logging
+import json
+import requests
 import messenger
 
 logging.basicConfig(level=logging.INFO)
@@ -47,7 +47,7 @@ class SenateStockNotification():
                 second_newest = transaction_created_at
 
         return second_newest
-    
+
     def get_data(self):
         url = "https://phx.unusualwhales.com/api/senate_stocks"
         #url = "https://phx.unusualwhales.com/api/senate_stocks_search_full?search=PELOSI"
@@ -59,11 +59,11 @@ class SenateStockNotification():
             "Referer": "https://unusualwhales.com/"
         }
 
-        r = requests.get(url, headers = headers)
-        with open("data.json", "w") as fp:
-            fp.write(json.dumps(r.json(), indent=4))
+        r = requests.get(url, headers = headers, timeout=120)
+        #with open("data.json", "w") as fp:
+        #    fp.write(json.dumps(r.json(), indent=4))
         return r.json()["senate_stocks"]
-    
+
     def _to_time(self, date_string: str):
         # Convert string to datetime object
         datetime_object = datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
@@ -78,7 +78,7 @@ class SenateStockNotification():
                 newest = transaction_created_at
                 logging.debug(transaction)
                 transaction_txt = f"{transaction['transaction_date']}: {transaction['reporter']} {transaction['txn_type']} {transaction['symbol']} for {transaction['amounts']}"
-                info_msg = f"{transaction_txt}\nNotes: {transaction['notes']}\nreported: {transaction['filed_at_date']}"
+                info_msg = f"SENATE STOCK TRADING:\n{transaction_txt}\nNotes: {transaction['notes']}\nreported: {transaction['filed_at_date']}"
                 self._messenger.send_message_to_group(self.response_wa_msg, info_msg)
         self._last_created_at = newest
 
@@ -91,7 +91,6 @@ class SenateStockNotification():
             except Exception as ex:
                 logging.critical(ex, exc_info=True)
             time.sleep(self.RUN_EVERY_S)
-        
-    
+
     def run_async(self):
         self._thread.start() 
