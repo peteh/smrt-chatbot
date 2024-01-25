@@ -457,7 +457,7 @@ class SignalMessenger(MessengerInterface):
         if "dataMessage" in message["envelope"] \
             and "attachments" in message["envelope"]["dataMessage"]:
             for attachment in message["envelope"]["dataMessage"]["attachments"]:
-                if attachment["contentType"] == "audio/aac":
+                if attachment["contentType"] == "audio/aac" or attachment["contentType"] == "audio/ogg; codecs=opus":
                     return True
         return False
     
