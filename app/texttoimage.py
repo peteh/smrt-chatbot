@@ -377,6 +377,65 @@ class BingImageProcessor(ImagePromptInterface):
         print("Failed to get an image")
         return None
 
+class FlowGPTImageProcessor(ImagePromptInterface):
+    MODEL_DALLE3 = "DALLE3"
+    def __init__(self, model = MODEL_DALLE3) -> None:
+        self._model = model
+    
+    def process(self, prompt) -> List[Tuple[str, str]]:
+        url = "https://backend-k8s.flowgpt.com/image-generation-anonymous"
+
+        headers = {
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8,fr;q=0.7",
+            "Content-Length": "84",
+            "Content-Type": "application/json",
+            "Origin": "https://flowgpt.com",
+            "Referer": "https://flowgpt.com/",
+            "Sec-Ch-Ua": '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-site",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        }
+
+        payload = {
+            "model": self._model,
+            "prompt": prompt, # add your custom prompt
+        }
+
+        response = requests.post(url, headers=headers, json=payload)
+
+        try:
+            print(response.status_code)
+            response_data = response.json()
+            url_value = response_data.get("url", "No URL found in the response")
+            # TODO write this better
+            image_urls = [url_value]
+            img_num = 0
+            images = []
+            for image_url in image_urls:
+                logging.debug(f"Image url: {image_url}")
+                print(f"Image url: {image_url}")
+                img_num += 1
+                response = requests.get(image_url, timeout=1200)
+                # filter out these weird svg graphics
+                if len(response.content) > 3400:
+                    images.append((f"image{img_num}.png" , response.content))
+            if images is None or len(images) == 0:
+                logging.error("Did not receive images from FlowGPT")
+                return images
+            return images
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)
+        print("Failed to get an image")
+        return None
+        
+    
+
 class FallbackTextToImageProcessor(ImagePromptInterface):
     """Image processor that tries a list of image processor until one succeeds. """
     def __init__(self, processors: List[ImagePromptInterface]) -> None:

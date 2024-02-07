@@ -22,11 +22,13 @@ class MainPipeline():
         questionbot_image = questionbot.QuestionBotOllama("llava")
         questionbot_Openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         questionbot_bing = questionbot.QuestionBotBingGPT()
+        questionbot_flowgpt = questionbot.QuestionBotFlowGPT(questionbot.QuestionBotFlowGPT.MODEL_CHATGPT_35)
         questionbot_bard = questionbot.QuestionBotBard()
         bots = [
                 # TODO: add bot again
                 #questionbot_ollama, 
                 questionbot_bing,
+                questionbot_flowgpt,
                 questionbot_bard, 
                 questionbot_Openai
                 ]
@@ -46,6 +48,7 @@ class MainPipeline():
         article_summary_pipeline = pipeline.ArticleSummaryPipeline(summarizer)
 
         processors = [texttoimage.BingImageProcessor(),
+                      texttoimage.FlowGPTImageProcessor(texttoimage.FlowGPTImageProcessor.MODEL_DALLE3),
                         #texttoimage.DiffusersTextToImage(), 
                         texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
         imagegen_api = texttoimage.FallbackTextToImageProcessor(processors)

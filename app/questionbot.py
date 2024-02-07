@@ -153,6 +153,63 @@ class QuestionBotBard(QuestionBotInterface):
             'cost': 0
         }
 
+class QuestionBotFlowGPT(QuestionBotInterface):
+    MODEL_CHATGPT_35 = "model-gpt-3.5-turbo"
+    
+    def __init__(self, model = MODEL_CHATGPT_35) -> None:
+        self._model = model
+
+    def answer(self, prompt: str):
+        url = "https://backend-k8s.flowgpt.com/v2/chat-anonymous"
+
+        headers = {
+            "Authorization": "Bearer null",
+            "Content-Type": "application/json",
+            "Referer": "https://flowgpt.com/",
+            "Sec-Ch-Ua": '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+            #"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
+        }
+
+        payload = {
+            "model": "gpt-3.5-turbo",
+            "nsfw": False,
+            "question": "Give me 3 different jokes",
+            "history": [
+                {
+                    "role": "assistant",
+                    "content": "Hello there 😃, I am ChatGPT. How can I help you today?"
+                }
+            ],
+            "system": "You are help assitant. Follow the user's instructions carefully. Respond using markdown",
+            "temperature": 0.7,
+            "promptId": self._model,
+            "documentIds": [],
+            "chatFileDocumentIds": [],
+            "generateImage": False,
+            "generateAudio": False
+        }
+        response = requests.post(url, headers=headers, json=payload)
+        print(response.text)
+        split = response.text.split("\n\n")
+        print("Response status code:", response.status_code)
+
+        response_text = ""
+        for split_str in split:
+            split_str_trimmed = split_str.strip()
+            if split_str_trimmed != "":
+                part = json.loads(split_str).get("data").replace("\n'n", "\n")
+                response_text += part
+
+        print(response_text)
+
+        return {
+            'text': response_text,
+            'cost': 0
+        }
+
 
 import requests
 from decouple import config
