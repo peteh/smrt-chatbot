@@ -176,7 +176,7 @@ class QuestionBotFlowGPT(QuestionBotInterface):
         payload = {
             "model": "gpt-3.5-turbo",
             "nsfw": False,
-            "question": "Give me 3 different jokes",
+            "question": prompt,
             "history": [
                 {
                     "role": "assistant",
