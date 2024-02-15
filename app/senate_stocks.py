@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.INFO)
 class SenateStockNotification():
     DELAY_S = 30
     RUN_EVERY_S = 60*60 # once per hour
+    MIN_VALUE_FOR_REPORTING = 50000
 
     # TODO: dirty hack to respond to messages
     response_wa_msg = {'chatId': '491726060318-1611969093@g.us'}
@@ -69,6 +70,15 @@ class SenateStockNotification():
         datetime_object = datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
         return datetime_object
 
+    def get_transaction_value(self, transaction_amount: str) -> tuple[float, float]:
+        # $1,000 - $15,000
+        tr_value = transaction_amount.replace("$", "").replace(",", "").split(" - ")
+        
+        value_from = float(tr_value[0])
+        value_to = float(tr_value[1])
+        return (value_from, value_to)
+        
+        
     def task(self):
         data = self.get_data()
         newest = self._last_created_at
@@ -77,9 +87,11 @@ class SenateStockNotification():
             if transaction_created_at > self._last_created_at:
                 newest = transaction_created_at
                 logging.debug(transaction)
-                transaction_txt = f"{transaction['transaction_date']}: {transaction['reporter']} {transaction['txn_type']} {transaction['symbol']} for {transaction['amounts']}"
-                info_msg = f"SENATE STOCK TRADING:\n{transaction_txt}\nNotes: {transaction['notes']}\nreported: {transaction['filed_at_date']}"
-                self._messenger.send_message_to_group(self.response_wa_msg, info_msg)
+                from_value, to_value = self.get_transaction_value(transaction['amounts'])
+                if from_value >= self.MIN_VALUE_FOR_REPORTING:
+                    transaction_txt = f"{transaction['transaction_date']}: {transaction['reporter']} {transaction['txn_type']} {transaction['symbol']} for {transaction['amounts']}"
+                    info_msg = f"SENATE STOCK TRADING:\n{transaction_txt}\nNotes: {transaction['notes']}\nreported: {transaction['filed_at_date']}"
+                    self._messenger.send_message_to_group(self.response_wa_msg, info_msg)
         self._last_created_at = newest
 
     def run(self):
