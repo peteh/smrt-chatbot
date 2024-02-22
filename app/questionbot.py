@@ -203,7 +203,8 @@ class QuestionBotFlowGPT(QuestionBotInterface):
                 part = json.loads(split_str).get("data").replace("\n'n", "\n")
                 response_text += part
 
-        print(response_text)
+        if response_text == "Insufficient credit":
+            raise ValueError("No credit for prompts")
 
         return {
             'text': response_text,
