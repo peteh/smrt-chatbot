@@ -200,8 +200,10 @@ class QuestionBotFlowGPT(QuestionBotInterface):
         for split_str in split:
             split_str_trimmed = split_str.strip()
             if split_str_trimmed != "":
-                part = json.loads(split_str).get("data").replace("\n'n", "\n")
-                response_text += part
+                json_event = json.loads(split_str)
+                if json_event.get("event") == "text":
+                    part = json_event.get("data").replace("\n'n", "\n")
+                    response_text += part
 
         if response_text == "Insufficient credit":
             raise ValueError("No credit for prompts")
