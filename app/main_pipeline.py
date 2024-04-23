@@ -18,23 +18,23 @@ class MainPipeline():
         questionbot_mixtral = questionbot.QuestionBotDolphinMixtral()
         questionbot_mistral = questionbot.QuestionBotMistral()
         questionbot_solar = questionbot.QuestionBotSolar()
-        questionbot_phi = questionbot.QuestionBotPhi()
+        questionbot_phi3 = questionbot.QuestionBotPhi3()
         questionbot_image = questionbot.QuestionBotOllama("llava")
-        questionbot_Openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
+        questionbot_openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         questionbot_bing = questionbot.QuestionBotBingGPT()
         questionbot_flowgpt = questionbot.QuestionBotFlowGPT(questionbot.QuestionBotFlowGPT.MODEL_CHATGPT_35)
         questionbot_bard = questionbot.QuestionBotBard()
         bots = [
                 # TODO: add bot again
-                #questionbot_ollama, 
+                #questionbot_phi3, 
                 questionbot_bing,
                 questionbot_flowgpt,
-                questionbot_bard, 
-                questionbot_Openai
+                questionbot_bard,
+                questionbot_openai
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
 
-        summarizer = summary.QuestionBotSummary(question_bot)
+        summarizer = summary.QuestionBotSummary(questionbot_phi3)
 
         transcriber = transcript.FasterWhisperTranscript(denoise=False)
         voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
@@ -42,7 +42,7 @@ class MainPipeline():
                                                     CONFIG_MIN_WORDS_FOR_SUMMARY)
         talk_pipeline = pipeline.TalkPipeline(questionbot_mistral)
 
-        gpt_pipeline = pipeline.GptPipeline(question_bot, questionbot_Openai, questionbot_bing, questionbot_bard)
+        gpt_pipeline = pipeline.GptPipeline(question_bot, questionbot_openai, questionbot_bing, questionbot_bard)
 
         group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
         article_summary_pipeline = pipeline.ArticleSummaryPipeline(summarizer)
