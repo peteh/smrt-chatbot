@@ -19,6 +19,7 @@ class MainPipeline():
         questionbot_mistral = questionbot.QuestionBotMistral()
         questionbot_solar = questionbot.QuestionBotSolar()
         questionbot_phi3 = questionbot.QuestionBotPhi3()
+        questionbot_llama3 = questionbot.QuestionBotLlama3()
         questionbot_image = questionbot.QuestionBotOllama("llava")
         questionbot_openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         questionbot_bing = questionbot.QuestionBotBingGPT()
@@ -34,7 +35,7 @@ class MainPipeline():
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
 
-        summarizer = summary.QuestionBotSummary(questionbot_phi3)
+        summarizer = summary.QuestionBotSummary(questionbot_llama3)
 
         transcriber = transcript.FasterWhisperTranscript(denoise=False)
         voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
@@ -93,3 +94,4 @@ class MainPipeline():
                 thread.start()
             # delete message from phone after processing
             #whatsapp.deleteMessage(message)
+

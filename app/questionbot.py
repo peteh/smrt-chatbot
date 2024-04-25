@@ -338,6 +338,10 @@ class QuestionBotPhi3(QuestionBotOllama):
     def __init__(self) -> None:
         super().__init__("phi3")
 
+class QuestionBotLlama3(QuestionBotOllama):
+    def __init__(self) -> None:
+        super().__init__("llama3") 
+
 class QuestionBotMistral(QuestionBotOllama):
     def __init__(self) -> None:
         super().__init__("dolphin-mistral")
