@@ -28,9 +28,10 @@ class MainPipeline():
         bots = [
                 # TODO: add bot again
                 #questionbot_phi3, 
-                questionbot_bing,
-                questionbot_flowgpt,
-                questionbot_bard,
+                #questionbot_bing,
+                #questionbot_flowgpt,
+                #questionbot_bard,
+                questionbot_llama3,
                 questionbot_openai
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
