@@ -1,4 +1,4 @@
-FROM python:3.10-bookworm
+FROM python:3.12-bookworm
 VOLUME /storage
 RUN mkdir -p /root/.cache && ln -s /storage /root/.cache/huggingface && mkdir -p /root/.local && ln -s /storage /root/.local/share
 RUN apt-get update && apt-get install -y opus-tools vorbis-tools ffmpeg espeak

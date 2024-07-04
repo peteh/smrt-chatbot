@@ -5,7 +5,7 @@ python-decouple
 faster_whisper
 trafilatura
 youtube-transcript-api
-TTS
+coqui-tts
 websockets
 denoiser
 python-socketio
