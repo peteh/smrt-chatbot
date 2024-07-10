@@ -2,11 +2,27 @@ import time
 from datetime import datetime
 import threading
 import logging
-import json
 import requests
+import requests_cache
 import messenger
+import yfinance as yf
 
 logging.basicConfig(level=logging.INFO)
+
+
+class StockInfo:
+    def __init__(self) -> None:
+        self._session = requests_cache.CachedSession("/tmp/yfinance.cache")
+        self._session.headers['User-agent'] = 'my-program/1.0'
+    
+    def expand_symbol(self, symbol):
+        try:
+            ticker = yf.Ticker(symbol, session=self._session)
+            print(ticker.info)
+            expanded = f"{symbol} ({ticker.info['shortName']}, {ticker.info['industry']})"
+            return expanded
+        except:
+            return symbol
 
 class SenateStockNotification():
     DELAY_S = 30
@@ -22,6 +38,7 @@ class SenateStockNotification():
         self._last_created_at = self.get_second_newest()
         self._messenger = messenger
         self._thread = threading.Thread(target=self.run)
+        self._stock_info = StockInfo()
 
     def get_newest(self):
         data = self.get_data()
@@ -77,7 +94,11 @@ class SenateStockNotification():
         value_from = float(tr_value[0])
         value_to = float(tr_value[1])
         return (value_from, value_to)
-        
+    
+    @staticmethod
+    def _expand_symbol(symbol):
+        ticker = yf.Ticker(symbol)
+        print(ticker.info)
         
     def task(self):
         data = self.get_data()
@@ -89,7 +110,8 @@ class SenateStockNotification():
                 logging.debug(transaction)
                 from_value, to_value = self.get_transaction_value(transaction['amounts'])
                 if from_value >= self.MIN_VALUE_FOR_REPORTING:
-                    transaction_txt = f"{transaction['transaction_date']}: {transaction['reporter']} {transaction['txn_type']} {transaction['symbol']} for {transaction['amounts']}"
+                    expanded_symbol = self._stock_info.expand_symbol(transaction['symbol'])
+                    transaction_txt = f"{transaction['transaction_date']}: {transaction['reporter']} {transaction['txn_type']} {expanded_symbol} for {transaction['amounts']}"
                     info_msg = f"SENATE STOCK TRADING:\n{transaction_txt}\nNotes: {transaction['notes']}\nreported: {transaction['filed_at_date']}"
                     self._messenger.send_message_to_group(self.response_wa_msg, info_msg)
         self._last_created_at = newest

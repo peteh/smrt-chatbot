@@ -1,5 +1,6 @@
 requests
 requests[socks]
+requests_cache
 flask
 python-decouple
 faster_whisper
@@ -15,3 +16,4 @@ re_edge_gpt
 diffusers[torch]
 bard-webapi
 bs4
+yfinance
