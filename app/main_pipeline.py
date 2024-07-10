@@ -38,7 +38,7 @@ class MainPipeline():
 
         summarizer = summary.QuestionBotSummary(questionbot_llama3)
 
-        transcriber = transcript.FasterWhisperTranscript(denoise=False)
+        transcriber = transcript.FasterWhisperTranscript()
         voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
                                                     summarizer,
                                                     CONFIG_MIN_WORDS_FOR_SUMMARY)

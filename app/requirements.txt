@@ -8,7 +8,6 @@ trafilatura
 youtube-transcript-api
 coqui-tts
 websockets
-denoiser
 python-socketio
 python-socketio[client]
 langid

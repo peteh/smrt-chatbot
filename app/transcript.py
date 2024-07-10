@@ -6,17 +6,8 @@ import requests
 import faster_whisper
 
 
-# faster whisper
-import torch
-import torchaudio
-import denoiser.pretrained
-import denoiser.dsp
-
 class TranscriptInterface(ABC):
     """Provides an interface for transcribing audio messages"""
-    @abstractmethod
-    def uses_denoise(self) -> bool:
-        """Returns true if the transcriber denoises the input media"""
 
     @abstractmethod
     def transcribe(self, audio_data) -> dict:
@@ -28,8 +19,6 @@ class OpenAIWhisperTranscript(TranscriptInterface):
         self._api_key = api_key
         self._api_url = "https://api.openai.com/v1/audio/transcribe"
 
-    def uses_denoise(self):
-        return False
 
     def transcribe(self, audio_data) -> dict:
         headers = {
@@ -53,8 +42,6 @@ class OpenAIWhisperTranscript(TranscriptInterface):
 
 class WhisperTranscript(TranscriptInterface):
     """Implementation based on whisper asr webservice. """
-    def uses_denoise(self):
-        return False
 
     def transcribe(self, audio_data):
         url = 'http://localhost:9001/asr?task=transcribe&language=en&output=json'
@@ -86,35 +73,16 @@ class WhisperTranscript(TranscriptInterface):
 
 class FasterWhisperTranscript(TranscriptInterface):
     """Implementation based on faster_whisper python. """
-    def __init__(self, model = "medium", beam_size = 5, threads = 4, denoise = False):
+    def __init__(self, model = "medium", beam_size = 5, threads = 4):
         self._beam_size = beam_size
         self._threads = threads
         self._model = model
-        self._denoise = denoise
-
-    def uses_denoise(self):
-        return self._denoise
-
-    def _denoise_audio(self, audio_data: bytes):
-        model = denoiser.pretrained.dns64().cpu()
-        file_like = io.BytesIO(audio_data)
-        #file_like.name = "file.ogg"
-        wav, sample_rate = torchaudio.load(file_like)
-        wav = denoiser.dsp.convert_audio(wav.cpu(), sample_rate, model.sample_rate, model.chin)
-        with torch.no_grad():
-            denoised = model(wav[None])[0]
-        buffer = io.BytesIO()
-        torchaudio.save(buffer, denoised, model.sample_rate, format="vorbis", compression=-1)
-        buffer.seek(0)
-        return buffer.read()
 
     def transcribe(self, audio_data):
         model = faster_whisper.WhisperModel(self._model,
                                             device="cpu",
                                             compute_type="int8",
                                             cpu_threads = self._threads)
-        if self._denoise:
-            audio_data = self._denoise_audio(audio_data)
 
         audio_reader = io.BytesIO(audio_data)
         # or run on GPU with INT8
