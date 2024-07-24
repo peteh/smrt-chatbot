@@ -334,17 +334,17 @@ Save the kittens."""
         super().__init__("dolphin-mixtral:8x7b-v2.6-q3_K_L", system_message)
 
 
-class QuestionBotPhi3(QuestionBotOllama):
-    def __init__(self) -> None:
-        super().__init__("phi3")
-
 class QuestionBotLlama3(QuestionBotOllama):
     def __init__(self) -> None:
         super().__init__("llama3") 
 
-class QuestionBotMistral(QuestionBotOllama):
+class QuestionBotLlama3_1(QuestionBotOllama):
     def __init__(self) -> None:
-        super().__init__("dolphin-mistral")
+        super().__init__("llama3.1") 
+
+class QuestionBotMistralNemo(QuestionBotOllama):
+    def __init__(self) -> None:
+        super().__init__("mistral-nemo")
         
 class QuestionBotSolar(QuestionBotOllama):
     def __init__(self) -> None:

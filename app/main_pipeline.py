@@ -15,11 +15,8 @@ class MainPipeline():
     def __init__(self):
         CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
         database = db.Database("data")
-        questionbot_mixtral = questionbot.QuestionBotDolphinMixtral()
-        questionbot_mistral = questionbot.QuestionBotMistral()
-        questionbot_solar = questionbot.QuestionBotSolar()
-        questionbot_phi3 = questionbot.QuestionBotPhi3()
-        questionbot_llama3 = questionbot.QuestionBotLlama3()
+        questionbot_mistral_nemo = questionbot.QuestionBotMistralNemo()
+        questionbot_llama3_1 = questionbot.QuestionBotLlama3_1()
         questionbot_image = questionbot.QuestionBotOllama("llava")
         questionbot_openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
         questionbot_bing = questionbot.QuestionBotBingGPT()
@@ -31,18 +28,19 @@ class MainPipeline():
                 #questionbot_bing,
                 #questionbot_flowgpt,
                 #questionbot_bard,
-                questionbot_llama3,
+                questionbot_mistral_nemo,
+                questionbot_llama3_1,
                 questionbot_openai
                 ]
         question_bot = questionbot.FallbackQuestionbot(bots)
 
-        summarizer = summary.QuestionBotSummary(questionbot_llama3)
+        summarizer = summary.QuestionBotSummary(questionbot_mistral_nemo)
 
         transcriber = transcript.FasterWhisperTranscript()
         voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
                                                     summarizer,
                                                     CONFIG_MIN_WORDS_FOR_SUMMARY)
-        talk_pipeline = pipeline.TalkPipeline(questionbot_mistral)
+        talk_pipeline = pipeline.TalkPipeline(questionbot_mistral_nemo)
 
         gpt_pipeline = pipeline.GptPipeline(question_bot, questionbot_openai, questionbot_bing, questionbot_bard)
 
