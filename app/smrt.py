@@ -36,25 +36,19 @@ stock_notifier = SenateStockNotification(whatsapp)
 CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
 database = db.Database("data")
 questionbot_mistral_nemo = questionbot.QuestionBotMistralNemo()
-questionbot_llama3_1 = questionbot.QuestionBotLlama3_1()
+questionbot_llama3_2 = questionbot.QuestionBotLlama3_2()
 questionbot_image = questionbot.QuestionBotOllama("llava")
 questionbot_openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
 questionbot_bing = questionbot.QuestionBotBingGPT()
-questionbot_flowgpt = questionbot.QuestionBotFlowGPT(questionbot.QuestionBotFlowGPT.MODEL_CHATGPT_35)
 questionbot_bard = questionbot.QuestionBotBard()
 bots = [
-        # TODO: add bot again
-        #questionbot_phi3, 
-        #questionbot_bing,
-        #questionbot_flowgpt,
-        #questionbot_bard,
+        questionbot_llama3_2,
         questionbot_mistral_nemo,
-        questionbot_llama3_1,
         questionbot_openai
         ]
 question_bot = questionbot.FallbackQuestionbot(bots)
 
-summarizer = summary.QuestionBotSummary(questionbot_mistral_nemo)
+summarizer = summary.QuestionBotSummary(questionbot_llama3_2)
 
 transcriber = transcript.FasterWhisperTranscript()
 voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
@@ -99,7 +93,7 @@ stock_notifier.run_async()
 try:
     whatsapp.start_session()
 except:
-    logging.warn("Could not start Whatsapp session")
+    logging.warning("Could not start Whatsapp session")
 
 
 while(True):

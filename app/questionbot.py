@@ -342,6 +342,10 @@ class QuestionBotLlama3_1(QuestionBotOllama):
     def __init__(self) -> None:
         super().__init__("llama3.1") 
 
+class QuestionBotLlama3_2(QuestionBotOllama):
+    def __init__(self) -> None:
+        super().__init__("llama3.2") 
+
 class QuestionBotMistralNemo(QuestionBotOllama):
     def __init__(self) -> None:
         super().__init__("mistral-nemo")
