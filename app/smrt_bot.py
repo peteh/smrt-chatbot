@@ -52,13 +52,13 @@ def run():
     imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
 
     image_prompt_pipeline = pipeline.ImagePromptPipeline(questionbot_image)
-
+    mark_seen_pipeline = pipeline.MarkSeenPipeline()
 
     tts_pipeline = pipeline_tts.TextToSpeechPipeline()
     grammar_pipeline = pipeline.GrammarPipeline(question_bot)
     tinder_pipeline = pipeline.TinderPipelinePipelineInterface(question_bot)
 
-
+    mainpipe.add_pipeline(mark_seen_pipeline)
     mainpipe.add_pipeline(stock_notifier)
     mainpipe.add_pipeline(voice_pipeline)
     mainpipe.add_pipeline(group_message_pipeline)

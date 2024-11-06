@@ -11,5 +11,5 @@ models/*
 docker-compose.override.yml
 samples/*
 out.ogg
-data.sqlite
+*.sqlite
 

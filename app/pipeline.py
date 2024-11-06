@@ -164,6 +164,38 @@ class MarkSeenPipeline(PipelineInterface):
     def get_help_text(self) -> str:
         return ""
 
+class UndeletePipeline(PipelineInterface):
+    """A pipe that stores the last few messages and can recover deleted. """
+    
+    UNDELETE_COMMAND = "#undelete"
+
+    def __init__(self) -> None:
+        pass
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        if messenger.is_self_message(message):
+            command = PipelineHelper.extract_command(messenger.get_message_text(message))
+            return self.UNDELETE_COMMAND in command
+        else: 
+            # we need to store it into our database/buffer
+            return True
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        (_, _, prompt) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+        messenger.mark_in_progress_0(message)
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        if messenger.is_self_message(message):
+            (_, _, count) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+            # TODO: do stuff with the command
+            return True
+        else: 
+            # TODO store into buffer
+            return True
+
+    def get_help_text(self) -> str:
+        return ""
+
 class VoiceMessagePipeline(PipelineInterface):
     """A pipe that converts audio messages to text and summarizes them. """
     def __init__(self, transcriber: TranscriptInterface,

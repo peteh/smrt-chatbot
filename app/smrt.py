@@ -11,6 +11,8 @@ root.setLevel(logging.DEBUG)
 launch = config("LAUNCH", "bot")
 
 if launch == "bot":
+    logging.info("Launching BOT")
     smrt_bot.run()
 elif launch == "private":
+    logging.info("Launching PRIVATE")
     smrt_private.run()
