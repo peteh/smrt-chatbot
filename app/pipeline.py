@@ -148,6 +148,22 @@ _#grammatik German Text_ corrects German language
 _#grammar English Text_ corrects English language"""
 
 
+
+class MarkSeenPipeline(PipelineInterface):
+    """A pipe that marks all incomings messages as seen. """
+    def __init__(self) -> None:
+        pass
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        # match all messages to acknowledge
+        return True
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        messenger.mark_seen(message)
+
+    def get_help_text(self) -> str:
+        return ""
+
 class VoiceMessagePipeline(PipelineInterface):
     """A pipe that converts audio messages to text and summarizes them. """
     def __init__(self, transcriber: TranscriptInterface,
@@ -568,37 +584,19 @@ class TalkPipeline(PipelineInterface):
 class GptPipeline(PipelineInterface):
     """A pipeline to talk to gpt models. """
     GPT_COMMAND = "gpt"
-    GPT3_COMMAND = "gpt3"
-    GPT4_COMMAND = "gpt4"
-    BARD_COMMAND = "bard"
 
-    def __init__(self, question_bot: QuestionBotInterface,
-                 gpt3: QuestionBotInterface,
-                 gpt4: QuestionBotInterface, 
-                 bard: QuestionBotInterface) -> None:
+    def __init__(self, question_bot: QuestionBotInterface) -> None:
         super().__init__()
         self._question_bot = question_bot
-        self._gpt3 = gpt3
-        self._gpt4 = gpt4
-        self._bard = bard
 
     def matches(self, messenger: MessengerInterface, message: dict):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
-        return self.GPT_COMMAND in command \
-                or self.GPT3_COMMAND in command \
-                or self.GPT4_COMMAND in command \
-                or self.BARD_COMMAND in command
+        return self.GPT_COMMAND in command
 
     def process(self, messenger: MessengerInterface, message: dict):
         (cmd, _, prompt) = PipelineHelper.extract_command_full(
             messenger.get_message_text(message))
         bot = self._question_bot
-        if cmd == self.GPT3_COMMAND:
-            bot = self._gpt3
-        if cmd == self.GPT4_COMMAND:
-            bot = self._gpt4
-        if cmd == self.BARD_COMMAND:
-            bot = self._bard
 
         answer = bot.answer(prompt)
         try: 
@@ -615,10 +613,7 @@ class GptPipeline(PipelineInterface):
     def get_help_text(self) -> str:
         return \
 """*ChatGPT*
-_#gpt [prompt]_ Allows you to talk to GPT, the bot does not have memory of previous messages though. 
-_#gpt3 [prompt]_ Force gpt3
-_#gpt4 [prompt]_ Force gpt4
-_#bard [prompt]_ Force Google Bard"""
+_#gpt [prompt]_ Allows you to talk to GPT, the bot does not have memory of previous messages though. """
 
 class Helpipeline(PipelineInterface):
     """A pipeline to print help messages. """

@@ -12,20 +12,28 @@ class MessengerInterface(ABC):
     """Interface for messengers to communicate with the underlying framework. """
 
     @abstractmethod
-    def mark_in_progress_0(self, message: dict):
+    def mark_in_progress_0(self, message: dict) -> None:
         """Marks a message that it is currently in processing. """
 
     @abstractmethod
-    def mark_in_progress_50(self, message: dict):
+    def mark_in_progress_50(self, message: dict) -> None:
         """Marks a message that it is currently 50% processed. """
 
     @abstractmethod
-    def mark_in_progress_done(self, message: dict):
+    def mark_in_progress_done(self, message: dict) -> None:
         """Marks a message that it's processing has been finished. """
 
     @abstractmethod
-    def mark_in_progress_fail(self, message: dict):
+    def mark_in_progress_fail(self, message: dict) -> None:
         """Marks a message that the processing of said message failed. """
+    
+    @abstractmethod
+    def mark_seen(self, message: dict) -> None:
+        """Marks a message/chat from the message as seen. 
+
+        Args:
+            message (dict): The message to mark the chat as seen. 
+        """
 
     @abstractmethod
     def is_group_message(self, message: dict) -> bool:
@@ -190,6 +198,18 @@ class Whatsapp(MessengerInterface):
 
     def mark_in_progress_fail(self, message: dict):
         self._react(message['id'], self.REACT_FAIL)
+    
+    def mark_seen(self, message: dict) -> None:
+        is_group_message = self.is_group_message(message)
+        recipient = message['chatId'] if is_group_message else message['sender']['id']
+        data = {
+            "phone": recipient,
+            "isGroup": is_group_message
+        }
+        requests.post(self._endpoint_url("mark-seen"),
+                      json=data,
+                      headers=self._headers,
+                      timeout=self.DEFAULT_TIMEOUT)
 
     def is_group_message(self, message: dict):
         return 'isGroupMsg' in message and message['isGroupMsg'] is True
@@ -385,6 +405,10 @@ class SignalMessenger(MessengerInterface):
 
     def mark_in_progress_fail(self, message: dict):
         self._react(message, self.REACT_FAIL)
+    
+    def mark_seen(self, message: dict) -> None:
+        # TODO: implement for signal
+        pass
 
     def is_group_message(self, message: dict):
         return ("dataMessage" in message["envelope"] \
