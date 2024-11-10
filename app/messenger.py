@@ -415,6 +415,7 @@ class SignalMessenger(MessengerInterface):
         else:
             recipient = message["envelope"]["sourceNumber"]
         data = {
+            "receipt_type": "read",
             "recipient": recipient,
             "timestamp": message["envelope"]["timestamp"]
         }
