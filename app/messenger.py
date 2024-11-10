@@ -407,8 +407,20 @@ class SignalMessenger(MessengerInterface):
         self._react(message, self.REACT_FAIL)
     
     def mark_seen(self, message: dict) -> None:
-        # TODO: implement for signal
-        pass
+        if self.is_group_message(message):
+            internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
+            if internal_id not in self._group_cache:
+                self._update_group_cache()
+            recipient = self._group_cache[internal_id]
+        else:
+            recipient = message["envelope"]["sourceNumber"]
+        data = {
+            "recipient": recipient,
+            "timestamp": message["envelope"]["timestamp"]
+        }
+        requests.post(self._endpoint_url("v1/receipts", self._number),
+                      json=data,
+                      timeout=self.DEFAULT_TIMEOUT)
 
     def is_group_message(self, message: dict):
         return ("dataMessage" in message["envelope"] \
