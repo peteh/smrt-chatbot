@@ -444,6 +444,7 @@ class SignalMessenger(MessengerInterface):
             self._update_group_cache()
         data = {
             "message": text,
+            "text_mode": "styled",
             "number": self._number,
             "recipients": [
                 self._group_cache[internal_id]
@@ -456,6 +457,7 @@ class SignalMessenger(MessengerInterface):
     def send_message_to_individual(self, message: dict, text: str):
         data = {
             "message": text,
+            "text_mode": "styled",
             "number": self._number,
             "recipients": [
                 message["envelope"]["sourceNumber"]
@@ -476,6 +478,7 @@ class SignalMessenger(MessengerInterface):
 
         data = {
             "message": text,
+            "text_mode": "styled",
             "number": self._number,
             "quote_author": message["envelope"]["sourceNumber"],
             "quote_timestamp": message["envelope"]["timestamp"],
