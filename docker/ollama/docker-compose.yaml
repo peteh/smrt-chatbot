@@ -10,6 +10,7 @@ services:
       - ./data:/root/.ollama
     networks:
       - smrt-network
+    restart: unless-stopped
 networks:
     smrt-network:
       external: true
