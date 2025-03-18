@@ -23,18 +23,16 @@ def run():
     stock_notifier = SenateStockNotification(whatsapp)
     CONFIG_MIN_WORDS_FOR_SUMMARY=int(config("MIN_WORDS_FOR_SUMMARY"))
     database = db.Database("data")
-    questionbot_mistral_nemo = questionbot.QuestionBotMistralNemo()
-    questionbot_llama3_1 = questionbot.QuestionBotLlama3_1()
+    questionbot_bot = questionbot.QuestionBotOllama("gemma3:12b")
     questionbot_image = questionbot.QuestionBotOllama("llava")
     questionbot_openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
     bots = [
-            questionbot_llama3_1,
-            questionbot_mistral_nemo,
+            questionbot_bot,
             questionbot_openai
             ]
     question_bot = questionbot.FallbackQuestionbot(bots)
 
-    summarizer = summary.QuestionBotSummary(questionbot_llama3_1)
+    summarizer = summary.QuestionBotSummary(questionbot_bot)
 
     transcriber = transcript.FasterWhisperTranscript()
     voice_pipeline = pipeline.VoiceMessagePipeline(transcriber,
