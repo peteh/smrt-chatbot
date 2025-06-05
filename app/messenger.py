@@ -26,7 +26,7 @@ class MessengerInterface(ABC):
     @abstractmethod
     def mark_in_progress_fail(self, message: dict) -> None:
         """Marks a message that the processing of said message failed. """
-    
+
     @abstractmethod
     def mark_seen(self, message: dict) -> None:
         """Marks a message/chat from the message as seen. 
@@ -38,7 +38,7 @@ class MessengerInterface(ABC):
     @abstractmethod
     def is_group_message(self, message: dict) -> bool:
         """Checks if a message is a group message"""
-    
+
     @abstractmethod
     def is_self_message(self, message: dict) -> bool:
         """checks if the message is a message from the bot itself"""
@@ -59,7 +59,7 @@ class MessengerInterface(ABC):
             message (dict): The message to reply to
             text (str): The reply message text
         """
-    
+
     @abstractmethod
     def delete_message(self, message: dict):
         """Deletes a message from the server"""
@@ -67,7 +67,7 @@ class MessengerInterface(ABC):
     @abstractmethod
     def has_audio_data(self, message: dict) -> bool:
         """Returns true if the message is an audio message. """
-    
+
     @abstractmethod
     def has_image_data(self, message: dict) -> bool:
         """Returns true if the message contains an image. """
@@ -79,7 +79,7 @@ class MessengerInterface(ABC):
     @abstractmethod
     def get_message_text(self, message: dict) -> str:
         """Returns the text of the given message. """
-    
+
     @abstractmethod
     def get_chat_id(self, message: dict) -> str:
         """Returns a unique identifier to identify the chat, e.g. a group id or sender id
@@ -90,7 +90,6 @@ class MessengerInterface(ABC):
         Returns:
             str: The unique identifier of the chat
         """
-        
 
     @abstractmethod
     def get_sender_name(self, message: dict) -> str:
@@ -146,7 +145,7 @@ class Whatsapp(MessengerInterface):
         self._session = session
         self._api_key = api_key
         self._headers = {"Authorization": f"Bearer {self._api_key}"}
-    
+
     def get_server(self) -> str:
         return self._server
 
@@ -198,7 +197,7 @@ class Whatsapp(MessengerInterface):
 
     def mark_in_progress_fail(self, message: dict):
         self._react(message['id'], self.REACT_FAIL)
-    
+
     def mark_seen(self, message: dict) -> None:
         is_group_message = self.is_group_message(message)
         recipient = message['chatId'] if is_group_message else message['sender']['id']
@@ -213,7 +212,7 @@ class Whatsapp(MessengerInterface):
 
     def is_group_message(self, message: dict):
         return 'isGroupMsg' in message and message['isGroupMsg'] is True
-    
+
     def is_self_message(self, message: dict):
         return "fromMe" in message and message["fromMe"]
 
@@ -222,7 +221,7 @@ class Whatsapp(MessengerInterface):
 
     def send_message_to_individual(self, message: dict, text: str):
         self._send_message(message['sender']['id'], False, text)
-    
+
     def reply_message(self, message: dict, text: str) -> None:
         is_group_message = self.is_group_message(message)
         recipient = message['chatId'] if is_group_message else message['sender']['id']
@@ -304,7 +303,7 @@ class Whatsapp(MessengerInterface):
 
     def has_audio_data(self, message: dict):
         return 'mimetype' in message and message['mimetype'] == "audio/ogg; codecs=opus"
-    
+
     def has_image_data(self, message: dict):
         #logging.info(f"Testing for image, mime-type: {message.get('mimetype')}")
         #return 'mimetype' in message and \
@@ -365,7 +364,7 @@ class SignalMessenger(MessengerInterface):
 
     def get_port(self) -> int:
         return self._port
-    
+
     def get_number(self) -> str:
         return self._number
 
@@ -405,7 +404,7 @@ class SignalMessenger(MessengerInterface):
 
     def mark_in_progress_fail(self, message: dict):
         self._react(message, self.REACT_FAIL)
-    
+
     def mark_seen(self, message: dict) -> None:
         if self.is_group_message(message):
             internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
@@ -426,7 +425,7 @@ class SignalMessenger(MessengerInterface):
     def is_group_message(self, message: dict):
         return ("dataMessage" in message["envelope"] \
             and "groupInfo" in message["envelope"]["dataMessage"])
-    
+
     def is_self_message(self, message: dict):
         # TODO: we currently don't get messages we send ourselves, but we could double check
         return False
@@ -466,7 +465,7 @@ class SignalMessenger(MessengerInterface):
         requests.post(self._endpoint_url("v2/send"),
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
-    
+
     def reply_message(self, message: dict, text: str) -> None:
         if self.is_group_message(message):
             internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
@@ -497,10 +496,11 @@ class SignalMessenger(MessengerInterface):
         if "dataMessage" in message["envelope"] \
             and "attachments" in message["envelope"]["dataMessage"]:
             for attachment in message["envelope"]["dataMessage"]["attachments"]:
-                if attachment["contentType"] == "audio/aac" or attachment["contentType"] == "audio/ogg; codecs=opus":
+                if attachment["contentType"] == "audio/aac" \
+                    or attachment["contentType"] == "audio/ogg; codecs=opus":
                     return True
         return False
-    
+
     def has_image_data(self, message: dict):
         if "dataMessage" in message["envelope"] \
             and "attachments" in message["envelope"]["dataMessage"]:
@@ -516,10 +516,9 @@ class SignalMessenger(MessengerInterface):
             and "mentions" in message["envelope"]["dataMessage"]:
             # TODO: extract the number
             for mention in message["envelope"]["dataMessage"]["mentions"]:
-                if mention.get("number") == "+4917677919607":
+                if mention.get("number") == self._number:
                     return True
         return False
-                
 
     def get_message_text(self, message: dict) -> str:
         if "dataMessage" in message["envelope"] \
@@ -579,7 +578,7 @@ class SignalMessenger(MessengerInterface):
         requests.post(self._endpoint_url("v2/send"),
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
-    
+
     def _send_audio(self, recipient, audio_file_path):
         with tempfile.TemporaryDirectory() as tmp:
             #output_file = os.path.join(tmp, 'output.ogg')
@@ -612,13 +611,13 @@ class SignalMessenger(MessengerInterface):
 
     def send_audio_to_individual(self, message, audio_file_path):
         self._send_audio(message["envelope"]["sourceNumber"], audio_file_path)
-        
-
 
     def download_media(self, message: dict) -> Tuple[str, bytes]:
-        # TODO: looks like signal could return a list of attachments, thus we should have a list here too
-        # we will just get the first one here
-        if "dataMessage" in message["envelope"] and "attachments" in message["envelope"]["dataMessage"]:
+        # TODO: looks like signal could return a list of attachments, 
+        # thus we should have a list here too
+        # we will just get the first one here for now though
+        if "dataMessage" in message["envelope"] \
+            and "attachments" in message["envelope"]["dataMessage"]:
             attachment = message["envelope"]["dataMessage"]["attachments"][0]
             content_type = attachment["contentType"]
             attachment_id = attachment["id"]

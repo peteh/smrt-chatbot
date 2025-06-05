@@ -1,14 +1,18 @@
-"""Implemenations of a pipeline for processing text to speech. """
+"""Implementations of a pipeline for processing text and voice for homeassistant. """
 import logging
-from pipeline import PipelineInterface, PipelineHelper
+
 import subprocess
 
 # text to speech pipeline standard imports
 import tempfile
 import os
 import typing
+import json
+import wave
+import time
+import websockets.sync.client
 
-
+from pipeline import PipelineInterface, PipelineHelper
 from messenger import MessengerInterface
 
 
@@ -68,11 +72,11 @@ class HomeassistantTextCommandPipeline(PipelineInterface):
         msg_id += 1
 
         logging.debug(f"Pipeline started with conversation_id: {conversation_id}")
-        
+
         msg = json.loads(ws.recv())
         if msg["event"]["type"] != "intent-start":
             raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
-        
+
         msg = json.loads(ws.recv())
         print("Pipeline response:", msg)
         if msg["event"]["type"] != "intent-end":
@@ -102,11 +106,6 @@ class HomeassistantTextCommandPipeline(PipelineInterface):
 """*Text to Speech*
 _#ha text_ Sends a homeassistant command to homeassistant. """
 
-import websockets.sync.client
-import json
-import wave
-import time
-
 class HomeassistantVoiceCommandPipeline(PipelineInterface):
     """Pipe to generate a voice messages based on audio input. """
     def __init__(self, ha_token: str, ha_ws_api_url: str, chat_id_whitelist: typing.List[str]):
@@ -118,7 +117,7 @@ class HomeassistantVoiceCommandPipeline(PipelineInterface):
     def matches(self, messenger: MessengerInterface, message: dict):
         return messenger.has_audio_data(message) \
             and messenger.get_chat_id(message) in self._chat_id_whitelist
-    
+
     def process_voice_command(self, wav_path: str):
         ws =  websockets.sync.client.connect(self._ha_ws_api_url)
 
@@ -184,15 +183,15 @@ class HomeassistantVoiceCommandPipeline(PipelineInterface):
         msg = json.loads(ws.recv())
         if msg["event"]["type"] != "stt-vad-start":
             raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
-        
+
         msg = json.loads(ws.recv())
         if msg["event"]["type"] != "stt-end":
             raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
-        
+
         msg = json.loads(ws.recv())
         if msg["event"]["type"] != "intent-start":
             raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
-        
+
         msg = json.loads(ws.recv())
         print("Pipeline response:", msg)
         if msg["event"]["type"] != "intent-end":
