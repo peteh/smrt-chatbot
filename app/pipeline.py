@@ -181,10 +181,6 @@ class UndeletePipeline(PipelineInterface):
             return True
 
     def process(self, messenger: MessengerInterface, message: dict):
-        (_, _, prompt) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
-        messenger.mark_in_progress_0(message)
-
-    def process(self, messenger: MessengerInterface, message: dict):
         if messenger.is_self_message(message):
             (_, _, count) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
             # TODO: do stuff with the command
@@ -200,15 +196,20 @@ class VoiceMessagePipeline(PipelineInterface):
     """A pipe that converts audio messages to text and summarizes them. """
     def __init__(self, transcriber: TranscriptInterface,
                  summarizer: SummaryInterface,
-                 min_words_for_summary: int):
+                 min_words_for_summary: int, chat_id_blacklist: List[str] = None):
         self._transcriber = transcriber
         self._summarizer = summarizer
         self._min_words_for_summary = min_words_for_summary
         self._store_files = False
+        self._chat_id_blacklist = chat_id_blacklist
 
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        return messenger.has_audio_data(message)
+        if not messenger.has_audio_data(message):
+            return False
+        if self._chat_id_blacklist is not None and messenger.get_chat_id(message) in self._chat_id_blacklist:
+            return False
+        return True
 
     def process(self, messenger: MessengerInterface, message: dict):
         try:

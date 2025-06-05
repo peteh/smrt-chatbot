@@ -45,10 +45,15 @@ class WhatsappMessageQueue():
         pass
 
     def run(self):
-        self._sio.connect(self._messenger.get_server())
+        try:
+            self._sio.connect(self._messenger.get_server())
 
-        while True:
-            time.sleep(3)
-        # TODO: reconnect handling
+            while True:
+                time.sleep(3)
+            # TODO: reconnect handling
 
-        self._sio.disconnect()
+            self._sio.disconnect()
+        except Exception as e:
+            logging.error(f"Error in WhatsappMessageQueue: {e}")
+            self._sio.disconnect()
+            #raise e

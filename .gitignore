@@ -13,3 +13,4 @@ samples/*
 out.ogg
 *.sqlite
 
+config.yml

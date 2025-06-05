@@ -313,69 +313,69 @@ class StableHordeTextToImage(ImagePromptInterface):
             return None
         return self._download_files(request_id)
 
-from diffusers import StableDiffusionPipeline, DiffusionPipeline
-import torch
-import io
-class DiffusersTextToImage(ImagePromptInterface):
-    """Image prompt generation using stablehorde.net API"""
-    def __init__(self) -> None:
-        self._negativePrompt = DEFAULT_NEGATIVE_PROMPT
+# from diffusers import StableDiffusionPipeline, DiffusionPipeline
+# import torch
+# import io
+# class DiffusersTextToImage(ImagePromptInterface):
+#     """Image prompt generation using stablehorde.net API"""
+#     def __init__(self) -> None:
+#         self._negativePrompt = DEFAULT_NEGATIVE_PROMPT
 
-    def process(self, prompt):
-        #model_id = "SG161222/Realistic_Vision_V6.0_B1_noVAE"
-        #pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_checker=None, use_safetensors=True)
-        pipe = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5", safety_checker=None) 
-        #pipe = DiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0", use_safetensors=True, safety_checker=None)
+#     def process(self, prompt):
+#         #model_id = "SG161222/Realistic_Vision_V6.0_B1_noVAE"
+#         #pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_checker=None, use_safetensors=True)
+#         pipe = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5", safety_checker=None) 
+#         #pipe = DiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0", use_safetensors=True, safety_checker=None)
 
-        img_num = 1
-        img_list = []
-        for image in pipe(f"{prompt} ### {self._negativePrompt}").images:
-            # Create a BytesIO object to store the PNG data
-            png_bytes_io = io.BytesIO()
+#         img_num = 1
+#         img_list = []
+#         for image in pipe(f"{prompt} ### {self._negativePrompt}").images:
+#             # Create a BytesIO object to store the PNG data
+#             png_bytes_io = io.BytesIO()
 
-            # Save the Pillow image to the BytesIO object as PNG
-            image.save(png_bytes_io, format="PNG")
-            image.close()
+#             # Save the Pillow image to the BytesIO object as PNG
+#             image.save(png_bytes_io, format="PNG")
+#             image.close()
 
-            # Get the PNG bytes from the BytesIO object
-            png_bytes = png_bytes_io.getvalue()
-            img_list.append((f"image{img_num}.png", png_bytes))
-            img_num += 1
-        return img_list
+#             # Get the PNG bytes from the BytesIO object
+#             png_bytes = png_bytes_io.getvalue()
+#             img_list.append((f"image{img_num}.png", png_bytes))
+#             img_num += 1
+#         return img_list
 
-import re_edge_gpt
-class BingImageProcessor(ImagePromptInterface):
-    """Prompt based image generator based on Microsoft Bing's creator"""
-    def __init__(self, cookie_path = "cookie.json") -> None:
-        self._cookie_path = cookie_path
+# import re_edge_gpt
+# class BingImageProcessor(ImagePromptInterface):
+#     """Prompt based image generator based on Microsoft Bing's creator"""
+#     def __init__(self, cookie_path = "cookie.json") -> None:
+#         self._cookie_path = cookie_path
 
-    def process(self, prompt):
-        try:
-            with open(self._cookie_path, "r", encoding="utf-8") as f:
-                cookies = json.load(f)
-                for cookie in cookies:
-                    if cookie['name'] == "_U":
-                        cookie_u = cookie['value']
-            image_gen = re_edge_gpt.ImageGen(auth_cookie=cookie_u)
-            image_urls = image_gen.get_images(prompt)
-            img_num = 0
-            images = []
-            for image_url in image_urls:
-                logging.debug(f"Image url: {image_url}")
-                print(f"Image url: {image_url}")
-                img_num += 1
-                response = requests.get(image_url, timeout=1200)
-                # filter out these weird svg graphics
-                if len(response.content) > 3400:
-                    images.append((f"image{img_num}.jpg" , response.content))
-            if images is None or len(images) == 0:
-                logging.error("Did not receive images from Bing")
-                return images
-            return images
-        except Exception as ex:
-            logging.critical(ex, exc_info=True)
-        print("Failed to get an image")
-        return None
+#     def process(self, prompt):
+#         try:
+#             with open(self._cookie_path, "r", encoding="utf-8") as f:
+#                 cookies = json.load(f)
+#                 for cookie in cookies:
+#                     if cookie['name'] == "_U":
+#                         cookie_u = cookie['value']
+#             image_gen = re_edge_gpt.ImageGen(auth_cookie=cookie_u)
+#             image_urls = image_gen.get_images(prompt)
+#             img_num = 0
+#             images = []
+#             for image_url in image_urls:
+#                 logging.debug(f"Image url: {image_url}")
+#                 print(f"Image url: {image_url}")
+#                 img_num += 1
+#                 response = requests.get(image_url, timeout=1200)
+#                 # filter out these weird svg graphics
+#                 if len(response.content) > 3400:
+#                     images.append((f"image{img_num}.jpg" , response.content))
+#             if images is None or len(images) == 0:
+#                 logging.error("Did not receive images from Bing")
+#                 return images
+#             return images
+#         except Exception as ex:
+#             logging.critical(ex, exc_info=True)
+#         print("Failed to get an image")
+#         return None
 
 class FlowGPTImageProcessor(ImagePromptInterface):
     MODEL_DALLE3 = "DALLE3"
