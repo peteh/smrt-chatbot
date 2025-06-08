@@ -10,11 +10,9 @@ import pipeline
 import pipeline_ha
 import questionbot
 import transcript
-import texttoimage
-#import pipeline_tts
-import db
 import summary
 import yaml
+import texttoimage
 
 schema = {
     "signal": {
@@ -68,6 +66,13 @@ schema = {
         },
         "required": False
     },
+    "image_generation": {
+        "type": "dict",
+        "schema": {
+            "generator": {"type": "string", "required": True}
+        },
+        "required": False
+    },
     "homeassistant": {
         "type": "dict",
         "schema": {
@@ -80,6 +85,12 @@ schema = {
             }
         },
         "required": False
+    },
+    "chatid": {
+        "type": "dict",
+        "schema": {},
+        "nullable": True,  # Accepts `null` or empty dict as valid
+        "required": False
     }
 }
 
@@ -87,7 +98,6 @@ from cerberus import Validator
 def validate_config(config, schema):
     validator = Validator(schema)
     if validator.validate(config):
-        print("✅ Configuration is valid.")
         return True
     else:
         print("❌ Configuration is invalid:")
@@ -98,11 +108,11 @@ def validate_config(config, schema):
 class BotLoader():
     def __init__(self):
         self._ollama_server = None
-    
+
     def set_ollama_server(self, server: str):
         """Set the ollama server to use."""
         self._ollama_server = server
-        
+ 
     def create(self, bot_name: str) -> questionbot.QuestionBotInterface:
         """Factory function to create a question bot instance based on the bot name."""
         if bot_name.startswith("ollama:"):
@@ -123,10 +133,11 @@ def run():
     configuration = yaml.safe_load(config_file)
     config_file.close()
 
-    validate_config(configuration, schema)
+    if not validate_config(configuration, schema):
+        exit(1)
     
     mainpipe = MainPipeline()
-    database = db.Database("data")
+    #database = db.Database("data")
     
     #questionbot_image = questionbot.QuestionBotOllama("llava")
     #image_prompt_pipeline = pipeline.ImagePromptPipeline(questionbot_image)
@@ -141,6 +152,11 @@ def run():
     #imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
     #group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
     #mainpipe.add_pipeline(group_message_pipeline)
+    #mainpipe.add_pipeline(imagegen_pipeline)
+    #mainpipe.add_pipeline(tts_pipeline)
+    #mainpipe.add_pipeline(gpt_pipeline)
+    #mainpipe.add_pipeline(image_prompt_pipeline)
+    #mainpipe.add_pipeline(grammar_pipeline)
     
     # load ollama config if present
     bot_loader = BotLoader()
@@ -150,7 +166,7 @@ def run():
     # General pipelines
     mark_seen_pipeline = pipeline.MarkSeenPipeline()
     mainpipe.add_pipeline(mark_seen_pipeline)
-    
+
     # homeassistant commands and pipelines
     CONFIG_HOMEASSISTANT = "homeassistant"
     if CONFIG_HOMEASSISTANT in configuration:
@@ -162,7 +178,7 @@ def run():
         ha_voice_pipeline = pipeline_ha.HomeassistantVoiceCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
         mainpipe.add_pipeline(ha_text_pipeline)
         mainpipe.add_pipeline(ha_voice_pipeline)
-    
+
     # voice message transcription with whsisper
     CONFIG_VOICE_TRANSCRIPTION = "voice_transcription"
     if CONFIG_VOICE_TRANSCRIPTION in configuration:
@@ -197,25 +213,40 @@ def run():
         article_summarizer = summary.QuestionBotSummary(article_summary_bot)
         article_summary_pipeline = pipeline.ArticleSummaryPipeline(article_summarizer)
         mainpipe.add_pipeline(article_summary_pipeline)
+    
+    # image generation
+    CONFIG_IMAGEGEN = "image_generation"
+    if CONFIG_IMAGEGEN in configuration:
+        config_imagegen = configuration[CONFIG_IMAGEGEN]
+        imagegen_processors = []
+        if "generator" in config_imagegen:
+            if config_imagegen["generator"].startswith("stablehorde:"):
+                stable_horde_api_key = config_imagegen["generator"][config_imagegen["generator"].find(":")+1:]
+                imagegen_processors.append(texttoimage.StableHordeTextToImage(stable_horde_api_key))
+                fallback_image_processor = texttoimage.FallbackTextToImageProcessor(imagegen_processors)
+                mainpipe.add_pipeline(pipeline.ImagePromptPipeline(fallback_image_processor))
+            else:
+                raise ValueError(f"Unknown image generation processor: {config_imagegen['generator']}")
 
-    
-    
-    #mainpipe.add_pipeline(imagegen_pipeline)
-    #mainpipe.add_pipeline(tts_pipeline)
-    #mainpipe.add_pipeline(gpt_pipeline)
-    #mainpipe.add_pipeline(image_prompt_pipeline)
-    #mainpipe.add_pipeline(grammar_pipeline)
-    
-    
-    
-    
+        if len(imagegen_processors) > 0:
+            imagegen_api = texttoimage.FallbackTextToImageProcessor(imagegen_processors)
+            imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
+            mainpipe.add_pipeline(imagegen_pipeline)
+
+    CONFIG_CHATID = "chatid"
+    if CONFIG_CHATID in configuration:
+        chatid_pipeline = pipeline.ChatIdPipeline()
+        mainpipe.add_pipeline(chatid_pipeline)
+
+
+    # load out messengers
     CONFIG_SIGNAL = "signal"
     if CONFIG_SIGNAL in configuration:
         config_signal = configuration[CONFIG_SIGNAL]
         signal_messenger = messenger.SignalMessenger(config_signal["number"], config_signal["host"], int(config_signal["port"]))
         signal_queue = SignalMessageQueue(signal_messenger, mainpipe)
         signal_queue.run_async()
-    
+
     CONFIG_WHATSAPP = "whatsapp"
     if CONFIG_WHATSAPP in configuration:
         config_whatsapp = configuration[CONFIG_WHATSAPP]
@@ -223,7 +254,7 @@ def run():
 
         whatsapp_queue = WhatsappMessageQueue(whatsapp, mainpipe)
         whatsapp_queue.run_async()
-    
+
         try:
             whatsapp.start_session()
         except:

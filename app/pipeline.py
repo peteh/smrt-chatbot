@@ -577,6 +577,31 @@ class TinderPipeline(PipelineInterface):
 """*Tinder Help*
 _#tinder[(Context)] message_ Proposes a response to a message from a girl. Additional context can be given to adapt the message. """
 
+class ChatIdPipeline(PipelineInterface):
+    """A pipeline that responds to chatid command with the unique identifier of the chat. """
+    CHATID_COMMAND = "chatid"
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        command = PipelineHelper.extract_command(messenger.get_message_text(message))
+        return self.CHATID_COMMAND in command
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        messenger.get_chat_id(message)
+
+        response_text = f"ChatId: {messenger.get_chat_id(message)}"
+        messenger.reply_message(message, response_text)
+
+        messenger.mark_in_progress_done(message)
+
+    def get_help_text(self) -> str:
+        return \
+"""*ChatId Help*
+_#chatid_ Returns the identifier of the current chatid. """
+
+
 class TalkPipeline(PipelineInterface):
     
     def __init__(self, question_bot: QuestionBotInterface) -> None:
