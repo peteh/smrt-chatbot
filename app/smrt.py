@@ -1,12 +1,242 @@
 """Main application"""
+import time
 import logging
-from decouple import config
-import smrt_bot
-logging.basicConfig(level=logging.DEBUG)
-root = logging.getLogger()
-root.setLevel(logging.DEBUG)
+import messenger
+from main_pipeline import MainPipeline
+from signalcli import SignalMessageQueue
+from whatsappsocketio import WhatsappMessageQueue
+from senate_stocks import SenateStockNotification
+import pipeline
+import pipeline_ha
+import questionbot
+import transcript
+import texttoimage
+#import pipeline_tts
+import db
+import summary
+import yaml
 
-# private or bot (default)
-launch = config("LAUNCH", "bot")
-logging.info("Launching BOT")
-smrt_bot.run()
+schema = {
+    "signal": {
+        "type": "dict",
+        "schema": {
+            "host": {"type": "string", "required": True},
+            "port": {"type": "integer", "required": True},
+            "number": {"type": "string", "required": True}
+        },
+        "required": False
+    },
+    "whatsapp": {
+        "type": "dict",
+        "schema": {
+            "wppconnect_api_key": {"type": "string", "required": True},
+            "wppconnect_server": {"type": "string", "required": True}
+        },
+        "required": False
+    },
+    "ollama": {
+        "type": "dict",
+        "schema": {
+            "host": {"type": "string", "required": True}
+        },
+        "required": False
+    },
+    "voice_transcription": {
+        "type": "dict",
+        "schema": {
+            "min_words_for_summary": {"type": "integer", "required": True},
+            "summary_bot": {"type": "string", "required": False},
+            "chat_id_blacklist": {
+                "type": "list",
+                "schema": {"type": "string"},
+                "required": False
+            }
+        },
+        "required": False
+    },
+    "article_summary": {
+        "type": "dict",
+        "schema": {
+            "summary_bot": {"type": "string", "required": True}
+        },
+        "required": False
+    },
+    "tinder": {
+        "type": "dict",
+        "schema": {
+            "tinder_bot": {"type": "string", "required": True}
+        },
+        "required": False
+    },
+    "homeassistant": {
+        "type": "dict",
+        "schema": {
+            "token": {"type": "string", "required": True},
+            "ws_api_url": {"type": "string", "required": True},
+            "chat_id_whitelist": {
+                "type": "list",
+                "schema": {"type": "string"},
+                "required": False
+            }
+        },
+        "required": False
+    }
+}
+
+from cerberus import Validator
+def validate_config(config, schema):
+    validator = Validator(schema)
+    if validator.validate(config):
+        print("✅ Configuration is valid.")
+        return True
+    else:
+        print("❌ Configuration is invalid:")
+        for field, errors in validator.errors.items():
+            print(f" - {field}: {errors}")
+        return False
+
+class BotLoader():
+    def __init__(self):
+        self._ollama_server = None
+    
+    def set_ollama_server(self, server: str):
+        """Set the ollama server to use."""
+        self._ollama_server = server
+        
+    def create(self, bot_name: str) -> questionbot.QuestionBotInterface:
+        """Factory function to create a question bot instance based on the bot name."""
+        if bot_name.startswith("ollama:"):
+            if self._ollama_server is None:
+                raise ValueError("Ollama server not set. Use set_ollama_server() to set it.")
+            model_name = bot_name[bot_name.find(":")+1:]
+            logging.debug(f"Creating QuestionBotOllama with model: {model_name}")
+            return questionbot.QuestionBotOllama(self._ollama_server, model_name)
+        elif bot_name.startswith("openai:"):
+            api_key = bot_name[bot_name.find(":"):]
+            return questionbot.QuestionBotOpenAIAPI(api_key)
+        else:
+            raise ValueError(f"Unknown bot name: {bot_name}")
+    
+
+def run():
+    config_file = open("app/config.yml", "r", encoding="utf-8")
+    configuration = yaml.safe_load(config_file)
+    config_file.close()
+
+    validate_config(configuration, schema)
+    
+    mainpipe = MainPipeline()
+    database = db.Database("data")
+    
+    #questionbot_image = questionbot.QuestionBotOllama("llava")
+    #image_prompt_pipeline = pipeline.ImagePromptPipeline(questionbot_image)
+    #questionbot_openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
+    #gpt_pipeline = pipeline.GptPipeline(questionbot_openai)
+    #tts_pipeline = pipeline_tts.TextToSpeechPipeline()
+    #grammar_pipeline = pipeline.GrammarPipeline(question_bot)
+    
+    # image generation
+    #processors = [texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
+    #imagegen_api = texttoimage.FallbackTextToImageProcessor(processors)
+    #imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
+    #group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
+    #mainpipe.add_pipeline(group_message_pipeline)
+    
+    # load ollama config if present
+    bot_loader = BotLoader()
+    if "ollama" in configuration:
+        bot_loader.set_ollama_server(configuration["ollama"]["host"])
+
+    # General pipelines
+    mark_seen_pipeline = pipeline.MarkSeenPipeline()
+    mainpipe.add_pipeline(mark_seen_pipeline)
+    
+    # homeassistant commands and pipelines
+    CONFIG_HOMEASSISTANT = "homeassistant"
+    if CONFIG_HOMEASSISTANT in configuration:
+        config_ha = configuration[CONFIG_HOMEASSISTANT]
+        ha_token = config_ha["token"]
+        ha_ws_api_url = config_ha["ws_api_url"]
+        ha_chat_id_whitelist = config_ha.get("chat_id_whitelist", [])
+        ha_text_pipeline = pipeline_ha.HomeassistantTextCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
+        ha_voice_pipeline = pipeline_ha.HomeassistantVoiceCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
+        mainpipe.add_pipeline(ha_text_pipeline)
+        mainpipe.add_pipeline(ha_voice_pipeline)
+    
+    # voice message transcription with whsisper
+    CONFIG_VOICE_TRANSCRIPTION = "voice_transcription"
+    if CONFIG_VOICE_TRANSCRIPTION in configuration:
+        config_vt = configuration[CONFIG_VOICE_TRANSCRIPTION]
+        vt_min_words_for_summary = config_vt.get("min_words_for_summary", 10)
+        vt_chat_id_blacklist = config_vt.get("chat_id_blacklist", [])
+        vt_transcriber = transcript.FasterWhisperTranscript()
+        if "summary_bot" in config_vt:
+            vt_summary_bot = bot_loader.create(config_vt["summary_bot"])
+            vt_summarizer = summary.QuestionBotSummary(vt_summary_bot)
+        else:
+            vt_summarizer = None
+        voice_pipeline = pipeline.VoiceMessagePipeline(vt_transcriber,
+                                                    vt_summarizer,
+                                                    vt_min_words_for_summary,
+                                                    chat_id_blacklist=vt_chat_id_blacklist)
+        mainpipe.add_pipeline(voice_pipeline)
+
+    # load tinder pipeline if configured
+    CONFIG_TINDER = "tinder"
+    if CONFIG_TINDER in configuration:
+        config_tinder = configuration[CONFIG_TINDER]
+        tinder_bot = bot_loader.create(config_tinder["tinder_bot"])
+        tinder_pipeline = pipeline.TinderPipeline(tinder_bot)
+        mainpipe.add_pipeline(tinder_pipeline)
+    
+    # load pipeline for article summarization if configured
+    CONFIG_ARTICLE_SUMMARY = "article_summary"
+    if CONFIG_ARTICLE_SUMMARY in configuration:
+        config_article_summary = configuration[CONFIG_ARTICLE_SUMMARY]
+        article_summary_bot = bot_loader.create(config_article_summary["summary_bot"])
+        article_summarizer = summary.QuestionBotSummary(article_summary_bot)
+        article_summary_pipeline = pipeline.ArticleSummaryPipeline(article_summarizer)
+        mainpipe.add_pipeline(article_summary_pipeline)
+
+    
+    
+    #mainpipe.add_pipeline(imagegen_pipeline)
+    #mainpipe.add_pipeline(tts_pipeline)
+    #mainpipe.add_pipeline(gpt_pipeline)
+    #mainpipe.add_pipeline(image_prompt_pipeline)
+    #mainpipe.add_pipeline(grammar_pipeline)
+    
+    
+    
+    
+    CONFIG_SIGNAL = "signal"
+    if CONFIG_SIGNAL in configuration:
+        config_signal = configuration[CONFIG_SIGNAL]
+        signal_messenger = messenger.SignalMessenger(config_signal["number"], config_signal["host"], int(config_signal["port"]))
+        signal_queue = SignalMessageQueue(signal_messenger, mainpipe)
+        signal_queue.run_async()
+    
+    CONFIG_WHATSAPP = "whatsapp"
+    if CONFIG_WHATSAPP in configuration:
+        config_whatsapp = configuration[CONFIG_WHATSAPP]
+        whatsapp = messenger.Whatsapp(config_whatsapp["wppconnect_server"], "smrt", config_whatsapp["wppconnect_api_key"])
+
+        whatsapp_queue = WhatsappMessageQueue(whatsapp, mainpipe)
+        whatsapp_queue.run_async()
+    
+        try:
+            whatsapp.start_session()
+        except:
+            logging.warning("Could not start Whatsapp session")
+        stock_notifier = SenateStockNotification(whatsapp)
+        mainpipe.add_pipeline(stock_notifier)
+        stock_notifier.run_async()
+
+    while(True):
+        time.sleep(1)
+
+    # TODO: proper thread handling 
+
+
+if __name__ == "__main__":
+    run()

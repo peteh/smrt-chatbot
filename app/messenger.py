@@ -163,7 +163,7 @@ class Whatsapp(MessengerInterface):
                                  json=data,
                                  headers=self._headers,
                                  timeout=self.DEFAULT_TIMEOUT)
-        print(response.json())
+        logging.debug(response.json())
 
     def _send_message(self, recipient: str, is_group, text: str):
         data = {
@@ -248,7 +248,7 @@ class Whatsapp(MessengerInterface):
                                  json=data,
                                  headers=self._headers,
                                  timeout=self.DEFAULT_TIMEOUT)
-        print(response.json())
+        logging.debug(response.json())
 
     def _send_image(self, recipient: str, is_group: bool,
                     file_name: str, binary_data, caption: str):

@@ -1,8 +1,8 @@
 requests
 #requests[socks]
+cerberus
 requests_cache
 flask
-python-decouple
 faster_whisper
 trafilatura
 youtube-transcript-api

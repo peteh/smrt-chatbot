@@ -145,16 +145,13 @@ class QuestionBotFlowGPT(QuestionBotInterface):
 
 
 import requests
-from decouple import config
 class QuestionBotOllama(QuestionBotInterface, QuestionBotImageInterface):
     
     DEFAULT_MODEL = "llama2-uncensored"
-    #DEFAULT_MODEL = "falcon"
-    #DEFAULT_MODEL = "orca-mini"
     THREADS = 6
 
-    def __init__(self, model : str = None, system_message = None) -> None:
-        self._server = config("OLLAMA_SERVER")
+    def __init__(self, ollama_host: str, model : str = None, system_message = None) -> None:
+        self._ollama_host = ollama_host
         self._headers = {}
         
         self._model = model if model is not None else self.DEFAULT_MODEL
@@ -162,7 +159,7 @@ class QuestionBotOllama(QuestionBotInterface, QuestionBotImageInterface):
         self._lazy_download_done = False
     
     def _model_available(self, model_name: str):
-        response = requests.get(f"{self._server}/api/tags", headers=self._headers)
+        response = requests.get(f"{self._ollama_host}/api/tags", headers=self._headers)
         response_json = response.json()
         for model in response_json["models"]:
             if model["name"] == model_name or model["name"] == f"{model_name}:latest":
@@ -175,7 +172,7 @@ class QuestionBotOllama(QuestionBotInterface, QuestionBotImageInterface):
             "stream": False
             }
         
-        response = requests.post(f"{self._server}/api/pull", headers=self._headers, json=request)
+        response = requests.post(f"{self._ollama_host}/api/pull", headers=self._headers, json=request)
         # TODO: json fails
         response_json = response.json()
         if "error" in response_json: 
@@ -208,7 +205,7 @@ class QuestionBotOllama(QuestionBotInterface, QuestionBotImageInterface):
         if self._system_message is not None: 
             request["system"] = self._system_message
 
-        response = requests.post(f"{self._server}/api/generate", headers=self._headers, json=request)
+        response = requests.post(f"{self._ollama_host}/api/generate", headers=self._headers, json=request)
         response_json = response.json()
         if "error" in response_json: 
             logging.critical(f"Ollama API call error: {response_json['error']}")
@@ -241,7 +238,7 @@ class QuestionBotOllama(QuestionBotInterface, QuestionBotImageInterface):
             "images": [base64data]
             }
 
-        response = requests.post(f"{self._server}/api/generate", headers=self._headers, json=request)
+        response = requests.post(f"{self._ollama_host}/api/generate", headers=self._headers, json=request)
         response_json = response.json()
         if "error" in response_json: 
             logging.critical(f"Ollama API call error: {response_json['error']}")

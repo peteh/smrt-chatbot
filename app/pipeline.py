@@ -238,7 +238,7 @@ class VoiceMessagePipeline(PipelineInterface):
             debug['transcript_language_probability'] = transcript['language_probability']
             debug['transcript_words'] = transcript['words']
             debug['transcript_cost'] = transcript['cost']
-            if words > self._min_words_for_summary:
+            if words > self._min_words_for_summary and self._summarizer is not None:
                 messenger.mark_in_progress_50(message)
 
                 start = time.time()
@@ -535,7 +535,7 @@ class ImagePromptPipeline(PipelineInterface):
 """*Image Processing*
 _#llava prompt_ Answers question to a given image"""
 
-class TinderPipelinePipelineInterface(PipelineInterface):
+class TinderPipeline(PipelineInterface):
     """A pipeline to write answers to tinder messages. """
     TINDER_COMMAND = "tinder"
 
