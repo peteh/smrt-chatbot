@@ -326,7 +326,7 @@ class Whatsapp(MessengerInterface):
         return message.get("content", "")
 
     def get_chat_id(self, message: dict) -> str:
-        return message['chatId']
+        return f"whatsapp://{message['chatId']}"
 
     def get_sender_name(self, message: dict):
         return message['sender']['pushname']
@@ -529,8 +529,10 @@ class SignalMessenger(MessengerInterface):
 
     def get_chat_id(self, message: dict) -> str:
         if self.is_group_message(message):
-            return message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
-        return message["envelope"]["sourceNumber"]
+            chatid = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
+        else:
+            chatid = message["envelope"]["sourceNumber"]
+        return f"signal://{chatid}"
 
     def get_sender_name(self, message: dict):
         return message["envelope"]["sourceName"]

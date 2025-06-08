@@ -591,7 +591,7 @@ class ChatIdPipeline(PipelineInterface):
     def process(self, messenger: MessengerInterface, message: dict):
         messenger.get_chat_id(message)
 
-        response_text = f"ChatId: {messenger.get_chat_id(message)}"
+        response_text = messenger.get_chat_id(message)
         messenger.reply_message(message, response_text)
 
         messenger.mark_in_progress_done(message)
@@ -615,8 +615,7 @@ class TalkPipeline(PipelineInterface):
         text = messenger.get_message_text(message)
         return len(text) > 0 and text[0] != "#" \
             and (not messenger.is_group_message(message) or messenger.is_bot_mentioned(message)) \
-            
-    
+
     def process(self, messenger: MessengerInterface, message: dict) -> None:
         system_message = "Your name is Echo, an AI assistant for chat messages. Messages with # as a prefix are used as commands. "
         commands_text = ""
