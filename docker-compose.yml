@@ -1,9 +1,11 @@
 services:
    smrt:
-      environment: 
-      - OPENAI_APIKEY=openaiapi
-      - WPPCONNECT_APIKEY=sessionforsmrt
-      - WPPCONNECT_SERVER=http://yourserver:21465
-      - MIN_WORDS_FOR_SUMMARY=10
+      image: smrt/smrt:latest
+      build:
+         context: .
+         dockerfile: Dockerfile
+      container_name: smrt
       volumes:
+      - ./config.yml:/app/config.yml
       - ./storage/:/storage/
+      restart: unless-stopped
