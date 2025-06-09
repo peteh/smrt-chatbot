@@ -9,7 +9,7 @@ from main_pipeline import MainPipeline
 
 
 class SignalMessageQueue():
-    """Implementation to read messages from signal cli web serivce """
+    """Implementation to read messages from signal cli web service """
     WEBSOCKET_TIMEOUT = 600
     WEBSOCKET_MAXSIZE = 1024*1024*50
 
