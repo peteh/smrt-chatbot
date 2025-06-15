@@ -65,7 +65,7 @@ class PipelineHelper():
         return command
 
     @staticmethod
-    def extract_command_full(data: str) -> List[str]:
+    def extract_command_full(data: str) -> tuple[str, str, str] | None:
         """Extracts commands from a text"""
         left_over = data.strip()
         if not left_over.startswith("#"):
