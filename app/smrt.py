@@ -7,6 +7,7 @@ from signalcli import SignalMessageQueue
 from whatsappsocketio import WhatsappMessageQueue
 from senate_stocks import SenateStockNotification
 import pipeline
+import pipeline_all
 import pipeline_ha
 import questionbot
 import transcript
@@ -29,6 +30,13 @@ schema = {
         "schema": {
             "wppconnect_api_key": {"type": "string", "required": True},
             "wppconnect_server": {"type": "string", "required": True}
+        },
+        "required": False
+    },
+    "telegram": {
+        "type": "dict",
+        "schema": {
+            "telegram_api_key": {"type": "string", "required": True},
         },
         "required": False
     },
@@ -191,7 +199,7 @@ def run():
             vt_summarizer = summary.QuestionBotSummary(vt_summary_bot)
         else:
             vt_summarizer = None
-        voice_pipeline = pipeline.VoiceMessagePipeline(vt_transcriber,
+        voice_pipeline = pipeline_all.VoiceMessagePipeline(vt_transcriber,
                                                     vt_summarizer,
                                                     vt_min_words_for_summary,
                                                     chat_id_blacklist=vt_chat_id_blacklist)
@@ -202,7 +210,7 @@ def run():
     if CONFIG_TINDER in configuration:
         config_tinder = configuration[CONFIG_TINDER]
         tinder_bot = bot_loader.create(config_tinder["tinder_bot"])
-        tinder_pipeline = pipeline.TinderPipeline(tinder_bot)
+        tinder_pipeline = pipeline_all.TinderPipeline(tinder_bot)
         mainpipe.add_pipeline(tinder_pipeline)
     
     # load pipeline for article summarization if configured
@@ -211,7 +219,7 @@ def run():
         config_article_summary = configuration[CONFIG_ARTICLE_SUMMARY]
         article_summary_bot = bot_loader.create(config_article_summary["summary_bot"])
         article_summarizer = summary.QuestionBotSummary(article_summary_bot)
-        article_summary_pipeline = pipeline.ArticleSummaryPipeline(article_summarizer)
+        article_summary_pipeline = pipeline_all.ArticleSummaryPipeline(article_summarizer)
         mainpipe.add_pipeline(article_summary_pipeline)
     
     # image generation
@@ -224,13 +232,13 @@ def run():
                 stable_horde_api_key = config_imagegen["generator"][config_imagegen["generator"].find(":")+1:]
                 imagegen_processors.append(texttoimage.StableHordeTextToImage(stable_horde_api_key))
                 fallback_image_processor = texttoimage.FallbackTextToImageProcessor(imagegen_processors)
-                mainpipe.add_pipeline(pipeline.ImagePromptPipeline(fallback_image_processor))
+                mainpipe.add_pipeline(pipeline_all.ImagePromptPipeline(fallback_image_processor))
             else:
                 raise ValueError(f"Unknown image generation processor: {config_imagegen['generator']}")
 
         if len(imagegen_processors) > 0:
             imagegen_api = texttoimage.FallbackTextToImageProcessor(imagegen_processors)
-            imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
+            imagegen_pipeline = pipeline_all.ImageGenerationPipeline(imagegen_api)
             mainpipe.add_pipeline(imagegen_pipeline)
 
     CONFIG_CHATID = "chatid"
@@ -239,13 +247,21 @@ def run():
         mainpipe.add_pipeline(chatid_pipeline)
 
 
-    # load out messengers
+    # load all messengers
     CONFIG_SIGNAL = "signal"
     if CONFIG_SIGNAL in configuration:
         config_signal = configuration[CONFIG_SIGNAL]
         signal_messenger = messenger.SignalMessenger(config_signal["number"], config_signal["host"], int(config_signal["port"]))
         signal_queue = SignalMessageQueue(signal_messenger, mainpipe)
         signal_queue.run_async()
+    
+    CONFIG_TELEGRAM = "telegram"
+    if CONFIG_TELEGRAM in configuration:
+        import messenger_telegram
+        config_telegram = configuration[CONFIG_TELEGRAM]
+        telegram_messenger = messenger_telegram.TelegramMessenger(config_telegram["telegram_api_key"])
+        telegram_queue = messenger_telegram.TelegramMessageQueue(telegram_messenger, mainpipe)
+        telegram_queue.run_async()
 
     CONFIG_WHATSAPP = "whatsapp"
     if CONFIG_WHATSAPP in configuration:

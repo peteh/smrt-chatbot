@@ -16,3 +16,4 @@ langid
 #bard-webapi
 bs4
 yfinance
+pyTelegramBotAPI
