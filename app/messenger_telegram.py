@@ -1,11 +1,12 @@
 import logging
 import threading
 import telebot
+import tempfile
 from messenger import MessengerInterface
 from main_pipeline import MainPipeline
 
 class TelegramMessenger(MessengerInterface):
-    """Messenger implemenation based on telebot api"""
+    """Messenger implemention based on telebot api"""
 
 
     def __init__(self, api_key: str):
@@ -15,53 +16,68 @@ class TelegramMessenger(MessengerInterface):
         return self._telebot
 
     def mark_in_progress_0(self, message: dict):
+        # Message reactions are not supported by Telegram API
         pass
 
     def mark_in_progress_50(self, message: dict):
+        # Message reactions are not supported by Telegram API
         pass
 
     def mark_in_progress_done(self, message: dict):
+        # Message reactions are not supported by Telegram API
         pass
 
     def mark_in_progress_fail(self, message: dict):
+        # Message reactions are not supported by Telegram API
         pass
 
     def mark_seen(self, message: dict) -> None:
-        pass
+        # Telegram API does not support marking messages as seen
+        return
 
-    def is_group_message(self, message: dict):
-        # TODO implement
-        return False
+    def is_group_message(self, message: dict | telebot.types.Message) -> bool:
+        return message.chat.type in ['group', 'supergroup']
 
     def is_self_message(self, message: dict):
         # TODO implement
         return False
 
-    def send_message_to_group(self, group_message: dict, text: str):
-        #self._send_message(group_message['chatId'], True, text)
-        pass
+    def send_message_to_group(self, group_message: dict | telebot.types.Message, text: str):
+        self._telebot.send_message(group_message.chat.id, text, parse_mode='Markdown')
 
-    def send_message_to_individual(self, message: dict, text: str):
-        #self._send_message(message['sender']['id'], False, text)
-        pass
+    def send_message_to_individual(self, message: dict | telebot.types.Message, text: str):
+        # user needs to send at least one message to the bot before we can send messages to them
+        user_id = message.from_user.id
+        self._telebot.send_message(user_id, text, parse_mode='Markdown')
 
-    def reply_message(self, message: dict, text: str) -> None:
-        self._telebot.reply_to(message, text)
+    def reply_message(self, message: dict | telebot.types.Message, text: str) -> None:
+        self._telebot.reply_to(message, text, parse_mode='Markdown')
 
     def delete_message(self, message: dict):
         pass
 
+    def _send_image(self, chat_id, file_name, binary_data, caption=""):
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+            temp_file.write(binary_data)
+            temp_file.flush()  # Ensure the file is written before sending
+            photo = open(temp_file.name, 'rb')
+            self._telebot.send_photo(chat_id=chat_id, photo=photo, caption=caption, parse_mode='Markdown')
+            photo.close()
 
-    def send_image_to_group(self, group_message, file_name, binary_data, caption = ""):
+    def send_image_to_group(self, group_message: dict | telebot.types.Message, file_name, binary_data, caption = ""):
+        # TODO: test
+        self._send_image(group_message.chat.id, file_name, binary_data, caption)
+
+
+    def send_image_to_individual(self, message: dict | telebot.types.Message, file_name, binary_data, caption = ""):
+        # TODO: test
+        user_id = message.from_user.id
+        self._send_image(user_id, file_name, binary_data, caption)
+
+    def send_audio_to_group(self, group_message: dict | telebot.types.Message, audio_file_path):
         pass
 
-    def send_image_to_individual(self, message, file_name, binary_data, caption = ""):
-        pass
-
-    def send_audio_to_group(self, group_message, audio_file_path):
-        pass
-
-    def send_audio_to_individual(self, message, audio_file_path):
+    def send_audio_to_individual(self, message: dict | telebot.types.Message, audio_file_path):
         pass
 
     def has_audio_data(self, message: dict):
@@ -82,9 +98,8 @@ class TelegramMessenger(MessengerInterface):
     def get_chat_id(self, message: telebot.types.Message) -> str:
         return f"telegram://{message.chat.id}"
 
-    def get_sender_name(self, message: dict):
-        # TODO: implement
-        return ""
+    def get_sender_name(self, message: telebot.types.Message) -> str:
+        return message.from_user.first_name if message.from_user else "Unknown"
 
     def download_media(self, message):
         # TODO: implement
@@ -112,6 +127,7 @@ class TelegramMessageQueue():
 
         @self._telebot.message_handler(func=lambda message: True)
         def handle_message(message):
+            logging.info(f"Received new message: {message}")
             self._mainpipe.process(self._messenger, message)
             
 

@@ -28,7 +28,6 @@ class HomeassistantTextCommandPipeline(PipelineInterface):
 
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        # TODO: need to also filter group
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands \
             and messenger.get_chat_id(message) in self._chat_id_whitelist
@@ -104,7 +103,7 @@ class HomeassistantTextCommandPipeline(PipelineInterface):
         # TODO: automatically tell which models we have
         return \
 """*Text to Speech*
-_#ha text_ Sends a homeassistant command to homeassistant. """
+_#ha text_ Sends a homeassistant command to homeassistant (You can also send voice messages with HA commands). """
 
 class HomeassistantVoiceCommandPipeline(PipelineInterface):
     """Pipe to generate a voice messages based on audio input. """
@@ -220,7 +219,5 @@ class HomeassistantVoiceCommandPipeline(PipelineInterface):
             messenger.mark_in_progress_fail(message)
             return
     def get_help_text(self) -> str:
-        # TODO: automatically tell which models we have
-        return \
-"""*Text to Speech*
-_#tts text_ Generates a voice message by Thorsten voice with the given text"""
+        # no extra need for help
+        return ""

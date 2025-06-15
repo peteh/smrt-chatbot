@@ -125,7 +125,7 @@ class ChatIdPipeline(PipelineInterface):
 _#chatid_ Returns the identifier of the current chatid. """
 
 
-class Helpipeline(PipelineInterface):
+class HelpPipeline(PipelineInterface):
     """A pipeline to print help messages. """
     HELP_COMMAND = "help"
 

@@ -3,8 +3,6 @@ import time
 import logging
 import messenger
 from main_pipeline import MainPipeline
-from signalcli import SignalMessageQueue
-from whatsappsocketio import WhatsappMessageQueue
 from senate_stocks import SenateStockNotification
 import pipeline
 import pipeline_all
@@ -14,6 +12,8 @@ import transcript
 import summary
 import yaml
 import texttoimage
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 schema = {
     "signal": {
@@ -250,9 +250,10 @@ def run():
     # load all messengers
     CONFIG_SIGNAL = "signal"
     if CONFIG_SIGNAL in configuration:
+        import messenger_signal
         config_signal = configuration[CONFIG_SIGNAL]
-        signal_messenger = messenger.SignalMessenger(config_signal["number"], config_signal["host"], int(config_signal["port"]))
-        signal_queue = SignalMessageQueue(signal_messenger, mainpipe)
+        signal_messenger = messenger_signal.SignalMessenger(config_signal["number"], config_signal["host"], int(config_signal["port"]))
+        signal_queue = messenger_signal.SignalMessageQueue(signal_messenger, mainpipe)
         signal_queue.run_async()
     
     CONFIG_TELEGRAM = "telegram"
@@ -265,10 +266,11 @@ def run():
 
     CONFIG_WHATSAPP = "whatsapp"
     if CONFIG_WHATSAPP in configuration:
+        import messenger_whatsapp
         config_whatsapp = configuration[CONFIG_WHATSAPP]
-        whatsapp = messenger.Whatsapp(config_whatsapp["wppconnect_server"], "smrt", config_whatsapp["wppconnect_api_key"])
+        whatsapp = messenger_whatsapp.Whatsapp(config_whatsapp["wppconnect_server"], "smrt", config_whatsapp["wppconnect_api_key"])
 
-        whatsapp_queue = WhatsappMessageQueue(whatsapp, mainpipe)
+        whatsapp_queue = messenger_whatsapp.WhatsappMessageQueue(whatsapp, mainpipe)
         whatsapp_queue.run_async()
 
         try:

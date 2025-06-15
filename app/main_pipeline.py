@@ -6,7 +6,7 @@ import pipeline
 
 class MainPipeline():
     def __init__(self):
-        self._help_pipeline = pipeline.Helpipeline()
+        self._help_pipeline = pipeline.HelpPipeline()
         #self._talk_pipeline = pipeline.TalkPipeline(questionbot_mistral_nemo)
         self._self_pipelines = []
         self._pipelines = [#self._talk_pipeline,
