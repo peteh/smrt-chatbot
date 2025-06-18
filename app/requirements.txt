@@ -1,4 +1,4 @@
-decouple
+python-decouple
 requests
 #requests[socks]
 cerberus
