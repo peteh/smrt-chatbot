@@ -157,6 +157,7 @@ class QuestionBotOllama(QuestionBotInterface, QuestionBotImageInterface):
         self._model = model if model is not None else self.DEFAULT_MODEL
         self._system_message = system_message
         self._lazy_download_done = False
+        logging.debug(f"Using Ollama host: {self._ollama_host}, model: {self._model}, system message: {self._system_message}")
     
     def _model_available(self, model_name: str):
         response = requests.get(f"{self._ollama_host}/api/tags", headers=self._headers)

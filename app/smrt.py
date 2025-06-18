@@ -1,7 +1,6 @@
 """Main application"""
 import time
 import logging
-import messenger
 from main_pipeline import MainPipeline
 from senate_stocks import SenateStockNotification
 import pipeline
@@ -168,8 +167,11 @@ def run():
     
     # load ollama config if present
     bot_loader = BotLoader()
-    if "ollama" in configuration:
-        bot_loader.set_ollama_server(configuration["ollama"]["host"])
+    CONFIG_OLLAMA = "ollama"
+    if CONFIG_OLLAMA in configuration:
+        ollama_server = configuration[CONFIG_OLLAMA]["host"]
+        logging.info(f"Using Ollama server for question bots: {ollama_server}")
+        bot_loader.set_ollama_server(ollama_server)
 
     # General pipelines
     mark_seen_pipeline = pipeline.MarkSeenPipeline()
