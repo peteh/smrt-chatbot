@@ -137,7 +137,7 @@ class BotLoader():
     
 
 def run():
-    config_file = open("app/config.yml", "r", encoding="utf-8")
+    config_file = open("config.yml", "r", encoding="utf-8")
     configuration = yaml.safe_load(config_file)
     config_file.close()
 
