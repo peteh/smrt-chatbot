@@ -11,9 +11,7 @@ websockets
 python-socketio
 python-socketio[client]
 langid
-#re_edge_gpt
 #diffusers[torch]
-#bard-webapi
 bs4
 yfinance
 pyTelegramBotAPI

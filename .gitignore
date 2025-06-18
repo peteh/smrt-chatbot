@@ -12,5 +12,5 @@ docker-compose.override.yml
 samples/*
 out.ogg
 *.sqlite
-
+smrt_config
 config.yml

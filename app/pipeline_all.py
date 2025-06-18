@@ -7,8 +7,6 @@ from typing import List
 import tempfile
 import os
 
-from abc import ABC, abstractmethod
-
 from summary import SummaryInterface
 from transcript import TranscriptInterface
 from messenger import MessengerInterface
