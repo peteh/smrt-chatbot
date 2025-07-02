@@ -246,10 +246,10 @@ class WhatsappMessageQueue():
         self._thread.start()
 
     def on_connect(self):
-        logging.info("Connected to server")
+        logging.info("Connected to WPPConnect server")
 
     def on_disconnect(self):
-        logging.info("Disconnected from server")
+        logging.info("Disconnected from WPPConnect server")
 
     def on_message(self, data):
         logging.info(f"Received message: {data}")
