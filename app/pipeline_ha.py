@@ -117,7 +117,7 @@ class HomeassistantVoiceCommandPipeline(PipelineInterface):
         return messenger.has_audio_data(message) \
             and messenger.get_chat_id(message) in self._chat_id_whitelist
 
-    def process_voice_command(self, wav_path: str):
+    def process_voice_command(self, wav_path: str) -> typing.Tuple[str, str]:
         ws =  websockets.sync.client.connect(self._ha_ws_api_url)
 
         # Step 1: Receive auth_required
@@ -186,6 +186,9 @@ class HomeassistantVoiceCommandPipeline(PipelineInterface):
         msg = json.loads(ws.recv())
         if msg["event"]["type"] != "stt-end":
             raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
+        
+        command_text = msg["event"]["data"]["stt_output"]["text"]
+        print(f"STT output: {command_text}")
 
         msg = json.loads(ws.recv())
         if msg["event"]["type"] != "intent-start":
@@ -198,7 +201,7 @@ class HomeassistantVoiceCommandPipeline(PipelineInterface):
         response_text = msg["event"]["data"]["intent_output"]["response"]["speech"]["plain"]["speech"]
         logging.info(f"Response text: {response_text}")
         ws.close()
-        return response_text
+        return (command_text, response_text)
 
     def process(self, messenger: MessengerInterface, message: dict):
         messenger.mark_in_progress_0(message)
@@ -211,8 +214,8 @@ class HomeassistantVoiceCommandPipeline(PipelineInterface):
                 f.close()
                 voice_data_wav_file_path = os.path.join(tmp, 'audio.wav')
                 subprocess.run(["ffmpeg", "-i", voice_data_file_path, "-ar", "16000", "-ac", "1", "-sample_fmt", "s16", voice_data_wav_file_path, ], check=True)
-                responst_text = self.process_voice_command(voice_data_wav_file_path)
-                messenger.reply_message(message, responst_text)
+                command_text, responst_text = self.process_voice_command(voice_data_wav_file_path)
+                messenger.reply_message(message, f"Command: {command_text}\nResponse: {responst_text}")
                 messenger.mark_in_progress_done(message)
         except Exception as ex:
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
