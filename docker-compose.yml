@@ -5,6 +5,8 @@ services:
          context: .
          dockerfile: Dockerfile
       container_name: smrt
+      ports:
+         - "5000:5000"
       volumes:
       - ./config.yml:/app/config.yml
       - ./storage/:/storage/

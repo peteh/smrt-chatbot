@@ -6,7 +6,7 @@ import base64
 import subprocess
 import tempfile
 import os
-from typing import Tuple
+from typing import Tuple, override
 
 import requests
 import websockets.sync.client as wsclient
@@ -45,6 +45,9 @@ class SignalMessenger(MessengerInterface):
             return f"http://{self._host}:{self._port}/{endpoint}/{endpoint_param}"
         return f"http://{self._host}:{self._port}/{endpoint}"
 
+    def get_name(self) -> str:
+        return "signal"
+    
     def _react(self, message: dict, reaction_text):
         if self.is_group_message(message):
             internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
@@ -108,6 +111,32 @@ class SignalMessenger(MessengerInterface):
         groups = response.json()
         for group in groups:
             self._group_cache[group["internal_id"]] = group["id"]
+    
+    def send_message(self, chat_id: str, text: str):
+        # The chat_id is in the format "signal://<group-id>" or "signal://<phone-number>"
+        # We need to extract the group id or phone number part
+        if chat_id.startswith("signal://"):
+            recipient = chat_id.split("signal://")[1]
+        else:
+            recipient = chat_id
+
+        if not recipient.startswith("+"):
+            # do group cache handling
+            if recipient not in self._group_cache:
+                self._update_group_cache()
+            recipient = self._group_cache.get(recipient, recipient)
+            
+        data = {
+            "message": text,
+            "text_mode": "styled",
+            "number": self._number,
+            "recipients": [
+                recipient
+            ]
+        }
+        requests.post(self._endpoint_url("v2/send"),
+                      json=data,
+                      timeout=self.DEFAULT_TIMEOUT)
 
     def send_message_to_group(self, group_message: dict, text: str):
         internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]

@@ -1,6 +1,8 @@
 """Main application"""
 import time
 import logging
+from flask import Flask, request, jsonify
+
 from main_pipeline import MainPipeline
 from senate_stocks import SenateStockNotification
 import pipeline
@@ -133,12 +135,65 @@ class BotLoader():
             return questionbot.QuestionBotOpenAIAPI(api_key)
         else:
             raise ValueError(f"Unknown bot name: {bot_name}")
+
+
+
+class MessageServer:
+    def __init__(self, host='0.0.0.0', port=5000):
+        self.app = Flask(__name__)
+        self.host = host
+        self.port = port
+        self._register_routes()
+        self._messengers = {}
+
+    def _register_routes(self):
+        @self.app.route('/send_message', methods=['POST'])
+        def send_message():
+            data = request.get_json()
+
+            if not data or 'chatIds' not in data or 'message' not in data:
+                return jsonify({'error': 'Missing required fields: chatids and message'}), 400
+
+            chat_ids = data['chatIds']
+            message = data['message']
+
+            if not isinstance(chat_ids, list) or not isinstance(message, str):
+                return jsonify({'error': 'Invalid types: chatids must be a list, message must be a string'}), 400
+
+            print(f"Sending message '{message}' to chat IDs: {chat_ids}")
+            for chat_id in chat_ids:
+                messenger = self._get_messenger_by_chatid(chat_id)
+                if messenger:
+                    try:
+                        messenger.send_message(chat_id, message)
+                    except Exception as e:
+                        logging.error(f"Failed to send message to {chat_id}: {e}")
+                        return jsonify({'error': f'Failed to send message to {chat_id}'}), 500
+                else:
+                    logging.warning(f"No messenger found for chat ID: {chat_id}")
+
+            return jsonify({'status': 'success', 'sent_to': chat_ids}), 200
+
+    def add_messenger(self, messenger):
+        self._messengers[messenger.get_name()] = messenger
     
+    def _get_messenger_by_chatid(self, chat_id: str):
+        identifier = chat_id.split("://")[0]  # Extract the identifier from the chat_id
+        
+        if identifier in self._messengers:
+            return self._messengers[identifier]
+        return None
+    
+    def run(self):
+        self.app.run(host=self.host, port=self.port)
 
 def run():
     config_file = open("config.yml", "r", encoding="utf-8")
     configuration = yaml.safe_load(config_file)
     config_file.close()
+    
+    message_server = MessageServer()
+    
 
     if not validate_config(configuration, schema):
         exit(1)
@@ -255,6 +310,7 @@ def run():
         import messenger_signal
         config_signal = configuration[CONFIG_SIGNAL]
         signal_messenger = messenger_signal.SignalMessenger(config_signal["number"], config_signal["host"], int(config_signal["port"]))
+        message_server.add_messenger(signal_messenger)
         signal_queue = messenger_signal.SignalMessageQueue(signal_messenger, mainpipe)
         signal_queue.run_async()
     
@@ -263,6 +319,7 @@ def run():
         import messenger_telegram
         config_telegram = configuration[CONFIG_TELEGRAM]
         telegram_messenger = messenger_telegram.TelegramMessenger(config_telegram["telegram_api_key"])
+        message_server.add_messenger(telegram_messenger)
         telegram_queue = messenger_telegram.TelegramMessageQueue(telegram_messenger, mainpipe)
         telegram_queue.run_async()
 
@@ -271,7 +328,7 @@ def run():
         import messenger_whatsapp
         config_whatsapp = configuration[CONFIG_WHATSAPP]
         whatsapp = messenger_whatsapp.Whatsapp(config_whatsapp["wppconnect_server"], "smrt", config_whatsapp["wppconnect_api_key"])
-
+        message_server.add_messenger(whatsapp)
         whatsapp_queue = messenger_whatsapp.WhatsappMessageQueue(whatsapp, mainpipe)
         whatsapp_queue.run_async()
 
@@ -279,15 +336,11 @@ def run():
             whatsapp.start_session()
         except:
             logging.warning("Could not start Whatsapp session")
-        stock_notifier = SenateStockNotification(whatsapp)
-        mainpipe.add_pipeline(stock_notifier)
-        stock_notifier.run_async()
-
-    while(True):
-        time.sleep(1)
-
-    # TODO: proper thread handling 
-
+        #stock_notifier = SenateStockNotification(whatsapp)
+        #mainpipe.add_pipeline(stock_notifier)
+        #stock_notifier.run_async()
+    
+    message_server.run()
 
 if __name__ == "__main__":
     run()

@@ -45,6 +45,16 @@ class Whatsapp(MessengerInterface):
                                  headers=self._headers,
                                  timeout=self.DEFAULT_TIMEOUT)
         logging.debug(response.json())
+    
+    def send_message(self, chat_id: str, text: str):
+        # The chat_id is in the format "whatsapp://<phone-number>@c.us"
+        # We need to extract the phone number part
+        if chat_id.startswith("whatsapp://"):
+            recipient = chat_id.split("whatsapp://")[1]
+        else:
+            recipient = chat_id
+        is_group = chat_id.endswith("@g.us")
+        self._send_message(recipient, is_group, text)
 
     def _send_message(self, recipient: str, is_group, text: str):
         data = {
@@ -102,6 +112,9 @@ class Whatsapp(MessengerInterface):
 
     def send_message_to_individual(self, message: dict, text: str):
         self._send_message(message['sender']['id'], False, text)
+    
+    def get_name(self) -> str:
+        return "whatsapp"
 
     def reply_message(self, message: dict, text: str) -> None:
         is_group_message = self.is_group_message(message)

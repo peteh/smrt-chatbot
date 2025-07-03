@@ -14,3 +14,4 @@ out.ogg
 *.sqlite
 smrt_config
 config.yml
+test_message.sh

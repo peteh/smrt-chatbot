@@ -4,6 +4,14 @@ from typing import Tuple
 
 class MessengerInterface(ABC):
     """Interface for messengers to communicate with the underlying framework. """
+    
+    @abstractmethod
+    def get_name(self) -> str:
+        """Returns the name of the messenger, e.g. 'whatsapp' or 'telegram'. 
+
+        Returns:
+            str: The name of the messenger
+        """
 
     @abstractmethod
     def mark_in_progress_0(self, message: dict) -> None:
@@ -36,6 +44,15 @@ class MessengerInterface(ABC):
     @abstractmethod
     def is_self_message(self, message: dict) -> bool:
         """checks if the message is a message from the bot itself"""
+
+    @abstractmethod
+    def send_message(self, chat_id: str, text: str):
+        """Sends a message to the given chat id.
+
+        Args:
+            chat_id (str): The unique identifier of the chat
+            text (str): The message text to send
+        """
 
     @abstractmethod
     def send_message_to_group(self, group_message: dict, text: str):
