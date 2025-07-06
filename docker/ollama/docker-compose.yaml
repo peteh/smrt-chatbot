@@ -8,9 +8,4 @@ services:
       - "127.0.0.1:11434:11434"
     volumes:
       - ./data:/root/.ollama
-    networks:
-      - smrt-network
     restart: unless-stopped
-networks:
-    smrt-network:
-      external: true

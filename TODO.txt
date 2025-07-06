@@ -1,3 +1,0 @@
-add dezgo.com support
-Fix database storage by making it configurable maybe? 
-Add language detection to language sensitive commands
