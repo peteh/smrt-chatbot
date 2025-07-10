@@ -145,6 +145,7 @@ class MessageServer:
         self.port = port
         self._register_routes()
         self._messengers = {}
+        self.app.logger.setLevel(logging.DEBUG)
 
     def _register_routes(self):
         @self.app.route('/send_message', methods=['POST'])
