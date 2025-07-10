@@ -163,9 +163,9 @@ class MessageServer:
                 return jsonify({'error': 'Invalid types: chatids must be a list, message must be a string'}), 400
 
             print(f"Sending message '{message}' to chat IDs: {chat_ids}")
+            error=""
             for chat_id in chat_ids:
                 messenger = self._get_messenger_by_chatid(chat_id)
-                error=""
                 if messenger:
                     try:
                         messenger.send_message(chat_id, message)
