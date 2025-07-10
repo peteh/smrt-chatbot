@@ -20,6 +20,20 @@ The bot allows you to forward commands and voice messages to be processed by Hom
 
 ![SMRT ChatBot Home Assistant Integration](docs/smrt-ha.png)
 
+You can send text commands like in homeassistant chat via:
+
+```txt
+#ha turn the living room light on
+```
+
+You can also use the announce functionality. For this to work you need to tag the assistant device with the label `sayCommand`. The command will call all assistants.
+
+Then you can use:
+
+```txt
+#say Announce something. 
+```
+
 ## Build & Run
 
 To build the project using Docker Compose, run:

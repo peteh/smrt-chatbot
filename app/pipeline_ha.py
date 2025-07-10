@@ -16,21 +16,39 @@ from pipeline import PipelineInterface, PipelineHelper
 from messenger import MessengerInterface
 
 
-class HomeassistantTextCommandPipeline(PipelineInterface):
-    """Pipe to handle ha commands in text. """
-    HA_COMMAND = "ha"
-
+class AbstractHomeassistantPipeline(PipelineInterface):
+    """Abstract base class for Homeassistant pipelines."""
     def __init__(self, ha_token: str, ha_ws_api_url: str, chat_id_whitelist: typing.List[str]):
         self._ha_token = ha_token
         self._ha_ws_api_url = ha_ws_api_url
         self._chat_id_whitelist = chat_id_whitelist
+    
+    def _get_chat_id_whitelist(self) -> typing.List[str]:
+        """Get the list of chat IDs that are allowed to use this pipeline."""
+        return self._chat_id_whitelist
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        raise NotImplementedError("Subclasses should implement this method.")
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        raise NotImplementedError("Subclasses should implement this method.")
+    
+    def get_help_text(self) -> str:
+        raise NotImplementedError("Subclasses should implement this method.")
+
+class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
+    """Pipe to handle ha commands in text. """
+    HA_COMMAND = "ha"
+
+    def __init__(self, ha_token: str, ha_ws_api_url: str, chat_id_whitelist: typing.List[str]):
+        super().__init__(ha_token, ha_ws_api_url, chat_id_whitelist)
         self._commands = [self.HA_COMMAND]
 
 
     def matches(self, messenger: MessengerInterface, message: dict):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands \
-            and messenger.get_chat_id(message) in self._chat_id_whitelist
+            and messenger.get_chat_id(message) in self._get_chat_id_whitelist()
     
     def process_text_command(self, ha_command: str):
         ws =  websockets.sync.client.connect(self._ha_ws_api_url)
@@ -105,17 +123,106 @@ class HomeassistantTextCommandPipeline(PipelineInterface):
 """*Text to Speech*
 _#ha text_ Sends a homeassistant command to homeassistant (You can also send voice messages with HA commands). """
 
-class HomeassistantVoiceCommandPipeline(PipelineInterface):
+class HomeassistantSayCommandPipeline(AbstractHomeassistantPipeline):
+    """Pipe to handle ha commands in text. """
+    HA_COMMAND = "say"
+
+    def __init__(self, ha_token: str, ha_ws_api_url: str, chat_id_whitelist: typing.List[str]):
+        super().__init__(ha_token, ha_ws_api_url, chat_id_whitelist)
+        self._commands = [self.HA_COMMAND]
+
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        command = PipelineHelper.extract_command(messenger.get_message_text(message))
+        return command in self._commands \
+            and messenger.get_chat_id(message) in self._get_chat_id_whitelist()
+    
+    def process_say_command(self, text: str):
+        ws =  websockets.sync.client.connect(self._ha_ws_api_url)
+
+        # Step 1: Receive auth_required
+        ws.recv()
+
+        # Step 2: Authenticate
+        ws.send(json.dumps({
+            "type": "auth",
+            "access_token": self._ha_token
+        }))
+        ws.recv()  # auth_ok
+
+        msg_id = 1
+        
+        # Send label registry list request
+        #ws.send(json.dumps({
+        #    "id": msg_id,
+        #    "type": "config/label_registry/list"
+        #}))
+
+        # Step 5: Receive label list response
+        #response = ws.recv()
+        #data = json.loads(response)
+
+        # Pretty print results
+        #for label in data.get("result", []):
+        #    print(f"Label: {label}")
+        
+        #msg_id += 1
+        
+        # Step 3: Run TTS pipeline
+        tts_msg = {
+            "id": msg_id,
+            "type": "call_service",
+            "domain": "assist_satellite",
+            "service": "announce",
+
+            "service_data": {
+                "message": text,
+            },
+            "target": {
+                #"entity_id": ["assist_satellite.living_room_assist_assist_satellite"]
+                "label_id": "saycommand"
+            },
+            "return_response": False
+        }
+
+
+        ws.send(json.dumps(tts_msg))
+
+        # Step 4: Receive all messages until done
+        msg = ws.recv()
+        data = json.loads(msg)
+        logging.debug(f"Received: {data}")
+        ws.close()
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+        messenger.mark_in_progress_0(message)
+        try:            
+            ha_command = text.strip()
+            messenger.mark_in_progress_0(message)
+            self.process_say_command(ha_command)
+            messenger.mark_in_progress_done(message)
+                
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
+            messenger.mark_in_progress_fail(message)
+            return
+    def get_help_text(self) -> str:
+        # TODO: automatically tell which models we have
+        return \
+"""*Text to Speech*
+_#say text_ Sends a message to homeassistant to be spoken by the voice assistant."""
+
+class HomeassistantVoiceCommandPipeline(AbstractHomeassistantPipeline):
     """Pipe to generate a voice messages based on audio input. """
     def __init__(self, ha_token: str, ha_ws_api_url: str, chat_id_whitelist: typing.List[str]):
-        self._ha_token = ha_token
-        self._ha_ws_api_url = ha_ws_api_url
-        self._chat_id_whitelist = chat_id_whitelist
+        super().__init__(ha_token, ha_ws_api_url, chat_id_whitelist)
+
 
 
     def matches(self, messenger: MessengerInterface, message: dict):
         return messenger.has_audio_data(message) \
-            and messenger.get_chat_id(message) in self._chat_id_whitelist
+            and messenger.get_chat_id(message) in self._get_chat_id_whitelist()
 
     def process_voice_command(self, wav_path: str) -> typing.Tuple[str, str]:
         ws =  websockets.sync.client.connect(self._ha_ws_api_url)

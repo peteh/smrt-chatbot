@@ -1,6 +1,7 @@
 """Main application"""
 import time
 import logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 from flask import Flask, request, jsonify
 
 from main_pipeline import MainPipeline
@@ -14,7 +15,7 @@ import summary
 import yaml
 import texttoimage
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 schema = {
     "signal": {
@@ -250,6 +251,7 @@ def run():
         ha_chat_id_whitelist = config_ha.get("chat_id_whitelist", [])
         ha_text_pipeline = pipeline_ha.HomeassistantTextCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
         ha_voice_pipeline = pipeline_ha.HomeassistantVoiceCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
+        ha_voice_pipeline = pipeline_ha.HomeassistantSayCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
         mainpipe.add_pipeline(ha_text_pipeline)
         mainpipe.add_pipeline(ha_voice_pipeline)
 
