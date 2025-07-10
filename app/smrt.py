@@ -151,10 +151,10 @@ class MessageServer:
         @self.app.route('/send_message', methods=['POST'])
         def send_message():
             data = request.get_json()
-            logging.debug(f"Received data: {data}")
+            self.app.logger.debug(f"Received data: {data}")
             if not data or 'chatIds' not in data or 'message' not in data:
-                logging.error("Missing required fields in request data, expected 'chatIds' and 'message'")
-                logging.error(f"Message data: {data}")
+                self.app.logger.error("Missing required fields in request data, expected 'chatIds' and 'message'")
+                self.app.logger.error(f"Message data: {data}")
                 return jsonify({'error': 'Missing required fields: chatIds and message'}), 400
 
             chat_ids = data['chatIds']
@@ -173,10 +173,10 @@ class MessageServer:
                     except Exception as e:
                         error_message = f"Error sending message to {chat_id}: {str(e)}"
                         error += f"{error_message}\n"
-                        logging.error(f"Failed to send message to {chat_id}: {e}")
+                        self.app.logger.error(f"Failed to send message to {chat_id}: {e}")
                 else:
                     error_message = f"No messenger found for chat ID: {chat_id}"
-                    logging.warning(error_message)
+                    self.app.logger.warning(error_message)
                     error+= f"{error_message}\n"
 
             if len(error) > 0:
