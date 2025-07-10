@@ -152,7 +152,9 @@ class MessageServer:
             data = request.get_json()
 
             if not data or 'chatIds' not in data or 'message' not in data:
-                return jsonify({'error': 'Missing required fields: chatids and message'}), 400
+                logging.error("Missing required fields in request data, expected 'chatIds' and 'message'")
+                logging.error(f"Message data: {data}")
+                return jsonify({'error': 'Missing required fields: chatIds and message'}), 400
 
             chat_ids = data['chatIds']
             message = data['message']
@@ -163,15 +165,21 @@ class MessageServer:
             print(f"Sending message '{message}' to chat IDs: {chat_ids}")
             for chat_id in chat_ids:
                 messenger = self._get_messenger_by_chatid(chat_id)
+                error=""
                 if messenger:
                     try:
                         messenger.send_message(chat_id, message)
                     except Exception as e:
+                        error_message = f"Error sending message to {chat_id}: {str(e)}"
+                        error += f"{error_message}\n"
                         logging.error(f"Failed to send message to {chat_id}: {e}")
-                        return jsonify({'error': f'Failed to send message to {chat_id}'}), 500
                 else:
-                    logging.warning(f"No messenger found for chat ID: {chat_id}")
+                    error_message = f"No messenger found for chat ID: {chat_id}"
+                    logging.warning(error_message)
+                    error+= f"{error_message}\n"
 
+            if len(error) > 0:
+                return jsonify({'status': 'error', 'message': error}), 500
             return jsonify({'status': 'success', 'sent_to': chat_ids}), 200
 
     def add_messenger(self, messenger):

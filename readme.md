@@ -179,7 +179,7 @@ rest_command:
 
 You can use the rest command directly or add scripts to send to specific groups.
 
-To create a script add a new one under Settings - Automations & Scenes - Scripts.
+To create a script, add a new one under Settings - Automations & Scenes - Scripts.
 
 ```yml
 alias: Send Chat Notification
