@@ -150,7 +150,7 @@ class MessageServer:
         @self.app.route('/send_message', methods=['POST'])
         def send_message():
             data = request.get_json()
-
+            logging.debug(f"Received data: {data}")
             if not data or 'chatIds' not in data or 'message' not in data:
                 logging.error("Missing required fields in request data, expected 'chatIds' and 'message'")
                 logging.error(f"Message data: {data}")
