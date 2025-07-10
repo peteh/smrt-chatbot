@@ -92,6 +92,11 @@ schema = {
                 "type": "list",
                 "schema": {"type": "string"},
                 "required": False
+            },
+            "process_without_command": {
+                "type": "boolean",
+                "default": False,  # Default to False if not specified
+                "required": False
             }
         },
         "required": False
@@ -249,11 +254,15 @@ def run():
         ha_token = config_ha["token"]
         ha_ws_api_url = config_ha["ws_api_url"]
         ha_chat_id_whitelist = config_ha.get("chat_id_whitelist", [])
-        ha_text_pipeline = pipeline_ha.HomeassistantTextCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
+        process_without_command = config_ha.get("process_without_command", False)
+        
+        ha_text_pipeline = pipeline_ha.HomeassistantTextCommandPipeline(ha_token, ha_ws_api_url, \
+            chat_id_whitelist=ha_chat_id_whitelist, process_without_command=process_without_command)
         ha_voice_pipeline = pipeline_ha.HomeassistantVoiceCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
-        ha_voice_pipeline = pipeline_ha.HomeassistantSayCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
+        ha_say_pipeline = pipeline_ha.HomeassistantSayCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
         mainpipe.add_pipeline(ha_text_pipeline)
         mainpipe.add_pipeline(ha_voice_pipeline)
+        mainpipe.add_pipeline(ha_say_pipeline)
 
     # voice message transcription with whsisper
     CONFIG_VOICE_TRANSCRIPTION = "voice_transcription"

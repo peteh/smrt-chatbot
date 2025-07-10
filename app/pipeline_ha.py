@@ -40,15 +40,28 @@ class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
     """Pipe to handle ha commands in text. """
     HA_COMMAND = "ha"
 
-    def __init__(self, ha_token: str, ha_ws_api_url: str, chat_id_whitelist: typing.List[str]):
+    def __init__(self, ha_token: str, ha_ws_api_url: str, chat_id_whitelist: typing.List[str], process_without_command = False):
         super().__init__(ha_token, ha_ws_api_url, chat_id_whitelist)
         self._commands = [self.HA_COMMAND]
+        self._process_without_command = process_without_command  # if true, will process any text command without the #ha prefix
+
 
 
     def matches(self, messenger: MessengerInterface, message: dict):
+        if messenger.get_chat_id(message) not in self._get_chat_id_whitelist():
+            return False
+        message_text = messenger.get_message_text(message)
+        if message_text is None:
+            return False
+        
+        if self._process_without_command and not message_text.startswith("#"):
+            # If we process without command, we just check if the message has text and does not start with a command
+            message_text = messenger.get_message_text(message)
+            return message_text is not None and len(messenger.get_message_text(message)) > 0
+        
+        # we check if the mesage is a ha command
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
-        return command in self._commands \
-            and messenger.get_chat_id(message) in self._get_chat_id_whitelist()
+        return command in self._commands
     
     def process_text_command(self, ha_command: str):
         ws =  websockets.sync.client.connect(self._ha_ws_api_url)
@@ -104,7 +117,12 @@ class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
         return response_text
 
     def process(self, messenger: MessengerInterface, message: dict):
-        (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+        text = messenger.get_message_text(message)
+        if self._process_without_command:
+            text = text.strip()
+        if text.startswith(f"#{self.HA_COMMAND}"):
+            (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+
         messenger.mark_in_progress_0(message)
         try:            
             ha_command = text.strip()

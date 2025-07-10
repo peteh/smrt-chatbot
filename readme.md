@@ -114,6 +114,7 @@ homeassistant:
     "signal://XXXX", # Signal Home Group
     "whatsapp://123456@g.us" # Whatsapp Home group
     ]
+  process_without_command: true # optional, default = false if true, will process any text command without the #ha prefix
 ```
 
 ### Voice Message Processing
