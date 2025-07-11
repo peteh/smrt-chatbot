@@ -132,7 +132,7 @@ class BotLoader():
         """Factory function to create a question bot instance based on the bot name."""
         if bot_name.startswith("ollama:"):
             if self._ollama_server is None:
-                raise ValueError("Ollama server not set. Use set_ollama_server() to set it.")
+                raise ValueError("Ollama server not set. Use \"ollama:\" configuration option to set it.")
             model_name = bot_name[bot_name.find(":")+1:]
             logging.debug(f"Creating QuestionBotOllama with model: {model_name}")
             return questionbot.QuestionBotOllama(self._ollama_server, model_name)
@@ -151,7 +151,7 @@ class MessageServer:
         self.port = port
         self._register_routes()
         self._messengers = {}
-        self.app.logger.setLevel(logging.DEBUG)
+        self.app.logger.setLevel(logging.INFO)
 
     def _register_routes(self):
         @self.app.route('/send_message', methods=['POST'])
@@ -171,11 +171,13 @@ class MessageServer:
 
             print(f"Sending message '{message}' to chat IDs: {chat_ids}")
             error=""
+            sent_to = []
             for chat_id in chat_ids:
                 messenger = self._get_messenger_by_chatid(chat_id)
                 if messenger:
                     try:
                         messenger.send_message(chat_id, message)
+                        sent_to.append(chat_id)
                     except Exception as e:
                         error_message = f"Error sending message to {chat_id}: {str(e)}"
                         error += f"{error_message}\n"
@@ -186,8 +188,8 @@ class MessageServer:
                     error+= f"{error_message}\n"
 
             if len(error) > 0:
-                return jsonify({'status': 'error', 'message': error}), 500
-            return jsonify({'status': 'success', 'sent_to': chat_ids}), 200
+                return jsonify({'status': 'error', 'message': error, 'sent_to': sent_to}), 500
+            return jsonify({'status': 'success', 'sent_to': sent_to}), 200
 
     def add_messenger(self, messenger):
         self._messengers[messenger.get_name()] = messenger
