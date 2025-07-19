@@ -49,6 +49,13 @@ schema = {
         },
         "required": False
     },
+    "llama_cpp": {
+        "type": "dict",
+        "schema": {
+            "host": {"type": "string", "required": True}  # URL of the llama.cpp server, e.g. http://localhost:8000
+        },
+        "required": False
+    },
     "voice_transcription": {
         "type": "dict",
         "schema": {
@@ -123,11 +130,18 @@ def validate_config(config, schema):
 class BotLoader():
     def __init__(self):
         self._ollama_server = None
+        self._llama_cpp_server = None
 
     def set_ollama_server(self, server: str):
         """Set the ollama server to use."""
         self._ollama_server = server
- 
+        logging.info(f"Using ollama server: {self._ollama_server}")
+        
+    def set_llama_cpp_server(self, server: str):
+        """Set the llama.cpp server to use."""
+        self._llama_cpp_server = server
+        logging.info(f"Using llama.cpp server: {self._llama_cpp_server}")
+        
     def create(self, bot_name: str) -> questionbot.QuestionBotInterface:
         """Factory function to create a question bot instance based on the bot name."""
         if bot_name.startswith("ollama:"):
@@ -136,6 +150,12 @@ class BotLoader():
             model_name = bot_name[bot_name.find(":")+1:]
             logging.debug(f"Creating QuestionBotOllama with model: {model_name}")
             return questionbot.QuestionBotOllama(self._ollama_server, model_name)
+        elif bot_name.startswith("llama_cpp:"):
+            if self._llama_cpp_server is None:
+                raise ValueError("Llama.cpp server not set. Use set_llama_cpp_server() to set it.")
+            #model_name = bot_name[bot_name.find(":")+1:]
+            #logging.debug(f"Creating QuestionBotLlamaCppServer with model: {model_name}")
+            return questionbot.QuestionBotLlamaCppServer(self._llama_cpp_server)
         elif bot_name.startswith("openai:"):
             api_key = bot_name[bot_name.find(":"):]
             return questionbot.QuestionBotOpenAIAPI(api_key)
@@ -245,6 +265,12 @@ def run():
         logging.info(f"Using Ollama server for question bots: {ollama_server}")
         bot_loader.set_ollama_server(ollama_server)
 
+    # load llama.cpp config if present
+    CONFIG_LLAMA_CPP = "llama_cpp"
+    if CONFIG_LLAMA_CPP in configuration:
+        llama_cpp_server = configuration[CONFIG_LLAMA_CPP]["host"]
+        logging.info(f"Using llama.cpp server for question bots: {llama_cpp_server}")
+        bot_loader.set_llama_cpp_server(llama_cpp_server)
     # General pipelines
     mark_seen_pipeline = pipeline.MarkSeenPipeline()
     mainpipe.add_pipeline(mark_seen_pipeline)

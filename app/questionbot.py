@@ -65,6 +65,46 @@ class QuestionBotOpenAIAPI(QuestionBotInterface):
             'cost': cost
         }
         
+class QuestionBotLlamaCppServer(QuestionBotInterface):
+    """Question bot based on llama.cpp server."""
+    def __init__(self, llama_cpp_server: str) -> None:
+        """_summary_
+
+        Args:
+            llama_cpp_server (str): The URL of the llama.cpp server, e.g. http://localhost:8000
+        """
+        super().__init__()
+        self._cost_per_token = 0.
+        self._llama_cpp_server = llama_cpp_server   
+
+    def answer(self, prompt: str):
+        url = f"{self._llama_cpp_server}/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            #"Authorization": f"Bearer {self._api_key}"
+        }
+
+        data = {
+            #"model": "gpt-3.5-turbo",
+            "messages": [{"role": "user", "content": prompt}]
+        }
+
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code != 200:
+            logging.error(f"Error: {response.status_code}, {response.text}")
+            return None
+
+        completion = response.json()
+        print(completion)
+        usage = completion.get("usage")
+        cost = usage.get("total_tokens") * self._cost_per_token
+        response = completion.get("choices")[0].get("message").get("content")
+        print(response)
+        return {
+            'text': response, 
+            'cost': cost
+        }
+
 
 class ChatRole(Enum):
     SYSTEM = 1

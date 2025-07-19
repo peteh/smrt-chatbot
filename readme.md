@@ -141,12 +141,27 @@ voice_transcription:
 
 Ollama can be used in some of the commands, e.g. for summaries in voice transcriptions.
 
-Configure ollama with the following settings
+Configure ollama with the following settings.
 
 ```yml
 ollama:
   host: "http://127.0.0.1:11434"
 ```
+
+Models can be chosen via `ollama:modelname`.
+
+### llama.cpp
+
+Llama.cpp server can also be used.
+
+```yml
+ollama:
+  host: "http://127.0.0.1:8000"
+```
+
+Models can be chosen via `llama_cpp:modelname`.
+
+Note: Models are actually not yet chosable as llama server only loads one model.
 
 ### ChatID command
 
