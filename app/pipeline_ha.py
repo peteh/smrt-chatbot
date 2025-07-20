@@ -10,6 +10,7 @@ import typing
 import json
 import wave
 import time
+import uuid
 import websockets.sync.client
 
 from pipeline import PipelineInterface, PipelineHelper
@@ -22,10 +23,14 @@ class AbstractHomeassistantPipeline(PipelineInterface):
         self._ha_token = ha_token
         self._ha_ws_api_url = ha_ws_api_url
         self._chat_id_whitelist = chat_id_whitelist
+        self._root_uuid = uuid.UUID("BEEEEEEF-DEAD-DEAD-DEAD-BEEEEEEEEEEF")
     
     def _get_chat_id_whitelist(self) -> typing.List[str]:
         """Get the list of chat IDs that are allowed to use this pipeline."""
         return self._chat_id_whitelist
+    
+    def _get_uuid_from_chat_id(self, chat_id: str) -> uuid.UUID:
+        return uuid.uuid5(namespace=self._root_uuid, name=chat_id)
 
     def matches(self, messenger: MessengerInterface, message: dict):
         raise NotImplementedError("Subclasses should implement this method.")
@@ -45,25 +50,23 @@ class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
         self._commands = [self.HA_COMMAND]
         self._process_without_command = process_without_command  # if true, will process any text command without the #ha prefix
 
-
-
     def matches(self, messenger: MessengerInterface, message: dict):
         if messenger.get_chat_id(message) not in self._get_chat_id_whitelist():
             return False
         message_text = messenger.get_message_text(message)
         if message_text is None:
             return False
-        
+
         if self._process_without_command and not message_text.startswith("#"):
             # If we process without command, we just check if the message has text and does not start with a command
             message_text = messenger.get_message_text(message)
             return message_text is not None and len(messenger.get_message_text(message)) > 0
-        
+
         # we check if the mesage is a ha command
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands
-    
-    def process_text_command(self, ha_command: str):
+
+    def process_text_command(self, ha_command: str, conversation_id: str):
         ws =  websockets.sync.client.connect(self._ha_ws_api_url)
 
         # Step 1: Receive auth_required
@@ -85,7 +88,8 @@ class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
             "end_stage": "intent",
             "input": {
                 "text": ha_command,
-            }
+            },
+            "conversation_id": conversation_id
         }))
         logging.debug("Pipeline started, waiting for run_start...")
 
@@ -127,7 +131,8 @@ class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
         try:            
             ha_command = text.strip()
             messenger.mark_in_progress_0(message)
-            responst_text = self.process_text_command(ha_command)
+            conversation_id = self._get_uuid_from_chat_id(messenger.get_chat_id(message))
+            responst_text = self.process_text_command(ha_command, str(conversation_id))
             messenger.reply_message(message, responst_text)
             messenger.mark_in_progress_done(message)
                 
@@ -154,7 +159,7 @@ class HomeassistantSayCommandPipeline(AbstractHomeassistantPipeline):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands \
             and messenger.get_chat_id(message) in self._get_chat_id_whitelist()
-    
+
     def process_say_command(self, text: str):
         ws =  websockets.sync.client.connect(self._ha_ws_api_url)
 
@@ -169,7 +174,7 @@ class HomeassistantSayCommandPipeline(AbstractHomeassistantPipeline):
         ws.recv()  # auth_ok
 
         msg_id = 1
-        
+
         # Send label registry list request
         #ws.send(json.dumps({
         #    "id": msg_id,
@@ -219,8 +224,7 @@ class HomeassistantSayCommandPipeline(AbstractHomeassistantPipeline):
             ha_command = text.strip()
             messenger.mark_in_progress_0(message)
             self.process_say_command(ha_command)
-            messenger.mark_in_progress_done(message)
-                
+            messenger.mark_in_progress_done(message)    
         except Exception as ex:
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
             messenger.mark_in_progress_fail(message)
@@ -242,7 +246,7 @@ class HomeassistantVoiceCommandPipeline(AbstractHomeassistantPipeline):
         return messenger.has_audio_data(message) \
             and messenger.get_chat_id(message) in self._get_chat_id_whitelist()
 
-    def process_voice_command(self, wav_path: str) -> typing.Tuple[str, str]:
+    def process_voice_command(self, wav_path: str, conversation_id: str) -> typing.Tuple[str, str]:
         ws =  websockets.sync.client.connect(self._ha_ws_api_url)
 
         # Step 1: Receive auth_required
@@ -264,7 +268,8 @@ class HomeassistantVoiceCommandPipeline(AbstractHomeassistantPipeline):
             "end_stage": "intent",
             "input": {
                 "sample_rate": 16000,
-            }
+            },
+            "conversation_id": conversation_id
         }))
         logging.debug("Pipeline started, waiting for run_start...")
 
@@ -339,7 +344,8 @@ class HomeassistantVoiceCommandPipeline(AbstractHomeassistantPipeline):
                 f.close()
                 voice_data_wav_file_path = os.path.join(tmp, 'audio.wav')
                 subprocess.run(["ffmpeg", "-i", voice_data_file_path, "-ar", "16000", "-ac", "1", "-sample_fmt", "s16", voice_data_wav_file_path, ], check=True)
-                command_text, responst_text = self.process_voice_command(voice_data_wav_file_path)
+                conversation_id = self._get_uuid_from_chat_id(messenger.get_chat_id(message))
+                command_text, responst_text = self.process_voice_command(voice_data_wav_file_path, str(conversation_id))
                 messenger.reply_message(message, f"Command: {command_text}\nResponse: {responst_text}")
                 messenger.mark_in_progress_done(message)
         except Exception as ex:
