@@ -113,6 +113,12 @@ schema = {
         "schema": {},
         "nullable": True,  # Accepts `null` or empty dict as valid
         "required": False
+    },
+    "gallery": {
+        "type": "dict",
+        "schema": {},
+        "nullable": True,  # Accepts `null` or empty dict as valid
+        "required": False
     }
 }
 
@@ -343,6 +349,13 @@ def run():
             imagegen_api = texttoimage.FallbackTextToImageProcessor(imagegen_processors)
             imagegen_pipeline = pipeline_all.ImageGenerationPipeline(imagegen_api)
             mainpipe.add_pipeline(imagegen_pipeline)
+    
+    CONFIG_GALLERY = "gallery"
+    if CONFIG_GALLERY in configuration:
+        import galleryweb
+        import pipeline_gallery
+        gallery_pipe = pipeline_gallery.GalleryPipeline()
+        mainpipe.add_pipeline(gallery_pipe)
 
     CONFIG_CHATID = "chatid"
     if CONFIG_CHATID in configuration:
@@ -385,6 +398,8 @@ def run():
         #stock_notifier = SenateStockNotification(whatsapp)
         #mainpipe.add_pipeline(stock_notifier)
         #stock_notifier.run_async()
+
+        
     
     message_server.run()
 

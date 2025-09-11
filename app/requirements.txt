@@ -16,3 +16,4 @@ langid
 bs4
 yfinance
 pyTelegramBotAPI
+Flask

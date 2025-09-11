@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WhatsApp Gallery - {{ group_id }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css" rel="stylesheet">
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        .grid img { width: 100%; border-radius: 8px; }
+        .meta { font-size: 0.8em; color: #555; }
+        #slider { margin: 30px 0; }
+        .date-labels { display: flex; justify-content: space-between; margin-top: 5px; }
+        form { margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <h1>WhatsApp Gallery (Group: {{ group_id }})</h1>
+
+    <!-- 🔹 Slider Filter Form -->
+    <form id="filterForm" method="get" action="/{{ group_id }}/">
+        <div id="slider"></div>
+        <div class="date-labels">
+            <span id="startLabel"></span>
+            <span id="endLabel"></span>
+        </div>
+        <input type="hidden" name="start" id="startInput" value="{{ start or min_date }}">
+        <input type="hidden" name="end" id="endInput" value="{{ end or max_date }}">
+        <button type="submit">Filter</button>
+    </form>
+
+    <!-- 🔹 Download filtered -->
+    <form id="downloadFilteredForm" method="get" action="/{{ group_id }}/download">
+        <input type="hidden" name="start" id="dlStartInput" value="{{ start or min_date }}">
+        <input type="hidden" name="end" id="dlEndInput" value="{{ end or max_date }}">
+        <button type="submit">⬇ Download filtered</button>
+    </form>
+
+    <!-- 🔹 Download all -->
+    <form method="get" action="/{{ group_id }}/download">
+        <button type="submit">⬇ Download all (ignore filter)</button>
+    </form>
+
+    <!-- 🔹 Gallery Grid -->
+    <div class="grid">
+        {% for filename, sender, timestamp in images %}
+        <div>
+            <img src="/{{ group_id }}/images/{{ filename }}" alt="image">
+            <div class="meta">
+                <strong>{{ sender }}</strong><br>
+                {{ timestamp }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 🔹 Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js"></script>
+    <script>
+        const slider = document.getElementById('slider');
+        const minDate = new Date("{{ min_date }}").getTime();
+        const maxDate = new Date("{{ max_date }}").getTime();
+        const startDate = new Date("{{ start or min_date }}").getTime();
+        const endDate = new Date("{{ end or max_date }}").getTime();
+
+        noUiSlider.create(slider, {
+            start: [startDate, endDate],
+            connect: true,
+            range: { 'min': minDate, 'max': maxDate },
+            step: 24 * 60 * 60 * 1000,
+            format: {
+                to: value => new Date(value).toISOString().slice(0, 10),
+                from: value => Date.parse(value)
+            }
+        });
+
+        const startInput = document.getElementById('startInput');
+        const endInput = document.getElementById('endInput');
+        const dlStartInput = document.getElementById('dlStartInput');
+        const dlEndInput = document.getElementById('dlEndInput');
+        const startLabel = document.getElementById('startLabel');
+        const endLabel = document.getElementById('endLabel');
+
+        slider.noUiSlider.on('update', (values) => {
+            startInput.value = values[0];
+            endInput.value = values[1];
+            dlStartInput.value = values[0];
+            dlEndInput.value = values[1];
+            startLabel.textContent = values[0];
+            endLabel.textContent = values[1];
+        });
+    </script>
+</body>
+</html>
