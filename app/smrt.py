@@ -14,7 +14,7 @@ import transcript
 import summary
 import yaml
 import texttoimage
-
+import database
 
 
 schema = {
@@ -116,8 +116,10 @@ schema = {
     },
     "gallery": {
         "type": "dict",
-        "schema": {},
-        "nullable": True,  # Accepts `null` or empty dict as valid
+        "schema": {
+            "base_url": {"type": "string", "required": True},
+            "port": {"type": "integer", "required": True}
+        },
         "required": False
     }
 }
@@ -261,6 +263,7 @@ def run():
     #mainpipe.add_pipeline(image_prompt_pipeline)
     #mainpipe.add_pipeline(grammar_pipeline)
     
+  
     # load ollama config if present
     bot_loader = BotLoader()
     CONFIG_OLLAMA = "ollama"
@@ -352,9 +355,13 @@ def run():
     
     CONFIG_GALLERY = "gallery"
     if CONFIG_GALLERY in configuration:
-        import galleryweb
+        base_url = configuration[CONFIG_GALLERY]["base_url"]
+        port = configuration[CONFIG_GALLERY]["port"]
+        
+        #import galleryweb
         import pipeline_gallery
-        gallery_pipe = pipeline_gallery.GalleryPipeline()
+
+        gallery_pipe = pipeline_gallery.GalleryPipeline(base_url)
         mainpipe.add_pipeline(gallery_pipe)
 
     CONFIG_CHATID = "chatid"

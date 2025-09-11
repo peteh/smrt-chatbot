@@ -17,7 +17,7 @@ import utils
 
 # article summary pipeline
 import trafilatura
-from db import Database
+from database import Database
 from pipeline import PipelineInterface, PipelineHelper
 import youtubeextract
 

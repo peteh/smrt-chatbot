@@ -2,7 +2,7 @@
 import time
 import os
 import unittest
-import db
+import database
 import utils
 
 class DatabaseTests(unittest.TestCase):
@@ -11,16 +11,16 @@ class DatabaseTests(unittest.TestCase):
     def test_listing_when_more_data_inserted_then_read_newest(self):
         """Tests if the db resturns the correct messages"""
         # arrange
-        database = db.Database('testdata')
-
+        db = database.Database('testdata')
+        msgDB = database.MessageDatabase(db)
         # act
-        database.add_group_message("abc", "Pete1", "lalala1")
+        msgDB.add_group_message("abc", "Pete1", "lalala1")
         time.sleep(1)
-        database.add_group_message("abc", "Pete2", "lalala2")
+        msgDB.add_group_message("abc", "Pete2", "lalala2")
         time.sleep(1)
-        database.add_group_message("abc", "Pete3", "lalala3")
+        msgDB.add_group_message("abc", "Pete3", "lalala3")
         time.sleep(1)
-        rows = database.get_group_messages("abc", 2)
+        rows = msgDB.get_group_messages("abc", 2)
 
         # assert
         self.assertEqual(rows[0]["sender"], "Pete2")
