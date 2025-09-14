@@ -360,8 +360,9 @@ def run():
         
         #import galleryweb
         import pipeline_gallery
+        gallery_db = pipeline_gallery.GalleryDatabase()
 
-        gallery_pipe = pipeline_gallery.GalleryPipeline(base_url)
+        gallery_pipe = pipeline_gallery.GalleryPipeline(gallery_db, base_url)
         mainpipe.add_pipeline(gallery_pipe)
 
     CONFIG_CHATID = "chatid"

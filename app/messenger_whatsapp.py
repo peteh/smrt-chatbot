@@ -17,6 +17,7 @@ class Whatsapp(MessengerInterface):
     REACT_HOURGLASS_HALF = "\u231b"
     REACT_HOURGLASS_FULL = "\u23f3"
     REACT_CHECKMARK = "\u2714\ufe0f"
+    REACT_SKIP = "\u1f518"
     REACT_FAIL = "\u274c"
 
     DEFAULT_TIMEOUT = 60
@@ -82,6 +83,9 @@ class Whatsapp(MessengerInterface):
 
     def mark_in_progress_50(self, message: dict):
         self._react(message['id'], self.REACT_HOURGLASS_HALF)
+    
+    def mark_skipped(self, message):
+        self._react(message['id'], self.REACT_SKIP)
 
     def mark_in_progress_done(self, message: dict):
         self._react(message['id'], self.REACT_CHECKMARK)

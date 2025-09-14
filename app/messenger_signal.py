@@ -22,6 +22,7 @@ class SignalMessenger(MessengerInterface):
     REACT_HOURGLASS_HALF = "\u231b"
     REACT_HOURGLASS_FULL = "\u23f3"
     REACT_CHECKMARK = "\u2714\ufe0f"
+    REACT_SKIP = "\u1f518"
     REACT_FAIL = "\u274c"
 
     def __init__(self, number: str, host:str, port: int) -> None:
@@ -76,6 +77,9 @@ class SignalMessenger(MessengerInterface):
 
     def mark_in_progress_done(self, message: dict):
         self._react(message, self.REACT_CHECKMARK)
+        
+    def mark_skipped(self, message):
+        self._react(message, self.REACT_SKIP)
 
     def mark_in_progress_fail(self, message: dict):
         self._react(message, self.REACT_FAIL)

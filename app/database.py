@@ -20,6 +20,7 @@ class Database:
     
     def close(self):
         self._con.close()
+
 class MessageDatabase():
     
     def __init__(self, db: Database):

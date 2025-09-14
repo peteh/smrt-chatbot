@@ -9,11 +9,18 @@ trafilatura
 youtube-transcript-api
 #coqui-tts
 websockets
+
+# wppconnect events api (for whatsapp)
 python-socketio
 python-socketio[client]
+
+# get language from text
 langid
 #diffusers[torch]
 bs4
 yfinance
 pyTelegramBotAPI
 Flask
+
+# image processing
+Pillow

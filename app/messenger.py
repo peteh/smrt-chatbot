@@ -24,6 +24,9 @@ class MessengerInterface(ABC):
     @abstractmethod
     def mark_in_progress_done(self, message: dict) -> None:
         """Marks a message that it's processing has been finished. """
+    
+    def mark_skipped(self, message: dict) -> None:
+        """Marks a message skipped from processing"""
 
     @abstractmethod
     def mark_in_progress_fail(self, message: dict) -> None:
