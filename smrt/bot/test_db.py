@@ -2,8 +2,8 @@
 import time
 import os
 import unittest
-import database
-import utils
+import smrt.db.database as database
+import smrt.utils.utils as utils
 
 class DatabaseTests(unittest.TestCase):
     """Test cases for db class"""

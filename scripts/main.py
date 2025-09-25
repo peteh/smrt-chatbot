@@ -3,19 +3,15 @@ import time
 import logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 from flask import Flask, request, jsonify
-
-from main_pipeline import MainPipeline
-from senate_stocks import SenateStockNotification
-import pipeline
-import pipeline_all
-import pipeline_ha
-import questionbot
-import transcript
-import summary
 import yaml
-import texttoimage
-import database
 
+import smrt.db
+import smrt.bot.pipeline as pipeline
+import smrt.bot.messenger as messenger
+
+#from senate_stocks import SenateStockNotification
+
+import smrt.bot.tools
 
 schema = {
     "signal": {
@@ -150,23 +146,23 @@ class BotLoader():
         self._llama_cpp_server = server
         logging.info(f"Using llama.cpp server: {self._llama_cpp_server}")
         
-    def create(self, bot_name: str) -> questionbot.QuestionBotInterface:
+    def create(self, bot_name: str) -> smrt.bot.tools.QuestionBotInterface:
         """Factory function to create a question bot instance based on the bot name."""
         if bot_name.startswith("ollama:"):
             if self._ollama_server is None:
                 raise ValueError("Ollama server not set. Use \"ollama:\" configuration option to set it.")
             model_name = bot_name[bot_name.find(":")+1:]
             logging.debug(f"Creating QuestionBotOllama with model: {model_name}")
-            return questionbot.QuestionBotOllama(self._ollama_server, model_name)
+            return smrt.bot.tools.question_bot.QuestionBotOllama(self._ollama_server, model_name)
         elif bot_name.startswith("llama_cpp:"):
             if self._llama_cpp_server is None:
                 raise ValueError("Llama.cpp server not set. Use set_llama_cpp_server() to set it.")
             #model_name = bot_name[bot_name.find(":")+1:]
             #logging.debug(f"Creating QuestionBotLlamaCppServer with model: {model_name}")
-            return questionbot.QuestionBotLlamaCppServer(self._llama_cpp_server)
+            return smrt.bot.tools.question_bot.QuestionBotLlamaCppServer(self._llama_cpp_server)
         elif bot_name.startswith("openai:"):
             api_key = bot_name[bot_name.find(":"):]
-            return questionbot.QuestionBotOpenAIAPI(api_key)
+            return smrt.bot.tools.question_bot.QuestionBotOpenAIAPI(api_key)
         else:
             raise ValueError(f"Unknown bot name: {bot_name}")
 
@@ -241,7 +237,7 @@ def run():
     if not validate_config(configuration, schema):
         exit(1)
     
-    mainpipe = MainPipeline()
+    mainpipe = pipeline.MainPipeline()
     #database = db.Database("data")
     
     #questionbot_image = questionbot.QuestionBotOllama("llava")
@@ -291,10 +287,10 @@ def run():
         ha_chat_id_whitelist = config_ha.get("chat_id_whitelist", [])
         process_without_command = config_ha.get("process_without_command", False)
         
-        ha_text_pipeline = pipeline_ha.HomeassistantTextCommandPipeline(ha_token, ha_ws_api_url, \
+        ha_text_pipeline = pipeline.HomeassistantTextCommandPipeline(ha_token, ha_ws_api_url, \
             chat_id_whitelist=ha_chat_id_whitelist, process_without_command=process_without_command)
-        ha_voice_pipeline = pipeline_ha.HomeassistantVoiceCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
-        ha_say_pipeline = pipeline_ha.HomeassistantSayCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
+        ha_voice_pipeline = pipeline.HomeassistantVoiceCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
+        ha_say_pipeline = pipeline.HomeassistantSayCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
         mainpipe.add_pipeline(ha_text_pipeline)
         mainpipe.add_pipeline(ha_voice_pipeline)
         mainpipe.add_pipeline(ha_say_pipeline)
@@ -305,13 +301,13 @@ def run():
         config_vt = configuration[CONFIG_VOICE_TRANSCRIPTION]
         vt_min_words_for_summary = config_vt.get("min_words_for_summary", 10)
         vt_chat_id_blacklist = config_vt.get("chat_id_blacklist", [])
-        vt_transcriber = transcript.FasterWhisperTranscript()
+        vt_transcriber = smrt.bot.tools.FasterWhisperTranscript()
         if "summary_bot" in config_vt:
             vt_summary_bot = bot_loader.create(config_vt["summary_bot"])
-            vt_summarizer = summary.QuestionBotSummary(vt_summary_bot)
+            vt_summarizer = smrt.bot.tools.QuestionBotSummary(vt_summary_bot)
         else:
             vt_summarizer = None
-        voice_pipeline = pipeline_all.VoiceMessagePipeline(vt_transcriber,
+        voice_pipeline = pipeline.VoiceMessagePipeline(vt_transcriber,
                                                     vt_summarizer,
                                                     vt_min_words_for_summary,
                                                     chat_id_blacklist=vt_chat_id_blacklist)
@@ -322,7 +318,7 @@ def run():
     if CONFIG_TINDER in configuration:
         config_tinder = configuration[CONFIG_TINDER]
         tinder_bot = bot_loader.create(config_tinder["tinder_bot"])
-        tinder_pipeline = pipeline_all.TinderPipeline(tinder_bot)
+        tinder_pipeline = pipeline.TinderPipeline(tinder_bot)
         mainpipe.add_pipeline(tinder_pipeline)
     
     # load pipeline for article summarization if configured
@@ -330,13 +326,14 @@ def run():
     if CONFIG_ARTICLE_SUMMARY in configuration:
         config_article_summary = configuration[CONFIG_ARTICLE_SUMMARY]
         article_summary_bot = bot_loader.create(config_article_summary["summary_bot"])
-        article_summarizer = summary.QuestionBotSummary(article_summary_bot)
-        article_summary_pipeline = pipeline_all.ArticleSummaryPipeline(article_summarizer)
+        article_summarizer = smrt.bot.tools.QuestionBotSummary(article_summary_bot)
+        article_summary_pipeline = pipeline.ArticleSummaryPipeline(article_summarizer)
         mainpipe.add_pipeline(article_summary_pipeline)
     
     # image generation
     CONFIG_IMAGEGEN = "image_generation"
     if CONFIG_IMAGEGEN in configuration:
+        import smrt.bot.tools.texttoimage as texttoimage
         config_imagegen = configuration[CONFIG_IMAGEGEN]
         imagegen_processors = []
         if "generator" in config_imagegen:
@@ -344,13 +341,13 @@ def run():
                 stable_horde_api_key = config_imagegen["generator"][config_imagegen["generator"].find(":")+1:]
                 imagegen_processors.append(texttoimage.StableHordeTextToImage(stable_horde_api_key))
                 fallback_image_processor = texttoimage.FallbackTextToImageProcessor(imagegen_processors)
-                mainpipe.add_pipeline(pipeline_all.ImagePromptPipeline(fallback_image_processor))
+                mainpipe.add_pipeline(pipeline.ImagePromptPipeline(fallback_image_processor))
             else:
                 raise ValueError(f"Unknown image generation processor: {config_imagegen['generator']}")
 
         if len(imagegen_processors) > 0:
             imagegen_api = texttoimage.FallbackTextToImageProcessor(imagegen_processors)
-            imagegen_pipeline = pipeline_all.ImageGenerationPipeline(imagegen_api)
+            imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
             mainpipe.add_pipeline(imagegen_pipeline)
     
     CONFIG_GALLERY = "gallery"
@@ -359,44 +356,41 @@ def run():
         port = configuration[CONFIG_GALLERY]["port"]
         
         #import galleryweb
-        import pipeline_gallery
-        gallery_db = pipeline_gallery.GalleryDatabase()
+        gallery_db = smrt.db.GalleryDatabase()
 
-        gallery_pipe = pipeline_gallery.GalleryPipeline(gallery_db, base_url)
+        gallery_pipe = pipeline.GalleryPipeline(gallery_db, base_url)
         mainpipe.add_pipeline(gallery_pipe)
 
     CONFIG_CHATID = "chatid"
     if CONFIG_CHATID in configuration:
-        chatid_pipeline = pipeline.ChatIdPipeline()
+        chatid_pipeline = smrt.bot.pipeline.ChatIdPipeline()
         mainpipe.add_pipeline(chatid_pipeline)
 
 
     # load all messengers
     CONFIG_SIGNAL = "signal"
     if CONFIG_SIGNAL in configuration:
-        import messenger_signal
         config_signal = configuration[CONFIG_SIGNAL]
-        signal_messenger = messenger_signal.SignalMessenger(config_signal["number"], config_signal["host"], int(config_signal["port"]))
+        signal_messenger = messenger.SignalMessenger(config_signal["number"], config_signal["host"], int(config_signal["port"]))
         message_server.add_messenger(signal_messenger)
-        signal_queue = messenger_signal.SignalMessageQueue(signal_messenger, mainpipe)
+        signal_queue = messenger.SignalMessageQueue(signal_messenger, mainpipe)
         signal_queue.run_async()
     
     CONFIG_TELEGRAM = "telegram"
     if CONFIG_TELEGRAM in configuration:
-        import messenger_telegram
         config_telegram = configuration[CONFIG_TELEGRAM]
-        telegram_messenger = messenger_telegram.TelegramMessenger(config_telegram["telegram_api_key"])
+        telegram_messenger = messenger.TelegramMessenger(config_telegram["telegram_api_key"])
         message_server.add_messenger(telegram_messenger)
-        telegram_queue = messenger_telegram.TelegramMessageQueue(telegram_messenger, mainpipe)
+        telegram_queue = messenger.TelegramMessageQueue(telegram_messenger, mainpipe)
         telegram_queue.run_async()
 
     CONFIG_WHATSAPP = "whatsapp"
     if CONFIG_WHATSAPP in configuration:
-        import messenger_whatsapp
+
         config_whatsapp = configuration[CONFIG_WHATSAPP]
-        whatsapp = messenger_whatsapp.Whatsapp(config_whatsapp["wppconnect_server"], "smrt", config_whatsapp["wppconnect_api_key"])
+        whatsapp = messenger.WhatsappMessenger(config_whatsapp["wppconnect_server"], "smrt", config_whatsapp["wppconnect_api_key"])
         message_server.add_messenger(whatsapp)
-        whatsapp_queue = messenger_whatsapp.WhatsappMessageQueue(whatsapp, mainpipe)
+        whatsapp_queue = messenger.WhatsappMessageQueue(whatsapp, mainpipe)
         whatsapp_queue.run_async()
 
         try:

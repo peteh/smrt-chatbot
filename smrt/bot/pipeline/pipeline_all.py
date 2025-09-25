@@ -7,19 +7,19 @@ from typing import List
 import tempfile
 import os
 
-from summary import SummaryInterface
-from transcript import TranscriptInterface
-from messenger import MessengerInterface
-from questionbot import QuestionBotInterface, QuestionBotImageInterface
-import texttoimage
-import utils
+from smrt.bot.tools.summary import SummaryInterface
+from smrt.bot.tools.transcript import TranscriptInterface
+from smrt.bot.messenger import MessengerInterface
+from smrt.bot.tools.question_bot import QuestionBotInterface, QuestionBotImageInterface
+import smrt.bot.tools.texttoimage as texttoimage
+import smrt.utils.utils as utils
 
 
 # article summary pipeline
 import trafilatura
-from database import Database
-from pipeline import PipelineInterface, PipelineHelper
-import youtubeextract
+from smrt.db.database import Database
+from smrt.bot.pipeline import PipelineInterface, PipelineHelper
+from smrt.bot.tools import YoutubeExtract
 
 
 class GrammarPipeline(PipelineInterface):
@@ -333,7 +333,7 @@ class ArticleSummaryPipeline(PipelineInterface):
         return summarized_text
 
     def _process_youtube(self, link):
-        processor = youtubeextract.YoutubeExtract(link)
+        processor = YoutubeExtract(link)
         text = processor.get_script()
         text_length = len(text)
         print(f"Length of youtube transcript: {text_length}")
@@ -354,7 +354,7 @@ class ArticleSummaryPipeline(PipelineInterface):
 
         try:
             for link in links:
-                if youtubeextract.YoutubeExtract.is_youtube_link(link):
+                if YoutubeExtract.is_youtube_link(link):
                     summarized_text = self._process_youtube(link)
                 else:
                     summarized_text = self._process_article(link)

@@ -9,10 +9,10 @@ import base64
 import requests
 import socketio
 
-from messenger import MessengerInterface
-from main_pipeline import MainPipeline
+from .messenger import MessengerInterface
+from .main_pipeline import MainPipeline
 
-class Whatsapp(MessengerInterface):
+class WhatsappMessenger(MessengerInterface):
     """Messenger implemenation based on wpp-server whatsapp"""
     REACT_HOURGLASS_HALF = "\u231b"
     REACT_HOURGLASS_FULL = "\u23f3"
@@ -245,7 +245,7 @@ class Whatsapp(MessengerInterface):
 
 class WhatsappMessageQueue():
 
-    def __init__(self, messenger_instance: Whatsapp, mainpipe: MainPipeline) -> None:
+    def __init__(self, messenger_instance: WhatsappMessenger, mainpipe: MainPipeline) -> None:
         self._messenger = messenger_instance
         self._mainpipe = mainpipe
         self._thread = None

@@ -1,7 +1,7 @@
 """Implemenations of text summarizers. """
 import logging
 from abc import ABC, abstractmethod
-from questionbot import QuestionBotInterface
+from smrt.bot.tools.question_bot import QuestionBotInterface
 
 
 class SummaryInterface(ABC):

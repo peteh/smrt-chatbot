@@ -3,7 +3,7 @@ import sqlite3
 import os
 import io
 import zipfile
-from database import Database
+from smrt.db.database import Database
 
 app = Flask(__name__)
 

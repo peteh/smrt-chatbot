@@ -1,6 +1,6 @@
 """Tests for QuestionBots. """
 import unittest
-import senate_stocks
+import smrt.bot.tools.senate_stocks as senate_stocks
 
 class SenateStockTests(unittest.TestCase):
 

@@ -1,12 +1,11 @@
 import logging
 import threading
-import messenger
-
-import pipeline
+from smrt.bot.messenger import MessengerInterface
+from smrt.bot.pipeline import PipelineInterface, HelpPipeline
 
 class MainPipeline():
     def __init__(self):
-        self._help_pipeline = pipeline.HelpPipeline()
+        self._help_pipeline = HelpPipeline()
         #self._talk_pipeline = pipeline.TalkPipeline(questionbot_mistral_nemo)
         self._self_pipelines = []
         self._pipelines = [#self._talk_pipeline,
@@ -14,18 +13,18 @@ class MainPipeline():
         #self._talk_pipeline.set_pipelines(self._pipelines)
         self._help_pipeline.set_pipelines(self._pipelines)
 
-    def add_pipeline(self, pipe: pipeline.PipelineInterface):
+    def add_pipeline(self, pipe: PipelineInterface):
         self._pipelines.append(pipe)
         #self._talk_pipeline.set_pipelines(self._pipelines)
         self._help_pipeline.set_pipelines(self._pipelines)
 
-    def add_self_pipeline(self, pipe: pipeline.PipelineInterface):
+    def add_self_pipeline(self, pipe: PipelineInterface):
         self._self_pipelines.append(pipe)
 
-    def process_pipe(self, pipe: pipeline.PipelineInterface, messenger_instance: messenger.MessengerInterface, message: dict):
+    def process_pipe(self, pipe: PipelineInterface, messenger_instance: MessengerInterface, message: dict):
         pipe.process(messenger_instance, message)
 
-    def process(self, messenger_instance: messenger.MessengerInterface, message: dict):
+    def process(self, messenger_instance: MessengerInterface, message: dict):
         if messenger_instance.is_self_message(message):
             for pipe in self._self_pipelines:
                 if pipe.matches(messenger_instance, message):

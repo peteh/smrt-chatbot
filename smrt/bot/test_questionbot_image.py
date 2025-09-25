@@ -1,12 +1,12 @@
 """Tests for QuestionBots. """
 import unittest
-import questionbot
+import smrt.bot.tools.question_bot as question_bot
 from decouple import config
 
 class QuestionBotTest(unittest.TestCase):
     """Test Cases for Questionbots"""
 
-    def _test_questionbot(self, question_bot: questionbot.QuestionBotInterface):
+    def _test_questionbot(self, question_bot: question_bot.QuestionBotInterface):
         # arrange
         prompt = "What make is the car in the image off? "
 
@@ -21,7 +21,7 @@ class QuestionBotTest(unittest.TestCase):
     
     def test_ollama(self):
         # arrange
-        question_bot = questionbot.QuestionBotOllama("llava")
+        question_bot = question_bot.QuestionBotOllama("llava")
 
         # act, assert
         self._test_questionbot(question_bot)

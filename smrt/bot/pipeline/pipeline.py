@@ -9,11 +9,7 @@ import os
 
 from abc import ABC, abstractmethod
 
-from messenger import MessengerInterface
-
-
-
-
+from smrt.bot.messenger import MessengerInterface
 
 class PipelineInterface(ABC):
     """Generic pipeline interface to process messages. """

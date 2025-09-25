@@ -8,6 +8,17 @@
             "program": "${file}",
             "cwd": "${fileDirname}",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Run Bot Script",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/main.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         }
     ]
 }

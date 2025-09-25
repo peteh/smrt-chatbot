@@ -1,15 +1,15 @@
 """Tests for QuestionBots. """
 import unittest
-import questionbot
-import summary
+import smrt.bot.tools.question_bot as question_bot
+import smrt.bot.tools.summary as summary
 from decouple import config
 
 class QuestionBotTest(unittest.TestCase):
     """Test Cases for Questionbots"""
 
-    def _test_questionbot(self, question_bot: questionbot.QuestionBotInterface):
+    def _test_questionbot(self, question_bot: question_bot.QuestionBotInterface):
         # arrange
-        summary_bot = questionbot.QuestionBotSolar()
+        summary_bot = question_bot.QuestionBotSolar()
         text = """Also ich habe gestern Alex getroffen. Zwickstraße 30. Also in Lippenhausen will er komplett 30
 Abzonen machen. Also von unten, von Tischnass bis hoch zu uns oder durchs ganze Kaffee eigentlich.
 Aber das kann er halt nur machen, weil es halt nur gemeine Straße ist. Das in Hammersheim war
@@ -38,21 +38,21 @@ muss man es im Kreis beantragen."""
 
     def test_openai_api(self):
         # arrange
-        question_bot = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
+        question_bot = question_bot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
 
         # act, assert
         self._test_questionbot(question_bot)
     
     def test_binggppt(self):
         # arrange
-        question_bot = questionbot.QuestionBotBingGPT()
+        question_bot = question_bot.QuestionBotBingGPT()
 
         # act, assert
         self._test_questionbot(question_bot)
     
     def test_ollama(self):
         # arrange
-        question_bot = questionbot.QuestionBotOllama()
+        question_bot = question_bot.QuestionBotOllama()
 
         # act, assert
         self._test_questionbot(question_bot)
@@ -60,22 +60,22 @@ muss man es im Kreis beantragen."""
     def test_fallback_questionbot(self):
         # TODO: use simpler mocks for this
         # arrange
-        class ExceptionQuestionBot(questionbot.QuestionBotInterface):
+        class ExceptionQuestionBot(question_bot.QuestionBotInterface):
             def answer(self, prompt: str):
                 raise Exception("Epic Fail")
 
-        class NoneQuestionBot(questionbot.QuestionBotInterface):
+        class NoneQuestionBot(question_bot.QuestionBotInterface):
             def answer(self, prompt: str):
                 return None
 
-        class GoodQuestionBot(questionbot.QuestionBotInterface):
+        class GoodQuestionBot(question_bot.QuestionBotInterface):
             def answer(self, prompt: str):
                 return {
                     "text": prompt,
                     "cost": 0
                 }
         bots = [ExceptionQuestionBot(), NoneQuestionBot(), GoodQuestionBot()]
-        question_bot = questionbot.FallbackQuestionbot(bots)
+        question_bot = question_bot.FallbackQuestionbot(bots)
 
         # act
         answer = question_bot.answer("yolo")

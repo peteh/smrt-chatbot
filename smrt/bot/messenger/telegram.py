@@ -3,8 +3,8 @@ import threading
 import telebot
 import tempfile
 from typing import override
-from messenger import MessengerInterface
-from main_pipeline import MainPipeline
+from .messenger import MessengerInterface
+from smrt.bot import MainPipeline
 
 class TelegramMessenger(MessengerInterface):
     """Messenger implemention based on telebot api"""

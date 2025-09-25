@@ -1,7 +1,7 @@
 """Implemenations of a pipeline for processing text to speech. """
 import logging
 from pipeline import PipelineInterface, PipelineHelper
-import utils
+import smrt.utils.utils as utils
 
 # text to speech pipeline standard imports
 import tempfile
