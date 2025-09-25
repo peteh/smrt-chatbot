@@ -3,6 +3,7 @@ import sqlite3
 import os
 import io
 import zipfile
+from database import Database
 
 app = Flask(__name__)
 
@@ -84,3 +85,26 @@ def download_images(group_id):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
+
+class MyFlaskApp:
+    def __init__(self):
+        self.app = Flask(__name__)
+        self._register_routes()
+
+    def _register_routes(self):
+        @self.app.route("/")
+        def home():
+            return jsonify({"message": "Hello, World!"})
+
+        @self.app.route("/hello/<name>")
+        def hello(name):
+            return jsonify({"message": f"Hello, {name}!"})
+
+    def run(self, **kwargs):
+        self.app.run(**kwargs)
+
+
+if __name__ == "__main__":
+    app = MyFlaskApp()
+    app.run(debug=True)
