@@ -8,6 +8,7 @@ import yaml
 import smrt.db
 import smrt.bot.pipeline as pipeline
 import smrt.bot.messenger as messenger
+import smrt.bot.messagequeue as messagequeue
 
 #from senate_stocks import SenateStockNotification
 
@@ -70,6 +71,12 @@ schema = {
         "schema": {
             "summary_bot": {"type": "string", "required": True}
         },
+        "required": False
+    },
+    "text_to_speech": {
+        "type": "dict",
+        "schema": {},
+        "nullable": True,  # Accepts `null` or empty dict as valid
         "required": False
     },
     "tinder": {
@@ -244,7 +251,6 @@ def run():
     #image_prompt_pipeline = pipeline.ImagePromptPipeline(questionbot_image)
     #questionbot_openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
     #gpt_pipeline = pipeline.GptPipeline(questionbot_openai)
-    #tts_pipeline = pipeline_tts.TextToSpeechPipeline()
     #grammar_pipeline = pipeline.GrammarPipeline(question_bot)
     
     # image generation
@@ -313,6 +319,11 @@ def run():
                                                     chat_id_blacklist=vt_chat_id_blacklist)
         mainpipe.add_pipeline(voice_pipeline)
 
+    CONFIG_TTS = "text_to_speech"
+    if CONFIG_TTS in configuration:
+        tts_pipeline = pipeline.TextToSpeechPipeline()
+        mainpipe.add_pipeline(tts_pipeline)
+    
     # load tinder pipeline if configured
     CONFIG_TINDER = "tinder"
     if CONFIG_TINDER in configuration:
@@ -373,7 +384,7 @@ def run():
         config_signal = configuration[CONFIG_SIGNAL]
         signal_messenger = messenger.SignalMessenger(config_signal["number"], config_signal["host"], int(config_signal["port"]))
         message_server.add_messenger(signal_messenger)
-        signal_queue = messenger.SignalMessageQueue(signal_messenger, mainpipe)
+        signal_queue = messagequeue.SignalMessageQueue(signal_messenger, mainpipe)
         signal_queue.run_async()
     
     CONFIG_TELEGRAM = "telegram"
@@ -381,7 +392,7 @@ def run():
         config_telegram = configuration[CONFIG_TELEGRAM]
         telegram_messenger = messenger.TelegramMessenger(config_telegram["telegram_api_key"])
         message_server.add_messenger(telegram_messenger)
-        telegram_queue = messenger.TelegramMessageQueue(telegram_messenger, mainpipe)
+        telegram_queue = messagequeue.TelegramMessageQueue(telegram_messenger, mainpipe)
         telegram_queue.run_async()
 
     CONFIG_WHATSAPP = "whatsapp"
@@ -390,7 +401,7 @@ def run():
         config_whatsapp = configuration[CONFIG_WHATSAPP]
         whatsapp = messenger.WhatsappMessenger(config_whatsapp["wppconnect_server"], "smrt", config_whatsapp["wppconnect_api_key"])
         message_server.add_messenger(whatsapp)
-        whatsapp_queue = messenger.WhatsappMessageQueue(whatsapp, mainpipe)
+        whatsapp_queue = messagequeue.WhatsappMessageQueue(whatsapp, mainpipe)
         whatsapp_queue.run_async()
 
         try:

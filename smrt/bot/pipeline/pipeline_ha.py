@@ -13,8 +13,8 @@ import time
 import uuid
 import websockets.sync.client
 
-from pipeline import PipelineInterface, PipelineHelper
-from messenger import MessengerInterface
+from smrt.bot.pipeline import PipelineInterface, PipelineHelper
+from smrt.bot.messenger import MessengerInterface
 
 
 class AbstractHomeassistantPipeline(PipelineInterface):
@@ -24,11 +24,11 @@ class AbstractHomeassistantPipeline(PipelineInterface):
         self._ha_ws_api_url = ha_ws_api_url
         self._chat_id_whitelist = chat_id_whitelist
         self._root_uuid = uuid.UUID("BEEEEEEF-DEAD-DEAD-DEAD-BEEEEEEEEEEF")
-    
+
     def _get_chat_id_whitelist(self) -> typing.List[str]:
         """Get the list of chat IDs that are allowed to use this pipeline."""
         return self._chat_id_whitelist
-    
+
     def _get_uuid_from_chat_id(self, chat_id: str) -> uuid.UUID:
         return uuid.uuid5(namespace=self._root_uuid, name=chat_id)
 
@@ -37,7 +37,7 @@ class AbstractHomeassistantPipeline(PipelineInterface):
 
     def process(self, messenger: MessengerInterface, message: dict):
         raise NotImplementedError("Subclasses should implement this method.")
-    
+
     def get_help_text(self) -> str:
         raise NotImplementedError("Subclasses should implement this method.")
 
@@ -135,7 +135,7 @@ class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
             responst_text = self.process_text_command(ha_command, str(conversation_id))
             messenger.reply_message(message, responst_text)
             messenger.mark_in_progress_done(message)
-                
+       
         except Exception as ex:
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
             messenger.mark_in_progress_fail(message)

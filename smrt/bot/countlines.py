@@ -32,4 +32,4 @@ def count_lines(start, lines=0, header=True, begin_start=None):
             lines = count_lines(thing, lines, header=False, begin_start=start)
 
     return lines
-print(count_lines("./app/"))
+print(count_lines("./smrt/"))

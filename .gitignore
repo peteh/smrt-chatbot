@@ -1,11 +1,7 @@
-app/.env
-app/.venv
+.env
+.venv
 .venv
 *.pyc
-app/cookie.json
-cookie.json
-app/cookie_bard.json
-cookie_bard.json
 app/models
 models/*
 docker-compose.override.yml
@@ -15,3 +11,4 @@ out.ogg
 smrt_config
 config.yml
 test_message.sh
+storage/gallery/*

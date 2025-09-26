@@ -1,6 +1,5 @@
 """A database implementation to store and retrieve messages. """
 import time
-import os
 import typing
 import sqlite3
 import threading

@@ -48,7 +48,7 @@ class XttsModel(TextToSpeechInterface):
             self._model.cuda()
         logging.info("Model Loaded!")
     
-    def tts(self, text: str, output_wav_file : str, language : str = None) -> bool:
+    def tts(self, text: str, output_wav_file : str, language : str = None) -> None:
         gpt_cond_latent, speaker_embedding = self._model.get_conditioning_latents(audio_path=f"{self._model_path}/{self._reference_wav}", 
                                                                                   gpt_cond_len=self._model.config.gpt_cond_len, 
                                                                                   max_ref_length=self._model.config.max_ref_len, 

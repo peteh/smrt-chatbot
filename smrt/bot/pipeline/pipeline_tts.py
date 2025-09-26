@@ -1,42 +1,34 @@
 """Implemenations of a pipeline for processing text to speech. """
 import logging
-from pipeline import PipelineInterface, PipelineHelper
-import smrt.utils.utils as utils
-
-# text to speech pipeline standard imports
 import tempfile
 import os
-import subprocess
 
-from texttospeech import XttsModel, ThorstenTtsVoice, TextToSpeechInterface
-from messenger import MessengerInterface
+from smrt.bot.pipeline import PipelineInterface, PipelineHelper
+import smrt.utils.utils as utils
+
+from smrt.bot.tools.texttospeech import XttsModel, ThorstenTtsVoice
+from smrt.bot.messenger import MessengerInterface
 
 
 class TextToSpeechPipeline(PipelineInterface):
     """Pipe to generate a voice messages based on input text. """
     TTS_COMMAND = "tts"
-    ARNY_COMMAND = "arny"
-    ARNYDE_COMMAND = "arnyde"
-    ARNY2_COMMAND = "arny2"
-    ARNY2DE_COMMAND = "arny2de"
-    
-    TTSMAX_COMMAND = "ttsmax"
-    TTSMAXDE_COMMAND = "ttsmaxde"
 
     def __init__(self):
         self._tts_thorsten = None
         self._model_path = f"{utils.storage_path()}/custom_models/"
         self._models = {}
-        
+
         subdirectories = [d[5:] for d in os.listdir(self._model_path) if os.path.isdir(os.path.join(self._model_path, d)) and d.startswith("xtts_")]
         for subdir in subdirectories:
+            logging.info(f"Found xtts model: {subdir}")
             self._models[subdir] = None
-        
+
         self._commands = [self.TTS_COMMAND]
         for model in self._models.keys():
             self._commands.append(f"tts_{model}")
             self._commands.append(f"tts_{model}_de")
-    
+
     def get_model_name(self, command : str):
         if command.startswith("tts_"):
             model = command[4:]
@@ -46,13 +38,12 @@ class TextToSpeechPipeline(PipelineInterface):
                 model = model[:-3]
             return (model, language)
         return (None, None)
-    
+
     def get_model(self, model_name):
         # lazy loading
-        if self._models[model_name] is None: 
+        if self._models[model_name] is None:
             self._models[model_name] = XttsModel(f"{utils.storage_path()}/custom_models/xtts_{model_name}")
         return self._models[model_name]
-        
 
     def _get_tts_thorsten(self):
         # lazy loading
@@ -63,7 +54,6 @@ class TextToSpeechPipeline(PipelineInterface):
     def matches(self, messenger: MessengerInterface, message: dict):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands
-        
 
     def process(self, messenger: MessengerInterface, message: dict):
         (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))

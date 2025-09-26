@@ -1,7 +1,7 @@
 import logging
 import threading
 from smrt.bot.messenger import MessengerInterface
-from smrt.bot.pipeline import PipelineInterface, HelpPipeline
+from .pipeline import PipelineInterface, HelpPipeline
 
 class MainPipeline():
     def __init__(self):

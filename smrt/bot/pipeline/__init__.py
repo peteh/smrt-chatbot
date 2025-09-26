@@ -2,8 +2,8 @@ from .main_pipeline import MainPipeline
 from .pipeline_gallery import GalleryPipeline
 from .pipeline import ChatIdPipeline, MarkSeenPipeline, HelpPipeline, PipelineInterface, PipelineHelper
 from .pipeline_ha import HomeassistantSayCommandPipeline, HomeassistantTextCommandPipeline, HomeassistantVoiceCommandPipeline
-from .pipeline_all import VoiceMessagePipeline, GrammarPipeline, ArticleSummaryPipeline, ImagePromptPipeline, ImageGenerationPipeline
-
+from .pipeline_all import VoiceMessagePipeline, GrammarPipeline, ArticleSummaryPipeline, ImagePromptPipeline, ImageGenerationPipeline, TinderPipeline
+from .pipeline_tts import TextToSpeechPipeline
 
 __all__ = [
     "MainPipeline",
@@ -20,5 +20,7 @@ __all__ = [
     "GrammarPipeline",
     "ArticleSummaryPipeline",
     "ImagePromptPipeline",
-    "ImageGenerationPipeline"
+    "ImageGenerationPipeline",
+    "TinderPipeline",
+    "TextToSpeechPipeline"
 ]

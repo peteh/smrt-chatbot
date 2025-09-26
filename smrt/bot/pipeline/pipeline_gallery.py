@@ -11,9 +11,6 @@ import smrt.utils.utils as utils
 from smrt.bot.messenger import MessengerInterface
 
 from .pipeline import PipelineInterface, PipelineHelper
-
-
-
 class GalleryPipeline(PipelineInterface):
     """Pipe to store images in a gallery from group chats. """
     GALLERY_COMMAND = "gallery"
@@ -47,7 +44,7 @@ class GalleryPipeline(PipelineInterface):
             str: _description_
         """
         file_uuid = str(uuid.uuid4())
-        # TODO: proper storage handling
+
         image_filename = utils.storage_path() + f"/gallery/{file_uuid}.blob"
         thumb_filename = utils.storage_path() + f"/gallery/{file_uuid}_thumb.png"
         # write binary to file: 

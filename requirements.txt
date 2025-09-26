@@ -7,7 +7,11 @@ flask
 faster_whisper
 trafilatura
 youtube-transcript-api
-#coqui-tts
+# tts stuff
+coqui-tts
+spacy
+#deepspeed
+
 websockets
 
 # wppconnect events api (for whatsapp)
