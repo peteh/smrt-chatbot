@@ -50,7 +50,8 @@ class YoutubeExtract():
             str: script of the youtube video. 
         """
         video_id = self._extract_youtube_video_id(self._link)
-        transcript = yt.YouTubeTranscriptApi().list(video_id).find_transcript(['en', 'de'])
+        transcript = yt.YouTubeTranscriptApi().list(video_id).find_transcript(['en', 'de']).fetch()
+        print(transcript)
         text_formatter = ytformatters.TextFormatter()
 
         text = text_formatter.format_transcript(transcript)
