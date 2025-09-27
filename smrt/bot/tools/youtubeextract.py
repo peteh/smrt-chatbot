@@ -9,7 +9,7 @@ class YoutubeExtract():
         self._link = link
 
     @staticmethod
-    def _extract_youtube_video_id(link):
+    def _extract_youtube_video_id(link) -> str | None:
         """
         Examples:
         - http://youtu.be/SA2iWivDJiE
@@ -50,7 +50,7 @@ class YoutubeExtract():
             str: script of the youtube video. 
         """
         video_id = self._extract_youtube_video_id(self._link)
-        transcript = yt.YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'de'])
+        transcript = yt.YouTubeTranscriptApi().list(video_id).find_transcript(['en', 'de'])
         text_formatter = ytformatters.TextFormatter()
 
         text = text_formatter.format_transcript(transcript)
