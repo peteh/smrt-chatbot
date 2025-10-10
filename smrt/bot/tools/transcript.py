@@ -73,29 +73,28 @@ class WhisperTranscript(TranscriptInterface):
 
 class FasterWhisperTranscript(TranscriptInterface):
     """Implementation based on faster_whisper python. """
-    def __init__(self, model = "large-v3", beam_size = 5, threads = 8):
+    def __init__(self, model_name = "large-v3", beam_size = 5, threads = 8):
         self._beam_size = beam_size
         self._threads = threads
-        self._model = model
-
-    def transcribe(self, audio_data):
-        model = faster_whisper.WhisperModel(self._model,
+        self._model_name = model_name
+        self._model = faster_whisper.WhisperModel(self._model,
                                             device="cpu",
                                             compute_type="int8",
                                             cpu_threads = self._threads)
 
+    def transcribe(self, audio_data):
         audio_reader = io.BytesIO(audio_data)
         # or run on GPU with INT8
         # model = WhisperModel(model_size, device="cuda", compute_type="int8_float16")
         # or run on CPU with INT8
         # model = WhisperModel(model_size, device="cpu", compute_type="int8")
 
-        segments, info = model.transcribe(audio_reader, beam_size=self._beam_size)
+        segments, info = self._model.transcribe(audio_reader, beam_size=self._beam_size)
         supported_languages = ['en', 'de', 'es', 'fr']
         if info.language not in supported_languages:
             print(f"Warning: language detected as '{info.language}', therefore we redo as 'en'")
             audio_reader.seek(0)
-            segments, info = model.transcribe(audio_reader, language='en', beam_size=5)
+            segments, info = self._model.transcribe(audio_reader, language='en', beam_size=5)
         audio_reader.close()
         duration = 0.
         text = ""
