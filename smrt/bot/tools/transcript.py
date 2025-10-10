@@ -88,13 +88,13 @@ class FasterWhisperTranscript(TranscriptInterface):
         # model = WhisperModel(model_size, device="cuda", compute_type="int8_float16")
         # or run on CPU with INT8
         # model = WhisperModel(model_size, device="cpu", compute_type="int8")
-
-        segments, info = self._model.transcribe(audio_reader, beam_size=self._beam_size)
+        vad = True
+        segments, info = self._model.transcribe(audio_reader, beam_size=self._beam_size, vad_filter=vad)
         supported_languages = ['en', 'de', 'es', 'fr']
         if info.language not in supported_languages:
             print(f"Warning: language detected as '{info.language}', therefore we redo as 'en'")
             audio_reader.seek(0)
-            segments, info = self._model.transcribe(audio_reader, language='en', beam_size=5)
+            segments, info = self._model.transcribe(audio_reader, language='en', beam_size=5, vad_filter=vad)
         audio_reader.close()
         duration = 0.
         text = ""
