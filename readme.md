@@ -117,6 +117,23 @@ homeassistant:
   process_without_command: true # optional, default = false if true, will process any text command without the #ha prefix
 ```
 
+### Gaudeam Integration
+
+Gaudeam.de is a platform for clubs. The integration allows to fetch some information. 
+
+Available commands:
+
+* `#gaubday` gets a list of members that have birthday today
+
+```yml
+gaudeam:
+  - gaudeam_session: "xxx"
+    chat_id_whitelist: [
+      "signal://XXXX", # Signal Group
+      "whatsapp://123456@g.us" # Whatsapp group
+    ]
+```
+
 ### Voice Message Processing
 
 The bot can also translate voice messages using whisper.

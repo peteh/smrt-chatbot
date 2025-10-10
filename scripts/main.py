@@ -124,6 +124,21 @@ schema = {
             "port": {"type": "integer", "required": True}
         },
         "required": False
+    },
+    "gaudeam": {
+        "type": "list",
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "gaudeam_session": {"type": "string", "required": True},
+                "chat_id_whitelist": {
+                    "type": "list",
+                    "schema": {"type": "string"},
+                    "required": True
+                }
+            }
+        },
+        "required": False
     }
 }
 
@@ -300,6 +315,16 @@ def run():
         mainpipe.add_pipeline(ha_text_pipeline)
         mainpipe.add_pipeline(ha_voice_pipeline)
         mainpipe.add_pipeline(ha_say_pipeline)
+    
+    # gaudeam integration
+    CONFIG_GAUDEAM = "gaudeam"
+    if CONFIG_GAUDEAM in configuration:
+        gaudeam_configs = configuration[CONFIG_GAUDEAM]
+        for gaudeam_config in gaudeam_configs:
+            gaudeam_session = gaudeam_config["gaudeam_session"]
+            chat_id_whitelist = gaudeam_config.get("chat_id_whitelist", [])
+            gaudeam_pipeline = pipeline.GaudeamPipeline(gaudeam_session, chat_id_whitelist)
+            mainpipe.add_pipeline(gaudeam_pipeline)
 
     # voice message transcription with whsisper
     CONFIG_VOICE_TRANSCRIPTION = "voice_transcription"

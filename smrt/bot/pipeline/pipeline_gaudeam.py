@@ -11,14 +11,13 @@ class GaudeamPipeline(PipelineInterface):
     """Pipe to handle ha commands in text. """
     BDAY_COMMAND = "gaubday"
 
-    def __init__(self, chat_id_whitelist: typing.List[str], gaudeam_session: str):
+    def __init__(self, gaudeam_session: str, chat_id_whitelist: typing.List[str]):
         self._chat_id_whitelist = chat_id_whitelist
         self._commands = [self.BDAY_COMMAND]
-        #self._gaudeam = Gaudeam(gaudeam_session)
-        self._gaudeam = Gaudeam("ILQ267KMHL8zp24alFYruFgrjLOKxXvcK9QxcMXPiMOnWuY312KIe%2FvKHWP8VpeXf9hI4sNMFU7LwLHwI%2BnnWHrtQLxbIXYhGnuTjQ9iT272KFmbKic8UmvPUo2eZBfspRrH6v2uIfoe005gqvSYyRCBi5CpciIw%2FEuL7ddk8oSj9m9hIA6F08V3gKxaplOG44ZtP4obIlA6y3X%2Fb7WPIVuSfJriCmn%2BJNh0LV3sLcQs3FkZTmsNoI9txkowq0hMARXGLYcUZXTLmFO%2FXJriuLZ99%2FjBgofoVT%2FQUx9qdz6iyRpd0bbkaqdeHPEdY9bWu8ijfojtmnE2B2EB3r5xGzTJ1HtaQFehEjQJf%2B5Wxk0yiaxX8c%2Bw%2BXsBFmbxihQaXArzHXH4RFweOoV%2BBVgbi4AKR0Z27HZMXx0hDbB1zzATBjSw7uQnrOEAh%2BRC9MabASFEpa3q6v47xHrpkxfsND0iPZisKP5nQ%2FPG7ReA1sS%2FlIj7IJwcz4iddx0i6d31LskjqpuI%2B0cgOe0cmJOkZZecGfXpc9zyZh1yLd%2FTg%2Fpwr2OZAMwkeg%3D%3D--NxmPa3MBR7gpA33O--NvT3FxNP7qWAmkvmDEOcig%3D%3D")
+        self._gaudeam = Gaudeam(gaudeam_session)
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        if messenger.get_chat_id(message) not in self._chat_id_whitelist():
+        if messenger.get_chat_id(message) not in self._chat_id_whitelist:
             return False
         message_text = messenger.get_message_text(message)
         if message_text is None:
