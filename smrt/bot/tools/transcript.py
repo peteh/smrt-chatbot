@@ -77,7 +77,7 @@ class FasterWhisperTranscript(TranscriptInterface):
         self._beam_size = beam_size
         self._threads = threads
         self._model_name = model_name
-        self._model = faster_whisper.WhisperModel(self._model,
+        self._model = faster_whisper.WhisperModel(self._model_name,
                                             device="cpu",
                                             compute_type="int8",
                                             cpu_threads = self._threads)
