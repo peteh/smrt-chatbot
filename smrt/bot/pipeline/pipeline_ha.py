@@ -62,7 +62,7 @@ class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
             message_text = messenger.get_message_text(message)
             return message_text is not None and len(messenger.get_message_text(message)) > 0
 
-        # we check if the mesage is a ha command
+        # we check if the message is a ha command
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands
 
