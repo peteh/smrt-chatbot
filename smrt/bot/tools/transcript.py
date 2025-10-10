@@ -73,7 +73,7 @@ class WhisperTranscript(TranscriptInterface):
 
 class FasterWhisperTranscript(TranscriptInterface):
     """Implementation based on faster_whisper python. """
-    def __init__(self, model_name = "large-v3", beam_size = 5, threads = 8):
+    def __init__(self, model_name = "large-v3-turbo", beam_size = 5, threads = 8):
         self._beam_size = beam_size
         self._threads = threads
         self._model_name = model_name
