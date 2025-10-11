@@ -177,7 +177,7 @@ class GaudeamBdayScheduledTask(scheduled.AbstractScheduledTask):
                     messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)
                     messenger.send_message(chat_id, text)
                 except Exception as ex:
-                    logging.error(f"Failed to send birthday message to {chat_id} via {messenger.get_name()}: {ex}", exc_info=True)
+                    logging.error(f"Failed to send birthday message to {chat_id} via: {ex}", exc_info=True)
         except Exception as ex:
             logging.error(f"Failed Gaudeam Scheduled Bday messages: {ex}", exc_info=True)
 
@@ -202,6 +202,6 @@ class GaudeamEventsScheduledTask(scheduled.AbstractScheduledTask):
                     messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)
                     messenger.send_message(chat_id, text)
                 except Exception as ex:
-                    logging.error(f"Failed to send events message to {chat_id} via {messenger.get_name()}: {ex}", exc_info=True)
+                    logging.error(f"Failed to send events message to {chat_id}: {ex}", exc_info=True)
         except Exception as ex:
             logging.error(f"Failed Gaudeam Scheduled Event messages: {ex}", exc_info=True)
