@@ -13,16 +13,16 @@ import time
 import uuid
 import websockets.sync.client
 
-from smrt.bot.pipeline import PipelineInterface, PipelineHelper
+from smrt.bot.pipeline import PipelineHelper, AbstractPipeline
 from smrt.bot.messenger import MessengerInterface
 
 
-class AbstractHomeassistantPipeline(PipelineInterface):
+class AbstractHomeassistantPipeline(AbstractPipeline):
     """Abstract base class for Homeassistant pipelines."""
     def __init__(self, ha_token: str, ha_ws_api_url: str, chat_id_whitelist: typing.List[str]):
+        super().__init__(chat_id_whitelist=chat_id_whitelist, chat_id_blacklist=None)
         self._ha_token = ha_token
         self._ha_ws_api_url = ha_ws_api_url
-        self._chat_id_whitelist = chat_id_whitelist
         self._root_uuid = uuid.UUID("BEEEEEEF-DEAD-DEAD-DEAD-BEEEEEEEEEEF")
 
     def _get_chat_id_whitelist(self) -> typing.List[str]:
@@ -51,8 +51,6 @@ class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
         self._process_without_command = process_without_command  # if true, will process any text command without the #ha prefix
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        if messenger.get_chat_id(message) not in self._get_chat_id_whitelist():
-            return False
         message_text = messenger.get_message_text(message)
         if message_text is None:
             return False
@@ -143,16 +141,16 @@ class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
     def get_help_text(self) -> str:
         # TODO: automatically tell which models we have
         return \
-"""*Text to Speech*
-_#ha text_ Sends a homeassistant command to homeassistant (You can also send voice messages with HA commands). """
+f"""*Homeassistant Commands*
+_#{self.HA_COMMAND} text_ Sends a homeassistant command to homeassistant (You can also send voice messages with HA commands). """
 
 class HomeassistantSayCommandPipeline(AbstractHomeassistantPipeline):
     """Pipe to handle ha commands in text. """
-    HA_COMMAND = "say"
+    HA_SAY_COMMAND = "say"
 
     def __init__(self, ha_token: str, ha_ws_api_url: str, chat_id_whitelist: typing.List[str]):
         super().__init__(ha_token, ha_ws_api_url, chat_id_whitelist)
-        self._commands = [self.HA_COMMAND]
+        self._commands = [self.HA_SAY_COMMAND]
 
 
     def matches(self, messenger: MessengerInterface, message: dict):
@@ -232,11 +230,11 @@ class HomeassistantSayCommandPipeline(AbstractHomeassistantPipeline):
     def get_help_text(self) -> str:
         # TODO: automatically tell which models we have
         return \
-"""*Text to Speech*
-_#say text_ Sends a message to homeassistant to be spoken by the voice assistant."""
+f"""*Text to Speech*
+_#{self.HA_SAY_COMMAND} text_ Sends a message to homeassistant to be spoken by the voice assistant."""
 
 class HomeassistantVoiceCommandPipeline(AbstractHomeassistantPipeline):
-    """Pipe to generate a voice messages based on audio input. """
+    """Pipe to process voice commands as Homeassistant commands. """
     def __init__(self, ha_token: str, ha_ws_api_url: str, chat_id_whitelist: typing.List[str]):
         super().__init__(ha_token, ha_ws_api_url, chat_id_whitelist)
 

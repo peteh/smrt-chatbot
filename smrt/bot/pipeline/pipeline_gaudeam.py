@@ -2,24 +2,23 @@
 import logging
 import typing
 import datetime
-from smrt.bot.pipeline import PipelineInterface, PipelineHelper
+from smrt.bot.pipeline import PipelineInterface, PipelineHelper, AbstractPipeline
 from smrt.bot.messenger import MessengerInterface, MessengerManager
 from smrt.bot import scheduled
 from smrt.libgaudeam import Gaudeam
 
 
-class GaudeamBdayPipeline(PipelineInterface):
+class GaudeamBdayPipeline(AbstractPipeline):
     """Pipe to handle ha commands in text. """
     BDAY_COMMAND = "gaubday"
 
     def __init__(self, gaudeam_session: str, chat_id_whitelist: typing.List[str]):
-        self._chat_id_whitelist = chat_id_whitelist
+        # can only be whitelisted chat ids
+        super().__init__(chat_id_whitelist, None)
         self._commands = [self.BDAY_COMMAND]
         self._gaudeam = Gaudeam(gaudeam_session)
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        if messenger.get_chat_id(message) not in self._chat_id_whitelist:
-            return False
         message_text = messenger.get_message_text(message)
         if message_text is None:
             return False
@@ -50,21 +49,19 @@ class GaudeamBdayPipeline(PipelineInterface):
                 return
     def get_help_text(self) -> str:
         return \
-"""*Gaudeam Birthdays*
-_#gaubday_ Sends birthdays of today. """
+f"""*Gaudeam Birthdays*
+_#{self.BDAY_COMMAND}_ Sends birthdays of today. """
 
-class GaudeamCalendarPipeline(PipelineInterface):
+class GaudeamCalendarPipeline(AbstractPipeline):
     """Pipe to handle ha commands in text. """
-    DATE_COMMAND = "gaudate"
+    DATE_COMMAND = "gauevents"
 
     def __init__(self, gaudeam_session: str, chat_id_whitelist: typing.List[str]):
-        self._chat_id_whitelist = chat_id_whitelist
+        super().__init__(chat_id_whitelist, None)
         self._commands = [self.DATE_COMMAND]
         self._gaudeam = Gaudeam(gaudeam_session)
 
     def matches(self, messenger: MessengerInterface, message: dict):
-        if messenger.get_chat_id(message) not in self._chat_id_whitelist:
-            return False
         message_text = messenger.get_message_text(message)
         if message_text is None:
             return False
@@ -95,8 +92,8 @@ class GaudeamCalendarPipeline(PipelineInterface):
                 return
     def get_help_text(self) -> str:
         return \
-"""*Gaudeam Event Dates*
-_#gaudate_ Sends a list of events coming up. """
+f"""*Gaudeam Event Dates*
+_#{self.DATE_COMMAND}_ Sends a list of events coming up. """
 
 class GaudeamUtils:
     @staticmethod

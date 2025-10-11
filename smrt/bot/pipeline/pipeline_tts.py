@@ -3,18 +3,19 @@ import logging
 import tempfile
 import os
 
-from smrt.bot.pipeline import PipelineInterface, PipelineHelper
+from smrt.bot.pipeline import PipelineInterface, PipelineHelper, AbstractPipeline
 import smrt.utils.utils as utils
 
 from smrt.bot.tools.texttospeech import XttsModel, ThorstenTtsVoice
 from smrt.bot.messenger import MessengerInterface
 
 
-class TextToSpeechPipeline(PipelineInterface):
+class TextToSpeechPipeline(AbstractPipeline):
     """Pipe to generate a voice messages based on input text. """
     TTS_COMMAND = "tts"
 
     def __init__(self):
+        super().__init__(None, None)
         self._tts_thorsten = None
         self._model_path = f"{utils.storage_path()}/custom_models/"
         self._models = {}

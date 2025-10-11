@@ -18,11 +18,11 @@ import smrt.utils.utils as utils
 # article summary pipeline
 import trafilatura
 from smrt.db.database import Database
-from smrt.bot.pipeline import PipelineInterface, PipelineHelper
+from smrt.bot.pipeline import PipelineInterface, PipelineHelper, AbstractPipeline
 from smrt.bot.tools import YoutubeExtract
 
 
-class GrammarPipeline(PipelineInterface):
+class GrammarPipeline(AbstractPipeline):
     """A pipeline that checks incoming messages for grammar 
     and spelling mistakes and fixes them. """
 
@@ -30,7 +30,7 @@ class GrammarPipeline(PipelineInterface):
     GRAMMATIK_COMMAND = "grammatik"
 
     def __init__(self, question_bot: QuestionBotInterface) -> None:
-        super().__init__()
+        super().__init__(None, None)
         self._question_bot = question_bot
 
     def matches(self, messenger: MessengerInterface, message: dict):
@@ -77,13 +77,13 @@ _#grammatik German Text_ corrects German language
 _#grammar English Text_ corrects English language"""
 
 
-class UndeletePipeline(PipelineInterface):
+class UndeletePipeline(AbstractPipeline):
     """A pipe that stores the last few messages and can recover deleted. """
     
     UNDELETE_COMMAND = "#undelete"
 
     def __init__(self) -> None:
-        pass
+        super().__init__(None, None)
 
     def matches(self, messenger: MessengerInterface, message: dict):
         if messenger.is_self_message(message):
@@ -105,22 +105,19 @@ class UndeletePipeline(PipelineInterface):
     def get_help_text(self) -> str:
         return ""
 
-class VoiceMessagePipeline(PipelineInterface):
+class VoiceMessagePipeline(AbstractPipeline):
     """A pipe that converts audio messages to text and summarizes them. """
     def __init__(self, transcriber: TranscriptInterface,
                  summarizer: SummaryInterface,
-                 min_words_for_summary: int, chat_id_blacklist: List[str] = None):
+                 min_words_for_summary: int, chat_id_whitelist: List[str] = None, chat_id_blacklist: List[str] = None):
+        super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._transcriber = transcriber
         self._summarizer = summarizer
         self._min_words_for_summary = min_words_for_summary
         self._store_files = False
-        self._chat_id_blacklist = chat_id_blacklist
-
 
     def matches(self, messenger: MessengerInterface, message: dict):
         if not messenger.has_audio_data(message):
-            return False
-        if self._chat_id_blacklist is not None and messenger.get_chat_id(message) in self._chat_id_blacklist:
             return False
         return True
 
@@ -181,7 +178,7 @@ class VoiceMessagePipeline(PipelineInterface):
 Forward voice messages to the bot to transcribe them. """
 
 # TODO split into message storage pipeline and command pipeline
-class GroupMessageQuestionPipeline(PipelineInterface):
+class GroupMessageQuestionPipeline(AbstractPipeline):
     """Allows to summarize and ask questions in a group conversation. """
     QUESTION_COMMAND = "#question"
     SUMMARY_COMMAND = "#summary"
@@ -189,6 +186,7 @@ class GroupMessageQuestionPipeline(PipelineInterface):
     def __init__(self, database: Database,
                  summarizer: SummaryInterface,
                  question_bot: QuestionBotInterface):
+        super().__init__(None, None)
         self._database = database
         self._summarizer = summarizer
         self._question_bot = question_bot
@@ -283,12 +281,13 @@ _#question Question?_ answers questions to the last messages in the group"""
 
 import requests
 import langid
-class ArticleSummaryPipeline(PipelineInterface):
+class URLSummaryPipeline(AbstractPipeline):
     """Summarizes an article or a youtube video. """
 
     MAX_TRANSCRIPT_LENGTH = 20000
 
     def __init__(self, summarizer: SummaryInterface):
+        super().__init__(None, None)
         self._summarizer = summarizer
         self._link_regex = re.compile(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)',
                                       re.DOTALL)
@@ -371,11 +370,12 @@ class ArticleSummaryPipeline(PipelineInterface):
 """*Article and Youtube Video Summary*
 Sending a link or youtube video to the bot will generate a summary"""
 
-class ImageGenerationPipeline(PipelineInterface):
+class ImageGenerationPipeline(AbstractPipeline):
     """Pipe to turn prompts into images. """
     IMAGE_COMMAND = "image"
 
     def __init__(self, image_api: texttoimage.ImagePromptInterface):
+        super().__init__(None, None)
         self._image_api = image_api
 
     def matches(self, messenger: MessengerInterface, message: dict):
@@ -409,11 +409,13 @@ class ImageGenerationPipeline(PipelineInterface):
 """*Image Generation*
 _#image prompt_ Generates images based on the given prompt"""
 
-class ImagePromptPipeline(PipelineInterface):
+class ImagePromptPipeline(AbstractPipeline):
+    
     """Pipe to turn prompts into images. """
     COMMAND = "llava"
 
     def __init__(self, image_api: QuestionBotImageInterface):
+        super().__init__(None, None)
         self._image_api = image_api
 
     def matches(self, messenger: MessengerInterface, message: dict):
@@ -448,12 +450,12 @@ class ImagePromptPipeline(PipelineInterface):
 """*Image Processing*
 _#llava prompt_ Answers question to a given image"""
 
-class TinderPipeline(PipelineInterface):
+class TinderPipeline(AbstractPipeline):
     """A pipeline to write answers to tinder messages. """
     TINDER_COMMAND = "tinder"
 
     def __init__(self, question_bot: QuestionBotInterface) -> None:
-        super().__init__()
+        super().__init__(None, None)
         self._question_bot = question_bot
 
     def matches(self, messenger: MessengerInterface, message: dict):
@@ -487,14 +489,15 @@ class TinderPipeline(PipelineInterface):
 
     def get_help_text(self) -> str:
         return \
-"""*Tinder Help*
-_#tinder[(Context)] message_ Proposes a response to a message from a girl. Additional context can be given to adapt the message. """
+f"""*Tinder Help*
+_#{self.TINDER_COMMAND}[(Context)] message_ Proposes a response to a message from a girl. Additional context can be given to adapt the message. """
 
 
 
-class TalkPipeline(PipelineInterface):
+class TalkPipeline(AbstractPipeline):
     
     def __init__(self, question_bot: QuestionBotInterface) -> None:
+        super().__init__(None, None)
         self._question_bot = question_bot
         self._pipelines = []
     
@@ -528,12 +531,12 @@ class TalkPipeline(PipelineInterface):
     def get_help_text(self) -> str:
         return None
 
-class GptPipeline(PipelineInterface):
+class GptPipeline(AbstractPipeline):
     """A pipeline to talk to gpt models. """
     GPT_COMMAND = "gpt"
 
     def __init__(self, question_bot: QuestionBotInterface) -> None:
-        super().__init__()
+        super().__init__(None, None)
         self._question_bot = question_bot
 
     def matches(self, messenger: MessengerInterface, message: dict):
@@ -559,6 +562,6 @@ class GptPipeline(PipelineInterface):
 
     def get_help_text(self) -> str:
         return \
-"""*ChatGPT*
-_#gpt [prompt]_ Allows you to talk to GPT, the bot does not have memory of previous messages though. """
+f"""*ChatGPT*
+_#{self.GPT_COMMAND} [prompt]_ Allows you to talk to GPT, the bot does not have memory of previous messages though. """
 

@@ -372,7 +372,7 @@ def run():
         config_article_summary = configuration[CONFIG_ARTICLE_SUMMARY]
         article_summary_bot = bot_loader.create(config_article_summary["summary_bot"])
         article_summarizer = smrt.bot.tools.QuestionBotSummary(article_summary_bot)
-        article_summary_pipeline = pipeline.ArticleSummaryPipeline(article_summarizer)
+        article_summary_pipeline = pipeline.URLSummaryPipeline(article_summarizer)
         mainpipe.add_pipeline(article_summary_pipeline)
     
     # image generation

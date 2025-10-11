@@ -27,14 +27,14 @@ class MainPipeline():
     def process(self, messenger_instance: MessengerInterface, message: dict):
         if messenger_instance.is_self_message(message):
             for pipe in self._self_pipelines:
-                if pipe.matches(messenger_instance, message):
+                if pipe.allowed_in_chat_id(messenger_instance, message) and pipe.matches(messenger_instance, message):
                     logging.debug(f"Self Pipe {type(pipe).__name__} matches, processing")
                     thread = threading.Thread(target=self.process_pipe, args=(pipe, messenger_instance, message))
                     thread.start()
             return
         
         for pipe in self._pipelines:
-            if pipe.matches(messenger_instance, message):
+            if pipe.allowed_in_chat_id(messenger_instance, message) and pipe.matches(messenger_instance, message):
                 logging.debug(f"Pipe {type(pipe).__name__} matches, processing")
                 thread = threading.Thread(target=self.process_pipe, args=(pipe, messenger_instance, message))
                 thread.start()

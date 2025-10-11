@@ -10,13 +10,13 @@ import smrt.utils.utils as utils
 
 from smrt.bot.messenger import MessengerInterface
 
-from .pipeline import PipelineInterface, PipelineHelper
-class GalleryPipeline(PipelineInterface):
+from .pipeline import PipelineHelper, AbstractPipeline
+class GalleryPipeline(AbstractPipeline):
     """Pipe to store images in a gallery from group chats. """
     GALLERY_COMMAND = "gallery"
 
     def __init__(self, gallery_db: GalleryDatabase, base_url: str):
-
+        super().__init__(None, None)
         self._commands = [self.GALLERY_COMMAND]
         self._gallery_db = gallery_db
         self._base_url = base_url
@@ -134,6 +134,6 @@ class GalleryPipeline(PipelineInterface):
     def get_help_text(self) -> str:
         # TODO: automatically tell which models we have
         return \
-"""*Gallery creation*
-_#gallery on/off_ Enables or disables the storage of images sent to the group in a gallery.
-_#gallery_ Shows if gallery is on or off and provides a link to the gallery."""
+f"""*Gallery creation*
+_#{self.GALLERY_COMMAND} on/off_ Enables or disables the storage of images sent to the group in a gallery.
+_#{self.GALLERY_COMMAND}_ Shows if gallery is on or off and provides a link to the gallery."""
