@@ -143,3 +143,18 @@ class MessengerInterface(ABC):
         Returns:
             Tuple[str, bytes]: mime type and binary data of the downloaded media
         """
+
+class MessengerManager():
+    def __init__(self):
+
+        self._messengers = {}
+
+    def add_messenger(self, messenger: MessengerInterface):
+        self._messengers[messenger.get_name()] = messenger
+    
+    def get_messenger_by_chatid(self, chat_id: str) -> MessengerInterface | None:
+        identifier = chat_id.split("://")[0]  # Extract the identifier from the chat_id
+        
+        if identifier in self._messengers:
+            return self._messengers[identifier]
+        return None

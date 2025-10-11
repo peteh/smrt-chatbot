@@ -1,6 +1,10 @@
 """Main application"""
 import time
 import logging
+import threading
+import schedule
+
+
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 from flask import Flask, request, jsonify
 import yaml
@@ -189,12 +193,12 @@ class BotLoader():
             raise ValueError(f"Unknown bot name: {bot_name}")
 
 class MessageServer:
-    def __init__(self, host='0.0.0.0', port=5000):
+    def __init__(self, messenger_manager: messenger.MessengerManager, host='0.0.0.0', port=5000):
         self.app = Flask(__name__)
         self.host = host
         self.port = port
         self._register_routes()
-        self._messengers = {}
+        self._messenger_manager = messenger_manager
         self.app.logger.setLevel(logging.INFO)
 
     def _register_routes(self):
@@ -213,11 +217,11 @@ class MessageServer:
             if not isinstance(chat_ids, list) or not isinstance(message, str):
                 return jsonify({'error': 'Invalid types: chatids must be a list, message must be a string'}), 400
 
-            print(f"Sending message '{message}' to chat IDs: {chat_ids}")
+            logging.debug(f"Sending message '{message}' to chat IDs: {chat_ids}")
             error=""
             sent_to = []
             for chat_id in chat_ids:
-                messenger = self._get_messenger_by_chatid(chat_id)
+                messenger = self._messenger_manager.get_messenger_by_chatid(chat_id)
                 if messenger:
                     try:
                         messenger.send_message(chat_id, message)
@@ -234,16 +238,6 @@ class MessageServer:
             if len(error) > 0:
                 return jsonify({'status': 'error', 'message': error, 'sent_to': sent_to}), 500
             return jsonify({'status': 'success', 'sent_to': sent_to}), 200
-
-    def add_messenger(self, messenger):
-        self._messengers[messenger.get_name()] = messenger
-    
-    def _get_messenger_by_chatid(self, chat_id: str):
-        identifier = chat_id.split("://")[0]  # Extract the identifier from the chat_id
-        
-        if identifier in self._messengers:
-            return self._messengers[identifier]
-        return None
     
     def run(self):
         self.app.run(host=self.host, port=self.port)
@@ -253,7 +247,8 @@ def run():
     configuration = yaml.safe_load(config_file)
     config_file.close()
     
-    message_server = MessageServer()
+    messenger_manager = messenger.MessengerManager()
+    message_server = MessageServer(messenger_manager)
     
 
     if not validate_config(configuration, schema):
@@ -327,6 +322,18 @@ def run():
             mainpipe.add_pipeline(gaudeam_pipeline)
             gaudeam_pipeline = pipeline.GaudeamCalendarPipeline(gaudeam_session, chat_id_whitelist)
             mainpipe.add_pipeline(gaudeam_pipeline)
+            
+            schedule_time = "9:00"
+            # schedule daily birthday notifications
+            bday_task = pipeline.GaudeamBdayScheduledTask(messenger_manager, chat_id_whitelist, gaudeam_session)
+            
+            schedule.every().day.at(schedule_time, "Europe/Berlin").do(bday_task.run)
+            logging.info(f"Scheduled Gaudeam birthday notifications at {schedule_time} daily.")
+            
+            # schedule event notifications every day
+            event_task = pipeline.GaudeamEventsScheduledTask(messenger_manager, chat_id_whitelist, gaudeam_session)
+            schedule.every().monday.at(schedule_time, "Europe/Berlin").do(event_task.run)
+            logging.info(f"Scheduled Gaudeam event notifications at {schedule_time} on mondays.")
 
     # voice message transcription with whsisper
     CONFIG_VOICE_TRANSCRIPTION = "voice_transcription"
@@ -410,7 +417,7 @@ def run():
     if CONFIG_SIGNAL in configuration:
         config_signal = configuration[CONFIG_SIGNAL]
         signal_messenger = messenger.SignalMessenger(config_signal["number"], config_signal["host"], int(config_signal["port"]))
-        message_server.add_messenger(signal_messenger)
+        messenger_manager.add_messenger(signal_messenger)
         signal_queue = messagequeue.SignalMessageQueue(signal_messenger, mainpipe)
         signal_queue.run_async()
     
@@ -418,7 +425,7 @@ def run():
     if CONFIG_TELEGRAM in configuration:
         config_telegram = configuration[CONFIG_TELEGRAM]
         telegram_messenger = messenger.TelegramMessenger(config_telegram["telegram_api_key"])
-        message_server.add_messenger(telegram_messenger)
+        messenger_manager.add_messenger(telegram_messenger)
         telegram_queue = messagequeue.TelegramMessageQueue(telegram_messenger, mainpipe)
         telegram_queue.run_async()
 
@@ -427,7 +434,7 @@ def run():
 
         config_whatsapp = configuration[CONFIG_WHATSAPP]
         whatsapp = messenger.WhatsappMessenger(config_whatsapp["wppconnect_server"], "smrt", config_whatsapp["wppconnect_api_key"])
-        message_server.add_messenger(whatsapp)
+        messenger_manager.add_messenger(whatsapp)
         whatsapp_queue = messagequeue.WhatsappMessageQueue(whatsapp, mainpipe)
         whatsapp_queue.run_async()
 
@@ -439,9 +446,34 @@ def run():
         #mainpipe.add_pipeline(stock_notifier)
         #stock_notifier.run_async()
 
-        
-    
+    stop_run_continuously = run_schedule_continuously()
     message_server.run()
 
+
+def run_schedule_continuously(interval=10):
+    """Continuously run, while executing pending jobs at each
+    elapsed time interval.
+    @return cease_continuous_run: threading. Event which can
+    be set to cease continuous run. Please note that it is
+    *intended behavior that run_continuously() does not run
+    missed jobs*. For example, if you've registered a job that
+    should run every minute and you set a continuous run
+    interval of one hour then your job won't be run 60 times
+    at each interval but only once.
+    """
+    cease_continuous_run = threading.Event()
+
+    class ScheduleThread(threading.Thread):
+        @classmethod
+        def run(cls):
+            while not cease_continuous_run.is_set():
+                schedule.run_pending()
+                time.sleep(interval)
+
+    continuous_thread = ScheduleThread()
+    continuous_thread.start()
+    return cease_continuous_run
+
 if __name__ == "__main__":
+    
     run()

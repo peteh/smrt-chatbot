@@ -12,6 +12,9 @@ coqui-tts
 spacy
 #deepspeed
 
+# scheduling recurring tasks
+schedule
+
 websockets
 
 # wppconnect events api (for whatsapp)
