@@ -323,7 +323,7 @@ def run():
             gaudeam_pipeline = pipeline.GaudeamCalendarPipeline(gaudeam_session, chat_id_whitelist)
             mainpipe.add_pipeline(gaudeam_pipeline)
             
-            schedule_time = "9:00"
+            schedule_time = "09:00"
             # schedule daily birthday notifications
             bday_task = pipeline.GaudeamBdayScheduledTask(messenger_manager, chat_id_whitelist, gaudeam_session)
             
