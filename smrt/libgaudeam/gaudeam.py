@@ -1,4 +1,5 @@
 import requests
+import logging
 import json
 import datetime
 
@@ -32,3 +33,13 @@ class Gaudeam:
             members.extend(response_members.json()["results"])
         return members
 
+    def calendar(self, start_date: datetime.date, end_date: datetime.date) -> list[dict]:
+        start_str = start_date.strftime("%Y-%m-%dT00:00:00Z")
+        end_str = end_date.strftime("%Y-%m-%dT00:00:00Z")
+        url = f"{self._url}/user_calendar.json?start={start_str}&end={end_str}&timeZone=UTC"
+        response = self._client.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logging.error(f"Error fetching calendar: {response.status_code}, {response.text}")
+            return []

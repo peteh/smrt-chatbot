@@ -323,7 +323,9 @@ def run():
         for gaudeam_config in gaudeam_configs:
             gaudeam_session = gaudeam_config["gaudeam_session"]
             chat_id_whitelist = gaudeam_config.get("chat_id_whitelist", [])
-            gaudeam_pipeline = pipeline.GaudeamPipeline(gaudeam_session, chat_id_whitelist)
+            gaudeam_pipeline = pipeline.GaudeamBdayPipeline(gaudeam_session, chat_id_whitelist)
+            mainpipe.add_pipeline(gaudeam_pipeline)
+            gaudeam_pipeline = pipeline.GaudeamCalendarPipeline(gaudeam_session, chat_id_whitelist)
             mainpipe.add_pipeline(gaudeam_pipeline)
 
     # voice message transcription with whsisper
