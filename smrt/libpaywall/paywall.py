@@ -10,7 +10,7 @@ class PageUnlocker:
 
         self._markers= {
             "spiegel.de": "paywall-purchase-button",
-            "faz.net": 'class="js-ctn-PaywallInfo', 
+            "faz.net": '<div class="wall__wrapper">', 
             "bild.de": '<div class="offer-module">'
         }
         

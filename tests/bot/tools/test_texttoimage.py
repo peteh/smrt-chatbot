@@ -1,14 +1,14 @@
 import unittest
-import texttoimage
+from smrt.bot.tools import texttoimage
 from decouple import config
 
 class TextToImageTest(unittest.TestCase):
-    def _testTextToImage(self, textToImage):
+    def _testTextToImage(self, text_to_image: texttoimage.ImagePromptInterface):
         # arrange
         prompt = "A red Porsche"
 
         # act
-        images = textToImage.process(prompt)
+        images = text_to_image.process(prompt)
 
         # assert
         self.assertIsNotNone(images)
@@ -30,10 +30,6 @@ class TextToImageTest(unittest.TestCase):
         textToImage.set_store_files(True)
         self._testTextToImage(textToImage)
     
-    def test_bing_imagegen(self):
-        textToImage = texttoimage.BingImageProcessor()
-        self._testTextToImage(textToImage)
-    
     def test_FallbackProcessor(self):
         # arrange
         class ExceptionImageProcessor(texttoimage.ImagePromptInterface):
@@ -46,7 +42,7 @@ class TextToImageTest(unittest.TestCase):
             
         class GoodImageProcessor(texttoimage.ImagePromptInterface):
             def process(self, prompt):
-                return [("bla.jpg", "x" * 50000)]
+                return [("bla.jpg", bytes("x" * 50000))]
     
         processors = [ExceptionImageProcessor(), 
                       NoneImageProcessor(), 

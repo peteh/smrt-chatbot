@@ -4,21 +4,22 @@ import threading
 import logging
 import requests
 import requests_cache
-import messenger
+from smrt.bot import messenger, pipeline
 import yfinance as yf
-import pipeline
+
 
 logging.basicConfig(level=logging.INFO)
 
 
 class StockInfo:
     def __init__(self) -> None:
-        self._session = requests_cache.CachedSession("/tmp/yfinance.cache")
-        self._session.headers['User-agent'] = 'my-program/1.0'
+        #self._session = requests_cache.CachedSession("/tmp/yfinance.cache")
+        #self._session.headers['User-agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
+        pass
     
     def expand_symbol(self, symbol):
         try:
-            ticker = yf.Ticker(symbol, session=self._session)
+            ticker = yf.Ticker(symbol)
             print(ticker.info)
             expanded = f"{symbol} ({ticker.info['shortName']}, {ticker.info['industry']})"
             return expanded

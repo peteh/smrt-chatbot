@@ -1,5 +1,5 @@
 import unittest
-import paywall
+import smrt.libpaywall.paywall as paywall
 
 class PaywallTests(unittest.TestCase):
     def _test_is_paywalled(self, link: str):
@@ -25,7 +25,7 @@ class PaywallTests(unittest.TestCase):
     def test_paywalled(self):
         self._test_is_paywalled("https://www.faz.net/aktuell/finanzen/meine-finanzen/mieten-und-wohnen/baukredit-hauskaeufer-nutzt-die-verrueckten-zinsen-18968253.html")
         self._test_is_paywalled("https://www.spiegel.de/kultur/tv/hart-aber-fair-ausgabe-zu-rammstein-protokoll-einer-entgleisung-a-722df077-a4a3-455f-9094-a23d0edf48ce")
-        self._test_is_paywalled("https://www.bild.de/bild-plus/gewinnspiele/bildplus-aktion/bild-couponaktion-freier-eintritt-in-den-serengeti-park-83783612.bild.html")
+        self._test_is_paywalled("https://www.bild.de/specials/premium-event/fame-fighting-noch-heute-den-fight-pass-sichern-67f3e2ac34eeb05559befdb3")
         
     def test_not_paywalled(self):
         self._test_is_not_paywalled("https://www.faz.net/aktuell/politik/inland/faz-sommerempfang-2023-im-berliner-borchardt-18978604.html")

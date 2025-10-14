@@ -11,6 +11,7 @@ class SenateStockTests(unittest.TestCase):
         # act
         stock_info = senate_stocks.StockInfo()
         expanded = stock_info.expand_symbol(ticker)
+        print(expanded)
 
         # assert
         self.assertEqual(expanded, "AAPL (Apple Inc., Consumer Electronics)")

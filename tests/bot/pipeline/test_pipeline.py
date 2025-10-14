@@ -1,6 +1,6 @@
 """Tests for QuestionBots. """
 import unittest
-import pipeline
+import smrt.bot.pipeline as pipeline
 
 class PipelineHelperTests(unittest.TestCase):
     """Test Cases for Pipeline Helper functions"""
