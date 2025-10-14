@@ -13,6 +13,14 @@ class PageUnlocker:
             "faz.net": '<div class="wall__wrapper">', 
             "bild.de": '<div class="offer-module">'
         }
+    
+    def is_blocked(self) -> bool:
+        response = self._session.get(self._link, headers=self._headers)
+        response_text = response.text
+        print(response_text)
+        if "Cloudflare Ray ID" in response.text:
+            return True
+        return False
         
     def is_paywalled(self) -> bool:
         for url_part, marker in self._markers.items():

@@ -31,3 +31,13 @@ class PaywallTests(unittest.TestCase):
         self._test_is_not_paywalled("https://www.faz.net/aktuell/politik/inland/faz-sommerempfang-2023-im-berliner-borchardt-18978604.html")
         self._test_is_not_paywalled("https://www.spiegel.de/wissenschaft/technik/verschollenes-tauchboot-titan-es-ist-wie-die-nadel-im-heuhaufen-a-1ae26117-5046-4ed1-ba49-78335ab82744")
         self._test_is_not_paywalled("https://www.bild.de/sport/fussball/nationalmannschaft/nationalmannschaft-flick-widerspricht-lierhaus-im-tv-sie-sprach-kritisch-84403082.bild.html")
+    
+    def test_is_blocked(self):
+        # arrange
+        pu = paywall.PageUnlocker("https://www.reddit.com/r/wallstreetbetsGER/comments/1o6k3dg/bin_unterwegs_kann_hier_bitte_jemand_gr%C3%BCner/")
+
+        # act
+        is_blocked = pu.is_blocked()
+
+        #assert
+        self.assertTrue(is_blocked)

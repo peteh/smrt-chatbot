@@ -1,8 +1,11 @@
 python-decouple
 requests
+#requests_cache
 #requests[socks]
+
+# validation of yaml/json data
 cerberus
-requests_cache
+
 flask
 faster_whisper
 trafilatura
@@ -10,6 +13,7 @@ youtube-transcript-api
 # tts stuff
 coqui-tts
 spacy
+
 #deepspeed
 
 # scheduling recurring tasks
@@ -23,7 +27,7 @@ python-socketio[client]
 
 # get language from text
 langid
-#diffusers[torch]
+
 bs4
 yfinance
 pyTelegramBotAPI
