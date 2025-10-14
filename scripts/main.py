@@ -135,6 +135,7 @@ schema = {
             "type": "dict",
             "schema": {
                 "gaudeam_session": {"type": "string", "required": True},
+                "gaudeam_subdomain": {"type": "string", "required": True},
                 "chat_id_whitelist": {
                     "type": "list",
                     "schema": {"type": "string"},
@@ -317,23 +318,25 @@ def run():
         gaudeam_configs = configuration[CONFIG_GAUDEAM]
         for gaudeam_config in gaudeam_configs:
             gaudeam_session = gaudeam_config["gaudeam_session"]
+            gaudeam_subdomain = gaudeam_config.get("gaudeam_subdomain")
+            gaudeam = smrt.libgaudeam.Gaudeam(gaudeam_session, gaudeam_subdomain)
             chat_id_whitelist = gaudeam_config.get("chat_id_whitelist", [])
-            gaudeam_pipeline = pipeline.GaudeamBdayPipeline(gaudeam_session, chat_id_whitelist)
+            gaudeam_pipeline = pipeline.GaudeamBdayPipeline(gaudeam, chat_id_whitelist)
             mainpipe.add_pipeline(gaudeam_pipeline)
-            gaudeam_pipeline = pipeline.GaudeamCalendarPipeline(gaudeam_session, chat_id_whitelist)
+            gaudeam_pipeline = pipeline.GaudeamCalendarPipeline(gaudeam, chat_id_whitelist)
             mainpipe.add_pipeline(gaudeam_pipeline)
             
             schedule_time = "09:00"
             # schedule daily birthday notifications
-            bday_task = pipeline.GaudeamBdayScheduledTask(messenger_manager, chat_id_whitelist, gaudeam_session)
+            bday_task = pipeline.GaudeamBdayScheduledTask(messenger_manager, chat_id_whitelist, gaudeam)
             
             schedule.every().day.at(schedule_time, "Europe/Berlin").do(bday_task.run)
             logging.info(f"Scheduled Gaudeam birthday notifications at {schedule_time} daily.")
             
             # schedule event notifications every day
-            event_task = pipeline.GaudeamEventsScheduledTask(messenger_manager, chat_id_whitelist, gaudeam_session)
-            schedule.every().monday.at(schedule_time, "Europe/Berlin").do(event_task.run)
-            logging.info(f"Scheduled Gaudeam event notifications at {schedule_time} on mondays.")
+            event_task = pipeline.GaudeamEventsScheduledTask(messenger_manager, chat_id_whitelist, gaudeam)
+            schedule.every().day.at(schedule_time, "Europe/Berlin").do(event_task.run)
+            logging.info(f"Scheduled Gaudeam event notifications at {schedule_time} daily.")
 
     # voice message transcription with whsisper
     CONFIG_VOICE_TRANSCRIPTION = "voice_transcription"

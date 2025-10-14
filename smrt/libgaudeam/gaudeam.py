@@ -4,10 +4,10 @@ import json
 import datetime
 
 class Gaudeam:
-    def __init__(self, gaudeam_session):
+    def __init__(self, gaudeam_session: str, subdomain: str):
         self._client = requests.Session()
         self._client.cookies.update({"_gaudeam_session": gaudeam_session})
-        self._url = "https://ulmia-stuttgart.gaudeam.de"
+        self._url = f"https://{subdomain}.gaudeam.de"
 
     def members(self, include_dead=False, include_alliances=False, include_resigned=False, seach_term=""):
         offset = 0
@@ -29,7 +29,7 @@ class Gaudeam:
         while len(members) < num_records:
             offset += limit
             params["offset"] = offset
-            response_members = self._client.get("https://ulmia-stuttgart.gaudeam.de/api/v1/members/index", params=params)
+            response_members = self._client.get(f"{self._url}/api/v1/members/index", params=params)
             members.extend(response_members.json()["results"])
         return members
 

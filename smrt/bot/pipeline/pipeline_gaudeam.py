@@ -2,7 +2,7 @@
 import logging
 import typing
 import datetime
-from smrt.bot.pipeline import PipelineInterface, PipelineHelper, AbstractPipeline
+from smrt.bot.pipeline import PipelineHelper, AbstractPipeline
 from smrt.bot.messenger import MessengerInterface, MessengerManager
 from smrt.bot import scheduled
 from smrt.libgaudeam import Gaudeam
@@ -12,11 +12,11 @@ class GaudeamBdayPipeline(AbstractPipeline):
     """Pipe to handle ha commands in text. """
     BDAY_COMMAND = "gaubday"
 
-    def __init__(self, gaudeam_session: str, chat_id_whitelist: typing.List[str]):
+    def __init__(self, gaudeam: Gaudeam, chat_id_whitelist: typing.List[str]):
         # can only be whitelisted chat ids
         super().__init__(chat_id_whitelist, None)
         self._commands = [self.BDAY_COMMAND]
-        self._gaudeam = Gaudeam(gaudeam_session)
+        self._gaudeam = gaudeam
 
     def matches(self, messenger: MessengerInterface, message: dict):
         message_text = messenger.get_message_text(message)
@@ -56,10 +56,10 @@ class GaudeamCalendarPipeline(AbstractPipeline):
     """Pipe to handle ha commands in text. """
     DATE_COMMAND = "gauevents"
 
-    def __init__(self, gaudeam_session: str, chat_id_whitelist: typing.List[str]):
+    def __init__(self, gaudeam: Gaudeam, chat_id_whitelist: typing.List[str]):
         super().__init__(chat_id_whitelist, None)
         self._commands = [self.DATE_COMMAND]
-        self._gaudeam = Gaudeam(gaudeam_session)
+        self._gaudeam = gaudeam
 
     def matches(self, messenger: MessengerInterface, message: dict):
         message_text = messenger.get_message_text(message)
@@ -156,9 +156,9 @@ class GaudeamUtils:
 class GaudeamBdayScheduledTask(scheduled.AbstractScheduledTask):
     """Scheduled task to send birthday notifications. """
 
-    def __init__(self, messenger_manager: MessengerManager, chat_ids: list[str], gaudeam_session: str):
+    def __init__(self, messenger_manager: MessengerManager, chat_ids: list[str], gaudeam: Gaudeam):
         super().__init__(messenger_manager, chat_ids)
-        self._gaudeam = Gaudeam(gaudeam_session)
+        self._gaudeam = gaudeam
 
     def run(self):
         try:
@@ -181,13 +181,23 @@ class GaudeamBdayScheduledTask(scheduled.AbstractScheduledTask):
 class GaudeamEventsScheduledTask(scheduled.AbstractScheduledTask):
     """Scheduled task to send event notifications. """
 
-    def __init__(self, messenger_manager: MessengerManager, chat_ids: list[str], gaudeam_session: str):
+    def __init__(self, messenger_manager: MessengerManager, chat_ids: list[str], gaudeam: Gaudeam):
         super().__init__(messenger_manager, chat_ids)
-        self._gaudeam = Gaudeam(gaudeam_session)
-
+        self._gaudeam = gaudeam
     def run(self):
         try: 
-            events = GaudeamUtils.get_events(self._gaudeam, 14)
+            # get day of week as an integer
+            week_day = datetime.datetime.now().weekday()
+            
+            
+            if week_day != 0: # 0 = Monday
+                # Monday, send events for the next 14 days
+                days_ahead = 14
+            else:
+                # only send events of the current day if existing
+                days_ahead = 1
+            
+            events = GaudeamUtils.get_events(self._gaudeam, days_ahead)
             if len(events) == 0:
                 logging.info("No events upcoming.")
                 return
