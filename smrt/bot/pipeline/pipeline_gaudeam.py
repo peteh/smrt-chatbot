@@ -190,7 +190,7 @@ class GaudeamEventsScheduledTask(scheduled.AbstractScheduledTask):
             week_day = datetime.datetime.now().weekday()
             
             
-            if week_day != 0: # 0 = Monday
+            if week_day == 0: # 0 = Monday
                 # Monday, send events for the next 14 days
                 days_ahead = 14
             else:
