@@ -1,14 +1,16 @@
 from .main_pipeline import MainPipeline
-from .pipeline_gallery import GalleryPipeline
+from .pipeline_gallery import GalleryPipeline, GalleryDeletePipeline
 from .pipeline import ChatIdPipeline, MarkSeenPipeline, HelpPipeline, PipelineInterface, PipelineHelper, AbstractPipeline
 from .pipeline_ha import HomeassistantSayCommandPipeline, HomeassistantTextCommandPipeline, HomeassistantVoiceCommandPipeline
 from .pipeline_all import VoiceMessagePipeline, GrammarPipeline, URLSummaryPipeline, ImagePromptPipeline, ImageGenerationPipeline, TinderPipeline
 from .pipeline_tts import TextToSpeechPipeline
 from .pipeline_gaudeam import GaudeamBdayPipeline, GaudeamCalendarPipeline, GaudeamBdayScheduledTask, GaudeamEventsScheduledTask
+from .scheduled import ScheduledTaskInterface, AbstractScheduledTask
 
 __all__ = [
     "MainPipeline",
     "GalleryPipeline",
+    "GalleryDeletePipeline",
     "PipelineInterface",
     "AbstractPipeline",
     "PipelineHelper",
@@ -28,5 +30,7 @@ __all__ = [
     "ImagePromptPipeline",
     "ImageGenerationPipeline",
     "TinderPipeline",
-    "TextToSpeechPipeline"
+    "TextToSpeechPipeline",
+    "ScheduledTaskInterface",
+    "AbstractScheduledTask",
 ]

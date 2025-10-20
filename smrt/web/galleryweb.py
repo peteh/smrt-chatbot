@@ -1,110 +1,116 @@
-from flask import Flask, render_template, send_from_directory, request, send_file, abort
+from flask import Flask, render_template, send_from_directory, request, send_file, abort, jsonify
 import sqlite3
 import os
 import io
 import zipfile
-from smrt.db.database import Database
+from smrt.db.database import GalleryDatabase
+import json
+import base64
+from smrt.utils import utils
 
-app = Flask(__name__)
-
-DB_PATH = "gallery.db"
-IMAGE_DIR = "images"
-
-def get_images(group_id, start=None, end=None):
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-
-    if start and end:
-        cur.execute("""
-            SELECT filename, sender, timestamp FROM images
-            WHERE group_id = ? AND date(timestamp) BETWEEN date(?) AND date(?)
-            ORDER BY id DESC
-        """, (group_id, start, end))
-    else:
-        cur.execute("""
-            SELECT filename, sender, timestamp FROM images
-            WHERE group_id = ?
-            ORDER BY id DESC
-        """, (group_id,))
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-@app.route("/<group_id>/")
-def gallery(group_id):
-    start = request.args.get("start")
-    end = request.args.get("end")
-
-    images = get_images(group_id, start, end)
-
-    # Min/max dates for slider
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT MIN(date(timestamp)), MAX(date(timestamp)) FROM images WHERE group_id = ?", (group_id,))
-    min_date, max_date = cur.fetchone()
-    conn.close()
-
-    if not min_date:  # no images for this group
-        return f"<h1>No images for group {group_id}</h1>"
-
-    return render_template("gallery.html",
-                           images=images,
-                           group_id=group_id,
-                           start=start,
-                           end=end,
-                           min_date=min_date,
-                           max_date=max_date)
-
-@app.route("/<group_id>/images/<path:filename>")
-def serve_image(group_id, filename):
-    return send_from_directory(IMAGE_DIR, filename)
-
-@app.route("/<group_id>/download")
-def download_images(group_id):
-    start = request.args.get("start")
-    end = request.args.get("end")
-    images = get_images(group_id, start, end)
-
-    if not images:
-        abort(404, "No images found")
-
-    memory_file = io.BytesIO()
-    with zipfile.ZipFile(memory_file, 'w') as zf:
-        for filename, sender, timestamp in images:
-            filepath = os.path.join(IMAGE_DIR, filename)
-            if os.path.exists(filepath):
-                zf.write(filepath, arcname=filename)
-    memory_file.seek(0)
-
-    # Optional: date range in filename
-    zip_name = "gallery.zip"
-    if start and end:
-        zip_name = f"gallery_{start}_to_{end}.zip"
-
-    return send_file(memory_file, as_attachment=True, download_name=zip_name)
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
-
-
-class MyFlaskApp:
-    def __init__(self):
-        self.app = Flask(__name__)
+class GalleryFlaskApp:
+    def __init__(self, gallery_db: GalleryDatabase):
+        self._app = Flask(__name__)
         self._register_routes()
+        self._gallery_db = gallery_db
+
+    def _mime_type_to_extension(self, mime_type: str) -> str:
+        mapping = {
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/gif": "gif",
+            "image/bmp": "bmp",
+            "image/webp": "webp"
+        }
+        return mapping.get(mime_type, "bin")
 
     def _register_routes(self):
-        @self.app.route("/")
+        @self._app.route("/")
         def home():
             return jsonify({"message": "Hello, World!"})
 
-        @self.app.route("/hello/<name>")
+        @self._app.route("/hello/<name>")
         def hello(name):
             return jsonify({"message": f"Hello, {name}!"})
+        
+        @self._app.route("/api/v1/images/<gallery_id>")
+        def get_images(gallery_id):
+            gallery_id_decoded = base64.b64decode(gallery_id).decode('utf-8')
+            images = self._gallery_db.get_images(gallery_id_decoded)
+            if not images:
+                abort(404, "No images found")
+            image_list = []
+            count = 1
+            for image in images:
+                extension = self._mime_type_to_extension(image["mime_type"])
+                padded_count = str(count).zfill(4)
+                image_entry = {
+                    "sender": image["sender"],
+                    "image_uuid": image["image_uuid"],
+                    "time": image["time"],
+                    "mime_type": image["mime_type"],
+                    "image_name": f"IMAGE_{padded_count}.{extension}",
+                    # Assuming a URL structure for accessing individual images
+                    #"url": f"/{gallery_id}/images/{filename}"
+                }
+                image_list.append(image_entry)
+            return jsonify(image_list)
+        
+        @self._app.route("/api/v1/thumb/<gallery_id>/<image_uuid>.png")
+        def get_thumbnail(gallery_id, image_uuid):
+            gallery_id_decoded = base64.b64decode(gallery_id).decode('utf-8')
+            image_data = self._gallery_db.get_image(gallery_id_decoded, image_uuid)
+            if not image_data:
+                abort(404, "Thumbnail not found")
+            image_uuid = image_data["image_uuid"]
+            #image_filename = utils.storage_path() + f"/gallery/{image_uuid}.blob"
+            thumb_filename = self._gallery_db.get_storage_path() + f"/{image_uuid}_thumb.png"
+            return send_file(thumb_filename,
+                mimetype='image/png',
+                as_attachment=False,
+                download_name=f"{image_uuid}_thumb.png"
+            )
+        
+        @self._app.route("/api/v1/image/<gallery_id>/<image_uuid>/<file_name>")
+        def get_image(gallery_id, image_uuid, file_name):
+            gallery_id_decoded = base64.b64decode(gallery_id).decode('utf-8')
+            image_data = self._gallery_db.get_image(gallery_id_decoded, image_uuid)
+            if not image_data:
+                abort(404, "Thumbnail not found")
+            image_uuid = image_data["image_uuid"]
+            mime_type = image_data["mime_type"]
+            #image_filename = utils.storage_path() + f"/gallery/{image_uuid}.blob"
+            local_file_name = self._gallery_db.get_storage_path() + f"/{image_uuid}.blob"
+            return send_file(local_file_name,
+                mimetype=mime_type,
+                as_attachment=False,
+                download_name=f"{file_name}"
+            )
+        
+        @self._app.route("/<gallery_id>/download")
+        def download_images(gallery_id):
+            start = request.args.get("start")
+            end = request.args.get("end")
+            images = self._gallery_db.get_images(gallery_id)
+
+            if not images:
+                abort(404, "No images found")
+
+            memory_file = io.BytesIO()
+            with zipfile.ZipFile(memory_file, 'w') as zf:
+                for filename, sender, timestamp in images:
+                    # todo do path stuff
+                    filepath = os.path.join("IMAGE_DIR", filename)
+                    if os.path.exists(filepath):
+                        zf.write(filepath, arcname=filename)
+            memory_file.seek(0)
+
+            # Optional: date range in filename
+            zip_name = "gallery.zip"
+            if start and end:
+                zip_name = f"gallery_{start}_to_{end}.zip"
+
+            return send_file(memory_file, as_attachment=True, download_name=zip_name)
 
     def run(self, **kwargs):
-        self.app.run(**kwargs)
-
-
-if __name__ == "__main__":
-    app = MyFlaskApp()
-    app.run(debug=True)
+        self._app.run(**kwargs)

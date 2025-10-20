@@ -19,6 +19,17 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
             }
+        },
+        {
+            "name": "Run Gallery",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/webgallery.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         }
     ]
 }

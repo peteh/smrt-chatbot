@@ -286,8 +286,8 @@ class URLSummaryPipeline(AbstractPipeline):
 
     MAX_TRANSCRIPT_LENGTH = 20000
 
-    def __init__(self, summarizer: SummaryInterface):
-        super().__init__(None, None)
+    def __init__(self, summarizer: SummaryInterface, chat_id_whitelist: List[str] = None, chat_id_blacklist: List[str] = None):
+        super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._summarizer = summarizer
         self._link_regex = re.compile(r'((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)',
                                       re.DOTALL)
@@ -454,8 +454,8 @@ class TinderPipeline(AbstractPipeline):
     """A pipeline to write answers to tinder messages. """
     TINDER_COMMAND = "tinder"
 
-    def __init__(self, question_bot: QuestionBotInterface) -> None:
-        super().__init__(None, None)
+    def __init__(self, question_bot: QuestionBotInterface, chat_id_whitelist: List[str] = None, chat_id_blacklist: List[str] = None) -> None:
+        super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._question_bot = question_bot
 
     def matches(self, messenger: MessengerInterface, message: dict):

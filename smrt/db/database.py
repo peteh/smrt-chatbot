@@ -7,8 +7,9 @@ import smrt.utils.utils as utils
 
 class Database:
     """Database to store and retrieve messages. """
-    def __init__(self, database_name):
-        file_path = utils.storage_path() + database_name + ".sqlite"
+    def __init__(self, storage_path: str, database_name: str):
+        # TODO path handling
+        file_path = storage_path + "/" + database_name + ".sqlite"
         self._con = sqlite3.connect(file_path, check_same_thread = False)
         self._con.row_factory = sqlite3.Row   # Here's the magic!
 
@@ -82,8 +83,9 @@ class MessageDatabase():
 class GalleryDatabase:
     """Database to store images from group chats for a gallery. """
 
-    def __init__(self):
-        self._db = Database("gallery.db")
+    def __init__(self, storage_path: str):
+        self._db = Database(storage_path, "gallery.db")
+        self._storage_path = storage_path + "/gallery/"
         self._lock = threading.Lock()  # Mutex for all DB operations
         self._create_tables()
 
@@ -114,6 +116,13 @@ class GalleryDatabase:
                 )
                 """)
             self._db.commit()
+    def get_storage_path(self) -> str:
+        """Returns the storage path for gallery images
+
+        Returns:
+            str: The storage path
+        """
+        return self._storage_path
     
     def is_enabled(self, chat_id: str) -> bool:
         """Returns if the gallery is enabled for a given chat_id
@@ -145,6 +154,22 @@ class GalleryDatabase:
                         (chat_id, 1 if enabled else 0))
             self._db.commit()
 
+    def has_image(self, chat_id: str, image_hash: str) -> bool:
+        """Checks if an image with the given hash already exists in the database for the given chat_id
+
+        Args:
+            chat_id (str): The chat id from which the image is
+            image_hash (str): The hash of the image
+        Returns:
+            bool: True if the image exists, False otherwise
+        """
+        with self._lock:
+            cur = self._db.cursor()
+            cur.execute("SELECT 1 FROM gallery WHERE chat_id = ? AND image_hash = ? LIMIT 1",
+                        (chat_id, image_hash))
+            row = cur.fetchone()
+            return row is not None
+
     def add_image(self, chat_id: str, sender: str, mime_type: str, image_uuid: str, image_hash: str) -> None:
         """Adds an image to the gallery database
 
@@ -166,7 +191,7 @@ class GalleryDatabase:
                         time.time()))
             self._db.commit()
 
-    def get_images(self, chat_id : str, count: int) -> typing.List[dict]:
+    def get_images(self, chat_id : str) -> typing.List[dict]:
         """Returns a list of the count newest images from a given chat. 
 
         Args:
@@ -177,13 +202,55 @@ class GalleryDatabase:
         with self._lock:
             return_list = []
             
-            for row in self._db.cursor().execute("SELECT chat_id, sender, image_uuid FROM gallery \
-                                    WHERE chat_id = ? ORDER BY `time` DESC LIMIT ?",
-                                    (chat_id, count)):
+            for row in self._db.cursor().execute("SELECT chat_id, sender, mime_type, image_uuid, image_hash, time FROM gallery \
+                                    WHERE chat_id = ? ORDER BY `time` DESC",
+                                    (chat_id, )):
                 entry = {
                     "chat_id": row["chat_id"],
                     "sender": row["sender"],
-                    "image_hash": row["image_hash"]
+                    "mime_type": row["mime_type"],
+                    "image_uuid": row["image_uuid"],
+                    "image_hash": row["image_hash"],
+                    "time": row["time"]
                 }
                 return_list.append(entry)
-            return return_list
+        return return_list
+    
+    def get_image(self, chat_id: str, image_uuid: str) -> dict:
+        """Returns a specific image entry from a given chat_id
+
+        Args:
+            chat_id (str): The chat id from which the image is to be retrieved
+            image_uuid (str): The uuid of the image to be retrieved
+        Returns:
+            dict: The image entry or None if not found
+        """
+        with self._lock:
+            cur = self._db.cursor()
+            cur.execute("SELECT chat_id, sender, mime_type, image_uuid, image_hash, time FROM gallery \
+                        WHERE chat_id = ? AND image_uuid = ? LIMIT 1",
+                        (chat_id, image_uuid))
+            row = cur.fetchone()
+            if row is None:
+                return None
+            entry = {
+                "chat_id": row["chat_id"],
+                "sender": row["sender"],
+                "mime_type": row["mime_type"],
+                "image_uuid": row["image_uuid"],
+                "image_hash": row["image_hash"],
+                "time": row["time"]
+            }
+            return entry
+    
+    def delete_image(self, chat_id: str, image_uuid: str) -> None:
+        """Deletes a specific image from a given chat_id
+
+        Args:
+            chat_id (str): The chat id from which the image is to be deleted
+            image_uuid (str): The uuid of the image to be deleted
+        """
+        with self._lock:
+            cur = self._db.cursor()
+            cur.execute("DELETE FROM gallery WHERE chat_id = ? AND image_uuid = ?", (chat_id, image_uuid))
+            self._db.commit()

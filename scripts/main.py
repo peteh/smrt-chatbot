@@ -3,6 +3,7 @@ import time
 import logging
 import threading
 import schedule
+from multiprocessing import Process
 
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -13,12 +14,14 @@ import smrt.db
 import smrt.bot.pipeline as pipeline
 import smrt.bot.messenger as messenger
 import smrt.bot.messagequeue as messagequeue
+from smrt.web.galleryweb import GalleryFlaskApp
 
 #from senate_stocks import SenateStockNotification
 
 import smrt.bot.tools
 
 schema = {
+    "storage_path": {"type": "string", "required": False},
     "signal": {
         "type": "dict",
         "schema": {
@@ -86,7 +89,17 @@ schema = {
     "tinder": {
         "type": "dict",
         "schema": {
-            "tinder_bot": {"type": "string", "required": True}
+            "tinder_bot": {"type": "string", "required": True},
+            "chat_id_whitelist": {
+                "type": "list",
+                "schema": {"type": "string"},
+                "required": False
+            },
+            "chat_id_blacklist": {
+                "type": "list",
+                "schema": {"type": "string"},
+                "required": False
+            }
         },
         "required": False
     },
@@ -125,7 +138,17 @@ schema = {
         "type": "dict",
         "schema": {
             "base_url": {"type": "string", "required": True},
-            "port": {"type": "integer", "required": True}
+            "port": {"type": "integer", "required": True},
+            "chat_id_whitelist": {
+                "type": "list",
+                "schema": {"type": "string"},
+                "required": False
+            },
+            "chat_id_blacklist": {
+                "type": "list",
+                "schema": {"type": "string"},
+                "required": False
+            }
         },
         "required": False
     },
@@ -139,7 +162,12 @@ schema = {
                 "chat_id_whitelist": {
                     "type": "list",
                     "schema": {"type": "string"},
-                    "required": True
+                    "required": False
+                },
+                "chat_id_blacklist": {
+                    "type": "list",
+                    "schema": {"type": "string"},
+                    "required": False
                 }
             }
         },
@@ -254,6 +282,12 @@ def run():
 
     if not validate_config(configuration, schema):
         exit(1)
+        
+    
+    storage_path = configuration.get("storage_path", "/storage/")
+    logging.info(f"Using storage path: {storage_path}")
+    
+     # create main pipeline
     
     mainpipe = pipeline.MainPipeline()
     #database = db.Database("data")
@@ -320,10 +354,11 @@ def run():
             gaudeam_session = gaudeam_config["gaudeam_session"]
             gaudeam_subdomain = gaudeam_config.get("gaudeam_subdomain")
             gaudeam = smrt.libgaudeam.Gaudeam(gaudeam_session, gaudeam_subdomain)
-            chat_id_whitelist = gaudeam_config.get("chat_id_whitelist", [])
-            gaudeam_pipeline = pipeline.GaudeamBdayPipeline(gaudeam, chat_id_whitelist)
+            chat_id_whitelist = gaudeam_config.get("chat_id_whitelist", None)
+            chat_id_blacklist = gaudeam_config.get("chat_id_blacklist", None)
+            gaudeam_pipeline = pipeline.GaudeamBdayPipeline(gaudeam, chat_id_whitelist, chat_id_blacklist)
             mainpipe.add_pipeline(gaudeam_pipeline)
-            gaudeam_pipeline = pipeline.GaudeamCalendarPipeline(gaudeam, chat_id_whitelist)
+            gaudeam_pipeline = pipeline.GaudeamCalendarPipeline(gaudeam, chat_id_whitelist, chat_id_blacklist)
             mainpipe.add_pipeline(gaudeam_pipeline)
             
             schedule_time = "09:00"
@@ -365,17 +400,21 @@ def run():
     CONFIG_TINDER = "tinder"
     if CONFIG_TINDER in configuration:
         config_tinder = configuration[CONFIG_TINDER]
+        chat_id_whitelist = config_tinder.get("chat_id_whitelist", None)
+        chat_id_blacklist = config_tinder.get("chat_id_blacklist", None)
         tinder_bot = bot_loader.create(config_tinder["tinder_bot"])
-        tinder_pipeline = pipeline.TinderPipeline(tinder_bot)
+        tinder_pipeline = pipeline.TinderPipeline(tinder_bot, chat_id_whitelist, chat_id_blacklist)
         mainpipe.add_pipeline(tinder_pipeline)
     
     # load pipeline for article summarization if configured
     CONFIG_ARTICLE_SUMMARY = "article_summary"
     if CONFIG_ARTICLE_SUMMARY in configuration:
         config_article_summary = configuration[CONFIG_ARTICLE_SUMMARY]
+        chat_id_whitelist = config_article_summary.get("chat_id_whitelist", None)
+        chat_id_blacklist = config_article_summary.get("chat_id_blacklist", None)
         article_summary_bot = bot_loader.create(config_article_summary["summary_bot"])
         article_summarizer = smrt.bot.tools.QuestionBotSummary(article_summary_bot)
-        article_summary_pipeline = pipeline.URLSummaryPipeline(article_summarizer)
+        article_summary_pipeline = pipeline.URLSummaryPipeline(article_summarizer, chat_id_whitelist, chat_id_blacklist)
         mainpipe.add_pipeline(article_summary_pipeline)
     
     # image generation
@@ -400,14 +439,32 @@ def run():
     
     CONFIG_GALLERY = "gallery"
     if CONFIG_GALLERY in configuration:
-        base_url = configuration[CONFIG_GALLERY]["base_url"]
-        port = configuration[CONFIG_GALLERY]["port"]
+        config_gallery = configuration[CONFIG_GALLERY]
+        base_url = config_gallery["base_url"]
+        port = config_gallery["port"]
+        chat_id_whitelist = config_gallery.get("chat_id_whitelist", None)
+        chat_id_blacklist = config_gallery.get("chat_id_blacklist", None)
+        
         
         #import galleryweb
-        gallery_db = smrt.db.GalleryDatabase()
+        gallery_db = smrt.db.GalleryDatabase(storage_path)
 
-        gallery_pipe = pipeline.GalleryPipeline(gallery_db, base_url)
+        gallery_pipe = pipeline.GalleryPipeline(gallery_db, base_url, chat_id_whitelist, chat_id_blacklist)
         mainpipe.add_pipeline(gallery_pipe)
+        gallery_delete_pipe = pipeline.GalleryDeletePipeline(gallery_db, chat_id_whitelist, chat_id_blacklist)
+        mainpipe.add_pipeline(gallery_delete_pipe)
+        
+        # run gallery flask app in own process
+        def _serve_gallery(port):
+            gallery_db = smrt.db.GalleryDatabase(storage_path)   # construct inside child process
+            gallery_app = GalleryFlaskApp(gallery_db)
+            # disable reloader/debug so Flask won't try to set signal handlers in this process
+            gallery_app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
+
+        gallery_proc = Process(target=_serve_gallery, args=(port,), daemon=True)
+        gallery_proc.start()
+        logging.info(f"Started Gallery web server on port {port} (pid={gallery_proc.pid})")
+        
 
     CONFIG_CHATID = "chatid"
     if CONFIG_CHATID in configuration:

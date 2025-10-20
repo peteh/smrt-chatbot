@@ -4,6 +4,8 @@ import typing
 import hashlib
 import uuid
 import io
+import os
+import base64
 from PIL import Image
 from smrt.db import GalleryDatabase
 import smrt.utils.utils as utils
@@ -15,8 +17,8 @@ class GalleryPipeline(AbstractPipeline):
     """Pipe to store images in a gallery from group chats. """
     GALLERY_COMMAND = "gallery"
 
-    def __init__(self, gallery_db: GalleryDatabase, base_url: str):
-        super().__init__(None, None)
+    def __init__(self, gallery_db: GalleryDatabase, base_url: str, chat_id_whitelist: typing.List[str] = None, chat_id_blacklist: typing.List[str] = None):
+        super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._commands = [self.GALLERY_COMMAND]
         self._gallery_db = gallery_db
         self._base_url = base_url
@@ -34,7 +36,7 @@ class GalleryPipeline(AbstractPipeline):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands
 
-    def process_image_thumb(self, image_data) -> str:
+    def process_image_store(self, image_data) -> str:
         """Processes the image for thumb and storage
 
         Args:
@@ -88,10 +90,14 @@ class GalleryPipeline(AbstractPipeline):
                     messenger.mark_skipped(message)
                     return
                 
-                # Compute MD5 hash
+                # Compute MD5 hash and skip duplicates in the same group
                 sha256_hash = hashlib.sha256(image_data).hexdigest()
+                
+                if gallery_db.has_image(chat_id, sha256_hash):
+                    messenger.mark_skipped(message)
+                    return
 
-                file_uuid = self.process_image_thumb(image_data)
+                file_uuid = self.process_image_store(image_data)
                 self._gallery_db.add_image(chat_id, messenger.get_sender_name(message), mime_type ,file_uuid, sha256_hash)
                 
                 messenger.mark_in_progress_done(message)
@@ -110,7 +116,8 @@ class GalleryPipeline(AbstractPipeline):
                 gallery_db = GalleryDatabase()
                 if params is None or len(params) == 0:
                     enabled = gallery_db.is_enabled(messenger.get_chat_id(message))
-                    messenger.reply_message(message, f"Gallery is {'enabled' if enabled else 'disabled'} for this group\nGallery link: {self._base_url}/gallery")
+                    encoded_chat_id = base64.b64encode(messenger.get_chat_id(message).encode('utf-8')).decode('utf-8')
+                    messenger.reply_message(message, f"Gallery is {'enabled' if enabled else 'disabled'} for this group\nGallery link: {self._base_url}/gallery/{encoded_chat_id}")
                     messenger.mark_in_progress_done(message)
                     return
                 elif params.lower() == "enable" or params.lower() == "on":
@@ -134,6 +141,52 @@ class GalleryPipeline(AbstractPipeline):
     def get_help_text(self) -> str:
         # TODO: automatically tell which models we have
         return \
-f"""*Gallery creation*
+f"""*Gallery Creation*
 _#{self.GALLERY_COMMAND} on/off_ Enables or disables the storage of images sent to the group in a gallery.
 _#{self.GALLERY_COMMAND}_ Shows if gallery is on or off and provides a link to the gallery."""
+
+
+class GalleryDeletePipeline(AbstractPipeline):
+    """Pipe to delete images from the gallery. """
+    GALLERY_DELETE_COMMAND = "gallerydelete"
+
+    def __init__(self, gallery_db: GalleryDatabase, chat_id_whitelist: typing.List[str] = None, chat_id_blacklist: typing.List[str] = None):
+        super().__init__(chat_id_whitelist, chat_id_blacklist)
+        self._commands = [self.GALLERY_DELETE_COMMAND]
+        self._gallery_db = gallery_db
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        # gallery delete command
+        command = PipelineHelper.extract_command(messenger.get_message_text(message))
+        return command in self._commands
+    def _delete_image(self, chat_id: str, image_uuid: str):
+        os.remove(utils.storage_path() + f"/gallery/{image_uuid}.blob")
+        os.remove(utils.storage_path() + f"/gallery/{image_uuid}_thumb.png")
+        self._gallery_db.delete_image(chat_id, image_uuid)
+        
+    def process(self, messenger: MessengerInterface, message: dict):
+        try:
+            # gallery delete command
+            command = PipelineHelper.extract_command(messenger.get_message_text(message))
+            if command == self.GALLERY_DELETE_COMMAND:
+                messenger.mark_in_progress_0(message)
+                chat_id = messenger.get_chat_id(message)
+                
+                # TODO add confirmation step
+                images = self._gallery_db.get_images(chat_id)
+                count = 0
+                for image in images:
+                    self._delete_image(chat_id, image["image_uuid"])
+                    count += 1
+                messenger.reply_message(message, f"{count} gallery images deleted for this group.")
+                messenger.mark_in_progress_done(message)
+                return
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
+            messenger.mark_in_progress_fail(message)
+            return
+
+    def get_help_text(self) -> str:
+        return \
+f"""*Gallery Deletation*
+_#{self.GALLERY_DELETE_COMMAND}_ Deletes all images in the current gallery."""
