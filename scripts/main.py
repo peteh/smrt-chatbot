@@ -7,7 +7,7 @@ from multiprocessing import Process
 
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-from flask import Flask, request, jsonify
+
 import yaml
 
 import smrt.db
@@ -134,6 +134,12 @@ schema = {
         "nullable": True,  # Accepts `null` or empty dict as valid
         "required": False
     },
+    "debug": {
+        "type": "dict",
+        "schema": {},
+        "nullable": True,  # Accepts `null` or empty dict as valid
+        "required": False
+    },
     "gallery": {
         "type": "dict",
         "schema": {
@@ -221,55 +227,8 @@ class BotLoader():
         else:
             raise ValueError(f"Unknown bot name: {bot_name}")
 
-class MessageServer:
-    def __init__(self, messenger_manager: messenger.MessengerManager, host='0.0.0.0', port=5000):
-        self.app = Flask(__name__)
-        self.host = host
-        self.port = port
-        self._register_routes()
-        self._messenger_manager = messenger_manager
-        self.app.logger.setLevel(logging.INFO)
+# TODO: put this into a production server too if debug is false
 
-    def _register_routes(self):
-        @self.app.route('/send_message', methods=['POST'])
-        def send_message():
-            data = request.get_json()
-            self.app.logger.debug(f"Received data: {data}")
-            if not data or 'chatIds' not in data or 'message' not in data:
-                self.app.logger.error("Missing required fields in request data, expected 'chatIds' and 'message'")
-                self.app.logger.error(f"Message data: {data}")
-                return jsonify({'error': 'Missing required fields: chatIds and message'}), 400
-
-            chat_ids = data['chatIds']
-            message = data['message']
-
-            if not isinstance(chat_ids, list) or not isinstance(message, str):
-                return jsonify({'error': 'Invalid types: chatids must be a list, message must be a string'}), 400
-
-            logging.debug(f"Sending message '{message}' to chat IDs: {chat_ids}")
-            error=""
-            sent_to = []
-            for chat_id in chat_ids:
-                messenger = self._messenger_manager.get_messenger_by_chatid(chat_id)
-                if messenger:
-                    try:
-                        messenger.send_message(chat_id, message)
-                        sent_to.append(chat_id)
-                    except Exception as e:
-                        error_message = f"Error sending message to {chat_id}: {str(e)}"
-                        error += f"{error_message}\n"
-                        self.app.logger.error(f"Failed to send message to {chat_id}: {e}")
-                else:
-                    error_message = f"No messenger found for chat ID: {chat_id}"
-                    self.app.logger.warning(error_message)
-                    error+= f"{error_message}\n"
-
-            if len(error) > 0:
-                return jsonify({'status': 'error', 'message': error, 'sent_to': sent_to}), 500
-            return jsonify({'status': 'success', 'sent_to': sent_to}), 200
-    
-    def run(self):
-        self.app.run(host=self.host, port=self.port)
 
 def run():
     config_file = open("config.yml", "r", encoding="utf-8")
@@ -277,13 +236,16 @@ def run():
     config_file.close()
     
     messenger_manager = messenger.MessengerManager()
-    message_server = MessageServer(messenger_manager)
+    message_server = messagequeue.MessageServerFlaskApp(messenger_manager)
     
 
     if not validate_config(configuration, schema):
         exit(1)
         
-    
+    CONFIG_DEBUG = "debug"
+    debug_flag = False
+    if CONFIG_DEBUG in configuration:
+        debug_flag = True
     storage_path = configuration.get("storage_path", "/storage/")
     logging.info(f"Using storage path: {storage_path}")
     
@@ -454,23 +416,30 @@ def run():
         gallery_delete_pipe = pipeline.GalleryDeletePipeline(gallery_db, chat_id_whitelist, chat_id_blacklist)
         mainpipe.add_pipeline(gallery_delete_pipe)
         
-        # run gallery flask app in own process
-        def _serve_gallery(port):
-            gallery_db = smrt.db.GalleryDatabase(storage_path)   # construct inside child process
-            gallery_app = GalleryFlaskApp(gallery_db)
-            # disable reloader/debug so Flask won't try to set signal handlers in this process
-            gallery_app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
-
-        gallery_proc = Process(target=_serve_gallery, args=(port,), daemon=True)
-        gallery_proc.start()
-        logging.info(f"Started Gallery web server on port {port} (pid={gallery_proc.pid})")
         
+        # run gallery flask app in own process if debug is True
+        if debug_flag:
+            def _serve_gallery(port):
+                gallery_db = smrt.db.GalleryDatabase(storage_path)   # construct inside child process
+                gallery_app = GalleryFlaskApp(gallery_db)
+                # disable reloader/debug so Flask won't try to set signal handlers in this process
+                gallery_app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
 
+            message_server_proc = Process(target=_serve_gallery, args=(port,), daemon=True)
+            message_server_proc.start()
+            logging.info(f"Started Gallery web server on port {port} (pid={message_server_proc.pid})")
+        else:
+            gallery_db = smrt.db.GalleryDatabase(storage_path)
+            gallery_app = GalleryFlaskApp(gallery_db)
+            from waitress import serve
+            gallery_thread = threading.Thread(target=serve, args=(gallery_app._app,), kwargs={"port": port}, daemon=False)
+            gallery_thread.start()
+            logging.info(f"Started Gallery web server on port {port} in thread.")
+    
     CONFIG_CHATID = "chatid"
     if CONFIG_CHATID in configuration:
         chatid_pipeline = smrt.bot.pipeline.ChatIdPipeline()
         mainpipe.add_pipeline(chatid_pipeline)
-
 
     # load all messengers
     CONFIG_SIGNAL = "signal"
@@ -506,8 +475,25 @@ def run():
         #mainpipe.add_pipeline(stock_notifier)
         #stock_notifier.run_async()
 
+    # run scheduled tasks continuously in background
     stop_run_continuously = run_schedule_continuously()
-    message_server.run()
+    
+    # run the message server
+    message_server_port = 5000
+    if debug_flag:
+        def _serve_message(message_server_port):
+            # disable reloader/debug so Flask won't try to set signal handlers in this process
+            message_server.run(host="0.0.0.0", port=message_server_port, debug=True, use_reloader=False)
+
+        message_server_proc = Process(target=_serve_message, args=(port,), daemon=True)
+        message_server_proc.start()
+        logging.info(f"Started Message server on port {port} (pid={message_server_proc.pid})")
+    else:
+        from waitress import serve
+        gallery_thread = threading.Thread(target=serve, args=(message_server._app,), kwargs={"port": message_server_port}, daemon=False)
+        gallery_thread.start()
+        logging.info(f"Started Gallery web server on port {port} in thread.")
+    
 
 
 def run_schedule_continuously(interval=10):
@@ -535,5 +521,4 @@ def run_schedule_continuously(interval=10):
     return cease_continuous_run
 
 if __name__ == "__main__":
-    
     run()

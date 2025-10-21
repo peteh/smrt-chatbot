@@ -6,7 +6,10 @@ requests
 # validation of yaml/json data
 cerberus
 
+# webserver stuff
 flask
+waitress
+
 faster_whisper
 trafilatura
 youtube-transcript-api
