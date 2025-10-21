@@ -3,7 +3,8 @@ import time
 import typing
 import sqlite3
 import threading
-import smrt.utils.utils as utils
+import uuid
+
 
 class Database:
     """Database to store and retrieve messages. """
@@ -112,10 +113,12 @@ class GalleryDatabase:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS gallery_config (
                     chat_id TEXT PRIMARY KEY,
+                    uuid VARCHAR(36),
                     enabled INTEGER
                 )
                 """)
             self._db.commit()
+
     def get_storage_path(self) -> str:
         """Returns the storage path for gallery images
 
@@ -123,6 +126,38 @@ class GalleryDatabase:
             str: The storage path
         """
         return self._storage_path
+
+    def get_gallery_uuid_from_chat_id(self, chat_id: str) -> str:
+        """Returns the gallery uuid for a given chat_id
+
+        Args:
+            chat_id (str): The chat id from the messenger of the group  
+        Returns:
+            str: The gallery uuid
+        """
+        with self._lock:
+            cur = self._db.cursor()
+            cur.execute("SELECT uuid FROM gallery_config WHERE chat_id = ? LIMIT 1", (chat_id,))
+            row = cur.fetchone()
+            if row is None:
+                return None
+            return row["uuid"]
+    
+    def get_chat_id_from_gallery_uuid(self, gallery_uuid: str) -> str:
+        """Returns the chat_id for a given gallery uuid
+
+        Args:
+            gallery_uuid (str): The gallery uuid
+        Returns:
+            str: The chat id from the messenger of the group
+        """
+        with self._lock:
+            cur = self._db.cursor()
+            cur.execute("SELECT chat_id FROM gallery_config WHERE uuid = ? LIMIT 1", (gallery_uuid,))
+            row = cur.fetchone()
+            if row is None:
+                return None
+            return row["chat_id"]
     
     def is_enabled(self, chat_id: str) -> bool:
         """Returns if the gallery is enabled for a given chat_id
@@ -150,9 +185,16 @@ class GalleryDatabase:
         """
         with self._lock:
             cur = self._db.cursor()
-            cur.execute("INSERT OR REPLACE INTO gallery_config (chat_id, enabled) VALUES (?, ?)",
-                        (chat_id, 1 if enabled else 0))
+            cur.execute("SELECT uuid FROM gallery_config WHERE chat_id = ? LIMIT 1", (chat_id,))
+            row = cur.fetchone()
+            if row is None or row["uuid"] is None:
+                uuid_val = str(uuid.uuid4())
+            else:
+                uuid_val = row["uuid"]
+            cur.execute("INSERT OR REPLACE INTO gallery_config (chat_id, uuid, enabled) VALUES (?, ?, ?)",
+                        (chat_id, uuid_val, 1 if enabled else 0))
             self._db.commit()
+
 
     def has_image(self, chat_id: str, image_hash: str) -> bool:
         """Checks if an image with the given hash already exists in the database for the given chat_id
@@ -203,7 +245,7 @@ class GalleryDatabase:
             return_list = []
             
             for row in self._db.cursor().execute("SELECT chat_id, sender, mime_type, image_uuid, image_hash, time FROM gallery \
-                                    WHERE chat_id = ? ORDER BY `time` DESC",
+                                    WHERE chat_id = ? ORDER BY `time` ASC",
                                     (chat_id, )):
                 entry = {
                     "chat_id": row["chat_id"],

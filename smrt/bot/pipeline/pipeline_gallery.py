@@ -43,19 +43,19 @@ class GalleryPipeline(AbstractPipeline):
             image_data (_type_): Byte data of the image
 
         Returns:
-            str: _description_
+            str: file uuid
         """
         file_uuid = str(uuid.uuid4())
 
-        image_filename = utils.storage_path() + f"/gallery/{file_uuid}.blob"
-        thumb_filename = utils.storage_path() + f"/gallery/{file_uuid}_thumb.png"
+        image_filename = self._gallery_db.get_storage_path() + f"/{file_uuid}.blob"
+        thumb_filename = self._gallery_db.get_storage_path() + f"/{file_uuid}_thumb.png"
         # write binary to file: 
         with open(image_filename, "wb") as f:
             f.write(image_data)
         # create thumbnail
         img = Image.open(image_filename)
         # Create a thumbnail (max size 128x128, keeps aspect ratio)
-        img.thumbnail((128, 128))
+        img.thumbnail((300, 300))
 
         # Save thumbnail
         img.save(thumb_filename, format = "png")
@@ -67,8 +67,7 @@ class GalleryPipeline(AbstractPipeline):
         if messenger.has_image_data(message):
             try:
                 chat_id = messenger.get_chat_id(message)
-                gallery_db = GalleryDatabase()
-                if not gallery_db.is_enabled(chat_id):
+                if not self._gallery_db.is_enabled(chat_id):
                     # gallery not enabled for this group
                     return
                 
@@ -93,7 +92,7 @@ class GalleryPipeline(AbstractPipeline):
                 # Compute MD5 hash and skip duplicates in the same group
                 sha256_hash = hashlib.sha256(image_data).hexdigest()
                 
-                if gallery_db.has_image(chat_id, sha256_hash):
+                if self._gallery_db.has_image(chat_id, sha256_hash):
                     messenger.mark_skipped(message)
                     return
 
@@ -113,20 +112,19 @@ class GalleryPipeline(AbstractPipeline):
             command, _, params = PipelineHelper.extract_command_full(messenger.get_message_text(message))
             if command == self.GALLERY_COMMAND:
                 messenger.mark_in_progress_0(message)
-                gallery_db = GalleryDatabase()
                 if params is None or len(params) == 0:
-                    enabled = gallery_db.is_enabled(messenger.get_chat_id(message))
-                    encoded_chat_id = base64.b64encode(messenger.get_chat_id(message).encode('utf-8')).decode('utf-8')
-                    messenger.reply_message(message, f"Gallery is {'enabled' if enabled else 'disabled'} for this group\nGallery link: {self._base_url}/gallery/{encoded_chat_id}")
+                    enabled = self._gallery_db.is_enabled(messenger.get_chat_id(message))
+                    gallery_id = self._gallery_db.get_gallery_uuid(messenger.get_chat_id(message))
+                    messenger.reply_message(message, f"Gallery is {'enabled' if enabled else 'disabled'} for this group\nGallery link: {self._base_url}/gallery/{gallery_id}")
                     messenger.mark_in_progress_done(message)
                     return
                 elif params.lower() == "enable" or params.lower() == "on":
-                    gallery_db.set_enabled(messenger.get_chat_id(message), True)
+                    self._gallery_db.set_enabled(messenger.get_chat_id(message), True)
                     messenger.reply_message(message, "Gallery enabled for this group.")
                     messenger.mark_in_progress_done(message)
                     return
                 elif params.lower() == "disable" or params.lower() == "off":
-                    gallery_db.set_enabled(messenger.get_chat_id(message), False)
+                    self._gallery_db.set_enabled(messenger.get_chat_id(message), False)
                     messenger.reply_message(message, "Gallery disabled for this group.")
                     messenger.mark_in_progress_done(message)
                     return  
@@ -160,8 +158,8 @@ class GalleryDeletePipeline(AbstractPipeline):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands
     def _delete_image(self, chat_id: str, image_uuid: str):
-        os.remove(utils.storage_path() + f"/gallery/{image_uuid}.blob")
-        os.remove(utils.storage_path() + f"/gallery/{image_uuid}_thumb.png")
+        os.remove(self._gallery_db.get_storage_path() + f"/{image_uuid}.blob")
+        os.remove(self._gallery_db.get_storage_path() + f"/{image_uuid}_thumb.png")
         self._gallery_db.delete_image(chat_id, image_uuid)
         
     def process(self, messenger: MessengerInterface, message: dict):
