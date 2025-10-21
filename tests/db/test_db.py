@@ -14,11 +14,11 @@ class DatabaseTests(unittest.TestCase):
         db = database.Database('testdata')
         msgDB = database.MessageDatabase(db)
         # act
-        msgDB.add_group_message("abc", "Pete1", "lalala1")
+        msgDB.add_message("abc", "Pete1", "lalala1")
         time.sleep(1)
-        msgDB.add_group_message("abc", "Pete2", "lalala2")
+        msgDB.add_message("abc", "Pete2", "lalala2")
         time.sleep(1)
-        msgDB.add_group_message("abc", "Pete3", "lalala3")
+        msgDB.add_message("abc", "Pete3", "lalala3")
         time.sleep(1)
         rows = msgDB.get_group_messages("abc", 2)
 

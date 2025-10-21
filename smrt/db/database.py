@@ -4,61 +4,64 @@ import typing
 import sqlite3
 import threading
 import uuid
-
+from pathlib import Path
 
 class Database:
     """Database to store and retrieve messages. """
-    def __init__(self, storage_path: str, database_name: str):
-        # TODO path handling
-        file_path = storage_path + "/" + database_name + ".sqlite"
+    def __init__(self, storage_path: Path, database_name: str):
+        file_path = storage_path / f"{database_name}.sqlite"
         self._con = sqlite3.connect(file_path, check_same_thread = False)
         self._con.row_factory = sqlite3.Row   # Here's the magic!
 
     def cursor(self):
         return self._con.cursor()
-    
+
     def commit(self):
         self._con.commit()
-    
+
     def close(self):
         self._con.close()
 
 class MessageDatabase():
     
-    def __init__(self, db: Database):
-        self._db = db
+    def __init__(self, storage_path: Path):
+        self._db = Database(storage_path, "message.db")
+        self._lock = threading.Lock()  # Mutex for all DB operations
+        self._create_tables()
     
     def _create_tables(self):
-        cur = self._db.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS groups (
-                group_id,
-                sender,
-                message,
-                time
-            )
+        with self._lock:
+            cur = self._db.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    chat_id TEXT,
+                    sender,
+                    message,
+                    time
+                )
+                """)
+
+            cur.execute("""
+            CREATE INDEX IF NOT EXISTS group_index ON messages(chat_id)
             """)
 
-        cur.execute("""
-        CREATE INDEX IF NOT EXISTS group_index ON groups(group_id)
-        """)
-
-    def add_group_message(self, group_id: str, sender: str, message: str) -> None:
+    def add_message(self, chat_id: str, sender: str, message: str) -> None:
         """Adds a group message to the database
 
         Args:
-            group_id (str): The group id from which the message is
+            chat_id (str): The chat id from which the message is
             sender (str): The sender of the message
             message (str): The actual message
         """
-        cur = self._db.cursor()
-        cur.execute("INSERT INTO groups (group_id, sender, message, time) VALUES (?, ?, ?, ?)",
-                    (group_id,
-                    sender,
-                    message, time.time()))
-        self._db.commit()
+        with self._lock:
+            cur = self._db.cursor()
+            cur.execute("INSERT INTO messages (chat_id, sender, message, time) VALUES (?, ?, ?, ?)",
+                        (chat_id,
+                        sender,
+                        message, time.time()))
+            self._db.commit()
 
-    def get_group_messages(self, group_id: str, count: int) -> typing.List[dict]:
+    def get_group_messages(self, chat_id: str, count: int) -> typing.List[dict]:
         """Returns a list of the count newest group messages from a given group. 
 
         Args:
@@ -68,25 +71,29 @@ class MessageDatabase():
         Returns:
             _type_: List of messages from the group
         """
-        return_list = []
-        for row in self._db.execute("SELECT group_id, sender, message FROM groups \
-                                 WHERE group_id = ? ORDER BY `time` DESC LIMIT ?",
-                                 (group_id, count)):
-            entry = {
-                "group_id": row['group_id'],
-                "sender": row['sender'],
-                "message": row['message']
-            }
-            return_list.append(entry)
-        return_list.reverse()
-        return return_list
+        with self._lock:
+            cur = self._db.cursor()
+            return_list = []
+            for row in cur.execute("SELECT group_id, sender, message FROM groups \
+                                    WHERE group_id = ? ORDER BY `time` DESC LIMIT ?",
+                                    (chat_id, count)):
+                entry = {
+                    "chat_id": row['chat_id'],
+                    "sender": row['sender'],
+                    "message": row['message']
+                }
+                return_list.append(entry)
+            return_list.reverse()
+            return return_list
 
 class GalleryDatabase:
     """Database to store images from group chats for a gallery. """
 
-    def __init__(self, storage_path: str):
+    def __init__(self, storage_path: Path):
         self._db = Database(storage_path, "gallery.db")
-        self._storage_path = storage_path + "/gallery/"
+        self._storage_path = storage_path / "gallery"
+        if not self._storage_path.exists():
+            self._storage_path.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()  # Mutex for all DB operations
         self._create_tables()
 
@@ -119,11 +126,11 @@ class GalleryDatabase:
                 """)
             self._db.commit()
 
-    def get_storage_path(self) -> str:
+    def get_storage_path(self) -> Path:
         """Returns the storage path for gallery images
 
         Returns:
-            str: The storage path
+            Path: The storage path
         """
         return self._storage_path
 
@@ -243,7 +250,7 @@ class GalleryDatabase:
         """
         with self._lock:
             return_list = []
-            
+
             for row in self._db.cursor().execute("SELECT chat_id, sender, mime_type, image_uuid, image_hash, time FROM gallery \
                                     WHERE chat_id = ? ORDER BY `time` ASC",
                                     (chat_id, )):
@@ -257,7 +264,7 @@ class GalleryDatabase:
                 }
                 return_list.append(entry)
         return return_list
-    
+
     def get_image(self, chat_id: str, image_uuid: str) -> dict:
         """Returns a specific image entry from a given chat_id
 
@@ -284,7 +291,7 @@ class GalleryDatabase:
                 "time": row["time"]
             }
             return entry
-    
+
     def delete_image(self, chat_id: str, image_uuid: str) -> None:
         """Deletes a specific image from a given chat_id
 
