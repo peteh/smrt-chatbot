@@ -3,7 +3,7 @@ import logging
 import tempfile
 import os
 
-from smrt.bot.pipeline import PipelineInterface, PipelineHelper, AbstractPipeline
+from smrt.bot.pipeline import PipelineHelper, AbstractPipeline
 import smrt.utils.utils as utils
 
 from smrt.bot.tools.texttospeech import XttsModel, ThorstenTtsVoice

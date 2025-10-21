@@ -56,7 +56,19 @@ This will launch the bot.
 
 ## Configuration
 
-Configuration is done in a config.yml file in the root of the project.
+Configuration is done in a `config.yml` file in the root of the project.
+
+### Development
+
+For development an additional flag can be set. This will do the following modifications:
+
+* Use flask development webserver for message end point and galleries
+
+Set the debug setting to enable it. 
+
+```yml
+debug:
+```
 
 ### Whatsapp Messenger
 
@@ -119,18 +131,24 @@ homeassistant:
 
 ### Gaudeam Integration
 
-Gaudeam.de is a platform for clubs. The integration allows to fetch some information. 
+Gaudeam.de is a platform for clubs. The integration allows to fetch information like events or birthdays. It's possible to configure multiple accounts by adding them as a list.
 
 Available commands:
 
 * `#gaubday` gets a list of members that have birthday today
+* `#gauevents` gets a list of of upcoming events in the next days
 
 ```yml
 gaudeam:
-  - gaudeam_session: "xxx"
+  - gaudeam_session: "xxx1" # session code extracted from cookie
     chat_id_whitelist: [
       "signal://XXXX", # Signal Group
       "whatsapp://123456@g.us" # Whatsapp group
+    ]
+  - gaudeam_session: "xxx2" # session code extracted from cookie
+    chat_id_whitelist: [
+      "signal://YYYY", # Signal Group
+      "whatsapp://645321@g.us" # Whatsapp group
     ]
 ```
 
@@ -145,7 +163,7 @@ To use the AI summary function you must configure ollama.
 
 ```yml
 voice_transcription:
-  min_words_for_summary: 10 # minimum number of words for a summary to be generated
+  min_words_for_summary: 100 # minimum number of words for a summary to be generated
   summary_bot: "ollama:gemma3:12b" # optional
   # blacklist chat ids for voice transcription
   chat_id_blacklist: [

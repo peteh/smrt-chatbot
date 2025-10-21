@@ -30,6 +30,14 @@ class AbstractHomeassistantPipeline(AbstractPipeline):
         return self._chat_id_whitelist
 
     def _get_uuid_from_chat_id(self, chat_id: str) -> uuid.UUID:
+        """Generates a unique and repeatable uuid based on the chat id
+
+        Args:
+            chat_id (str): The chat id to generate the uuid from.
+
+        Returns:
+            uuid.UUID: A unique uuid based on the chat id.
+        """
         return uuid.uuid5(namespace=self._root_uuid, name=chat_id)
 
     def matches(self, messenger: MessengerInterface, message: dict):
@@ -216,7 +224,7 @@ class HomeassistantSayCommandPipeline(AbstractHomeassistantPipeline):
         ws.close()
 
     def process(self, messenger: MessengerInterface, message: dict):
-        (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+        (_, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
         messenger.mark_in_progress_0(message)
         try:            
             ha_command = text.strip()
@@ -226,19 +234,17 @@ class HomeassistantSayCommandPipeline(AbstractHomeassistantPipeline):
         except Exception as ex:
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
             messenger.mark_in_progress_fail(message)
-            return
+
     def get_help_text(self) -> str:
-        # TODO: automatically tell which models we have
         return \
 f"""*Text to Speech*
 _#{self.HA_SAY_COMMAND} text_ Sends a message to homeassistant to be spoken by the voice assistant."""
 
 class HomeassistantVoiceCommandPipeline(AbstractHomeassistantPipeline):
     """Pipe to process voice commands as Homeassistant commands. """
+
     def __init__(self, ha_token: str, ha_ws_api_url: str, chat_id_whitelist: typing.List[str]):
         super().__init__(ha_token, ha_ws_api_url, chat_id_whitelist)
-
-
 
     def matches(self, messenger: MessengerInterface, message: dict):
         return messenger.has_audio_data(message) \
