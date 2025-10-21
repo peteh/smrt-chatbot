@@ -106,6 +106,48 @@ telegram:
   telegram_api_key: "XXXX:YYYY" 
 ```
 
+### Ollama
+
+Ollama can be used in some of the commands, e.g. for summaries in voice transcriptions.
+
+Configure ollama with the following settings.
+
+```yml
+ollama:
+  host: "http://127.0.0.1:11434"
+```
+
+Models can be chosen via `ollama:modelname`.
+
+### llama.cpp
+
+Llama.cpp server can also be used.
+
+```yml
+ollama:
+  host: "http://127.0.0.1:8000"
+```
+
+Models can be chosen via `llama_cpp:modelname`.
+
+Note: Models are actually not yet chosable as llama server only loads one model.
+
+### Gallery Creation
+
+The gallery allows to collect images that people upload in groups. When gallery creation is turned on via `#gallery on`, all images are uploaded to the /storage folder. A webserver is created from which you can view and download all images.
+
+* Turn gallery on for the group via `#gallery on`
+* Get the link to the group via `#gallery`
+* Open the link, view and download all uploaded images
+* Storing images can be disabled again via `#gallery off`
+* `#gallerydelete` can delete the existing images
+
+```yml
+gallery: # enable gallery
+  base_url: "http://localhost:9000" # Base URL where the gallery web interface will be hosted
+  port: 9000 # Optional: Port for the gallery web interface (default 9000)
+```
+
 ### Homeassistant Command Processing
 
 The bot allows to send homeassistant commands either as text or as voice commands.
@@ -171,32 +213,6 @@ voice_transcription:
     "whatsapp://123456@g.us" # Whatsapp Home group
     ] 
 ```
-
-### Ollama
-
-Ollama can be used in some of the commands, e.g. for summaries in voice transcriptions.
-
-Configure ollama with the following settings.
-
-```yml
-ollama:
-  host: "http://127.0.0.1:11434"
-```
-
-Models can be chosen via `ollama:modelname`.
-
-### llama.cpp
-
-Llama.cpp server can also be used.
-
-```yml
-ollama:
-  host: "http://127.0.0.1:8000"
-```
-
-Models can be chosen via `llama_cpp:modelname`.
-
-Note: Models are actually not yet chosable as llama server only loads one model.
 
 ### ChatID command
 
