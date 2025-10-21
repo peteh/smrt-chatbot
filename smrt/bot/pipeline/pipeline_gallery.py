@@ -9,6 +9,7 @@ import base64
 from PIL import Image
 from smrt.db import GalleryDatabase
 import smrt.utils.utils as utils
+import time
 
 from smrt.bot.messenger import MessengerInterface
 
@@ -114,7 +115,11 @@ class GalleryPipeline(AbstractPipeline):
                 messenger.mark_in_progress_0(message)
                 if params is None or len(params) == 0:
                     enabled = self._gallery_db.is_enabled(messenger.get_chat_id(message))
-                    gallery_id = self._gallery_db.get_gallery_uuid(messenger.get_chat_id(message))
+                    gallery_id = self._gallery_db.get_gallery_uuid_from_chat_id(messenger.get_chat_id(message))
+                    if gallery_id is None:
+                        messenger.reply_message(message, f"Gallery is not set up for this group yet. Use #{self.GALLERY_COMMAND} on to enable it.")
+                        messenger.mark_in_progress_done(message)
+                        return
                     messenger.reply_message(message, f"Gallery is {'enabled' if enabled else 'disabled'} for this group\nGallery link: {self._base_url}/gallery/{gallery_id}")
                     messenger.mark_in_progress_done(message)
                     return
@@ -147,16 +152,22 @@ _#{self.GALLERY_COMMAND}_ Shows if gallery is on or off and provides a link to t
 class GalleryDeletePipeline(AbstractPipeline):
     """Pipe to delete images from the gallery. """
     GALLERY_DELETE_COMMAND = "gallerydelete"
+    GALLERY_DELETE_CONFIRM_COMMAND = "gallerydeleteconfirm"
+    
+    CONFIRM_TIMEOUT_S = 30
 
     def __init__(self, gallery_db: GalleryDatabase, chat_id_whitelist: typing.List[str] = None, chat_id_blacklist: typing.List[str] = None):
         super().__init__(chat_id_whitelist, chat_id_blacklist)
-        self._commands = [self.GALLERY_DELETE_COMMAND]
+        self._commands = [self.GALLERY_DELETE_COMMAND, self.GALLERY_DELETE_CONFIRM_COMMAND]
         self._gallery_db = gallery_db
+        
+        self._confirm_awaits = {}  #chat_id -> timestamp
 
     def matches(self, messenger: MessengerInterface, message: dict):
         # gallery delete command
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands
+
     def _delete_image(self, chat_id: str, image_uuid: str):
         os.remove(self._gallery_db.get_storage_path() + f"/{image_uuid}.blob")
         os.remove(self._gallery_db.get_storage_path() + f"/{image_uuid}_thumb.png")
@@ -170,7 +181,27 @@ class GalleryDeletePipeline(AbstractPipeline):
                 messenger.mark_in_progress_0(message)
                 chat_id = messenger.get_chat_id(message)
                 
-                # TODO add confirmation step
+                self._confirm_awaits[chat_id] = time.time()
+                
+                messenger.reply_message(message, f"To confirm deletion of all gallery images for this group, please send the command #gallerydeleteconfirm within the next {self.CONFIRM_TIMEOUT_S} seconds.")
+                messenger.mark_in_progress_done(message)
+                return
+
+            if command == self.GALLERY_DELETE_CONFIRM_COMMAND:
+                messenger.mark_in_progress_0(message)
+                chat_id = messenger.get_chat_id(message)
+                if chat_id not in self._confirm_awaits:
+                    messenger.reply_message(message, f"No deletion was requested for this group. Please send #{self.GALLERY_DELETE_COMMAND}  first.")
+                    messenger.mark_in_progress_fail(message)
+                    return
+
+                request_time = self._confirm_awaits[chat_id]
+                del self._confirm_awaits[chat_id]
+                if time.time() - request_time > self.CONFIRM_TIMEOUT_S:
+                    messenger.reply_message(message, f"The deletion confirmation has timed out. Please send #{self.GALLERY_DELETE_COMMAND} again to request deletion.")
+                    messenger.mark_in_progress_fail(message)
+                    return
+
                 images = self._gallery_db.get_images(chat_id)
                 count = 0
                 for image in images:
@@ -179,6 +210,7 @@ class GalleryDeletePipeline(AbstractPipeline):
                 messenger.reply_message(message, f"{count} gallery images deleted for this group.")
                 messenger.mark_in_progress_done(message)
                 return
+
         except Exception as ex:
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
             messenger.mark_in_progress_fail(message)

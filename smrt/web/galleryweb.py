@@ -77,7 +77,7 @@ class GalleryFlaskApp:
                 download_name=f"{image_uuid}_thumb.png"
             )
         
-        @self._app.route("/api/v1/image/<gallery_id>/<image_uuid>/<file_name>")
+        @self._app.route("/api/v1/image/<string:gallery_id>/<string:image_uuid>/<string:file_name>")
         def get_image(gallery_id, image_uuid, file_name):
             chat_id = self._gallery_db.get_chat_id_from_gallery_uuid(gallery_id)
             image_data = self._gallery_db.get_image(chat_id, image_uuid)
@@ -93,11 +93,14 @@ class GalleryFlaskApp:
                 download_name=f"{file_name}"
             )
         
-        @self._app.route("/<gallery_id>/download")
-        def download_images(gallery_id):
+        @self._app.route("/api/v1/download/<string:gallery_id>/<string:gallery_file_name>")
+        def download_images(gallery_id, gallery_file_name):
             start = request.args.get("start")
             end = request.args.get("end")
-            images = self._gallery_db.get_images(gallery_id)
+            chat_id = self._gallery_db.get_chat_id_from_gallery_uuid(gallery_id)
+            if chat_id is None:
+                abort(404, "No images found")
+            images = self._gallery_db.get_images(chat_id)
 
             if not images:
                 abort(404, "No images found")

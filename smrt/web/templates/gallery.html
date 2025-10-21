@@ -31,6 +31,7 @@
     .lightbox .caption{margin-top:8px;color:var(--muted);font-size:0.95rem}
     .lightbox .close, .lightbox .nav{position:absolute;top:18px;color:#fff;background:rgba(0,0,0,0.25);border:0;padding:8px;border-radius:6px;cursor:pointer}
     .lightbox .close{right:18px}
+    .download-link{margin-left:12px;color:var(--accent);background:transparent;border:0;padding:6px 10px;border-radius:6px;text-decoration:none;font-weight:600}
     .lightbox .nav{top:50%;transform:translateY(-50%);padding:12px}
     .lightbox .prev{left:18px}
     .lightbox .next{right:18px}
@@ -41,7 +42,8 @@
   <div class="wrap">
     <header>
       <h1>Gallery</h1>
-      <div style="margin-left:auto;color:var(--muted)">id: <code style="color:#fff;margin-left:8px">{{ gallery_uuid }}</code></div>
+      <!--<div style="margin-left:auto;color:var(--muted)">id: <code style="color:#fff;margin-left:8px">{{ gallery_uuid }}</code></div>-->
+      <a id="downloadGallery" class="download-link" href="#" title="Download gallery as ZIP">⬇ Download ZIP</a>
     </header>
 
     <div id="galleryContainer" class="grid" aria-live="polite">
@@ -63,6 +65,12 @@
     (function(){
       const galleryId = "{{ gallery_uuid }}";
       const apiList = `/api/v1/images/${encodeURIComponent(galleryId)}`;
+      // set gallery download link (encoded)
+      const dlElem = document.getElementById('downloadGallery');
+      if (dlElem) {
+        dlElem.href = `/api/v1/download/${encodeURIComponent(galleryId)}/gallery.zip`;
+        dlElem.setAttribute('download', `${galleryId}-gallery.zip`);
+      }
       const gallery = document.getElementById('galleryContainer');
       let images = [];
       let currentIndex = -1;
