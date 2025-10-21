@@ -398,43 +398,41 @@ def run():
             imagegen_api = texttoimage.FallbackTextToImageProcessor(imagegen_processors)
             imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
             mainpipe.add_pipeline(imagegen_pipeline)
-    
+
     CONFIG_GALLERY = "gallery"
     if CONFIG_GALLERY in configuration:
         config_gallery = configuration[CONFIG_GALLERY]
         base_url = config_gallery["base_url"]
-        port = config_gallery["port"]
+        gallery_port = config_gallery.get("port", 9000)
         chat_id_whitelist = config_gallery.get("chat_id_whitelist", None)
         chat_id_blacklist = config_gallery.get("chat_id_blacklist", None)
-        
-        
-        #import galleryweb
+
         gallery_db = smrt.db.GalleryDatabase(storage_path)
 
         gallery_pipe = pipeline.GalleryPipeline(gallery_db, base_url, chat_id_whitelist, chat_id_blacklist)
         mainpipe.add_pipeline(gallery_pipe)
         gallery_delete_pipe = pipeline.GalleryDeletePipeline(gallery_db, chat_id_whitelist, chat_id_blacklist)
         mainpipe.add_pipeline(gallery_delete_pipe)
-        
-        
+
+        gallery_db = smrt.db.GalleryDatabase(storage_path)
+        gallery_app = GalleryFlaskApp(gallery_db)
         # run gallery flask app in own process if debug is True
         if debug_flag:
             def _serve_gallery(port):
-                gallery_db = smrt.db.GalleryDatabase(storage_path)   # construct inside child process
-                gallery_app = GalleryFlaskApp(gallery_db)
+                #gallery_db = smrt.db.GalleryDatabase(storage_path)   # construct inside child process
+                #gallery_app = GalleryFlaskApp(gallery_db)
                 # disable reloader/debug so Flask won't try to set signal handlers in this process
                 gallery_app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
 
-            message_server_proc = Process(target=_serve_gallery, args=(port,), daemon=True)
+            message_server_proc = Process(target=_serve_gallery, args=(gallery_port,), daemon=True)
             message_server_proc.start()
-            logging.info(f"Started Gallery web server on port {port} (pid={message_server_proc.pid})")
+            logging.info(f"Started Gallery web server on port {gallery_port} (pid={message_server_proc.pid})")
         else:
-            gallery_db = smrt.db.GalleryDatabase(storage_path)
-            gallery_app = GalleryFlaskApp(gallery_db)
+            
             from waitress import serve
-            gallery_thread = threading.Thread(target=serve, args=(gallery_app._app,), kwargs={"port": port}, daemon=False)
+            gallery_thread = threading.Thread(target=serve, args=(gallery_app._app,), kwargs={"port": gallery_port}, daemon=False)
             gallery_thread.start()
-            logging.info(f"Started Gallery web server on port {port} in thread.")
+            logging.info(f"Started Gallery web server on port {gallery_port} in thread.")
     
     CONFIG_CHATID = "chatid"
     if CONFIG_CHATID in configuration:
@@ -485,14 +483,14 @@ def run():
             # disable reloader/debug so Flask won't try to set signal handlers in this process
             message_server.run(host="0.0.0.0", port=message_server_port, debug=True, use_reloader=False)
 
-        message_server_proc = Process(target=_serve_message, args=(port,), daemon=True)
+        message_server_proc = Process(target=_serve_message, args=(message_server_port,), daemon=True)
         message_server_proc.start()
-        logging.info(f"Started Message server on port {port} (pid={message_server_proc.pid})")
+        logging.info(f"Started Message server on port {message_server_port} (pid={message_server_proc.pid})")
     else:
         from waitress import serve
         gallery_thread = threading.Thread(target=serve, args=(message_server._app,), kwargs={"port": message_server_port}, daemon=False)
         gallery_thread.start()
-        logging.info(f"Started Gallery web server on port {port} in thread.")
+        logging.info(f"Started Message server on port {message_server_port} in thread.")
     
 
 
