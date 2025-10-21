@@ -2,9 +2,9 @@
 import time
 import logging
 import threading
-import schedule
 from multiprocessing import Process
-
+from pathlib import Path
+import schedule
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -227,9 +227,6 @@ class BotLoader():
         else:
             raise ValueError(f"Unknown bot name: {bot_name}")
 
-# TODO: put this into a production server too if debug is false
-
-
 def run():
     config_file = open("config.yml", "r", encoding="utf-8")
     configuration = yaml.safe_load(config_file)
@@ -246,7 +243,7 @@ def run():
     debug_flag = False
     if CONFIG_DEBUG in configuration:
         debug_flag = True
-    storage_path = configuration.get("storage_path", "/storage/")
+    storage_path = Path(configuration.get("storage_path", "/storage/"))
     logging.info(f"Using storage path: {storage_path}")
     
      # create main pipeline
@@ -299,7 +296,7 @@ def run():
         ha_ws_api_url = config_ha["ws_api_url"]
         ha_chat_id_whitelist = config_ha.get("chat_id_whitelist", [])
         process_without_command = config_ha.get("process_without_command", False)
-        
+
         ha_text_pipeline = pipeline.HomeassistantTextCommandPipeline(ha_token, ha_ws_api_url, \
             chat_id_whitelist=ha_chat_id_whitelist, process_without_command=process_without_command)
         ha_voice_pipeline = pipeline.HomeassistantVoiceCommandPipeline(ha_token, ha_ws_api_url, chat_id_whitelist=ha_chat_id_whitelist)
@@ -414,26 +411,22 @@ def run():
         gallery_delete_pipe = pipeline.GalleryDeletePipeline(gallery_db, chat_id_whitelist, chat_id_blacklist)
         mainpipe.add_pipeline(gallery_delete_pipe)
 
-        gallery_db = smrt.db.GalleryDatabase(storage_path)
         gallery_app = GalleryFlaskApp(gallery_db)
-        # run gallery flask app in own process if debug is True
+        
+        # run gallery flask app if debug is True
         if debug_flag:
             def _serve_gallery(port):
-                #gallery_db = smrt.db.GalleryDatabase(storage_path)   # construct inside child process
-                #gallery_app = GalleryFlaskApp(gallery_db)
-                # disable reloader/debug so Flask won't try to set signal handlers in this process
                 gallery_app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
 
             message_server_proc = Process(target=_serve_gallery, args=(gallery_port,), daemon=True)
             message_server_proc.start()
             logging.info(f"Started Gallery web server on port {gallery_port} (pid={message_server_proc.pid})")
         else:
-            
             from waitress import serve
             gallery_thread = threading.Thread(target=serve, args=(gallery_app._app,), kwargs={"port": gallery_port}, daemon=False)
             gallery_thread.start()
             logging.info(f"Started Gallery web server on port {gallery_port} in thread.")
-    
+
     CONFIG_CHATID = "chatid"
     if CONFIG_CHATID in configuration:
         chatid_pipeline = smrt.bot.pipeline.ChatIdPipeline()
