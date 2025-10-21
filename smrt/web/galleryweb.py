@@ -55,8 +55,6 @@ class GalleryFlaskApp:
                     "time": image["time"],
                     "mime_type": image["mime_type"],
                     "image_name": self._get_file_name(count, image["mime_type"]),
-                    # Assuming a URL structure for accessing individual images
-                    #"url": f"/{gallery_id}/images/{filename}"
                 }
                 image_list.append(image_entry)
                 count += 1
@@ -70,7 +68,7 @@ class GalleryFlaskApp:
                 abort(404, "Thumbnail not found")
             image_uuid = image_data["image_uuid"]
             #image_filename = utils.storage_path() + f"/gallery/{image_uuid}.blob"
-            thumb_filename = self._gallery_db.get_storage_path() + f"/{image_uuid}_thumb.png"
+            thumb_filename = self._gallery_db.get_storage_path() / f"{image_uuid}_thumb.png"
             return send_file(thumb_filename,
                 mimetype='image/png',
                 as_attachment=False,
@@ -86,7 +84,7 @@ class GalleryFlaskApp:
             image_uuid = image_data["image_uuid"]
             mime_type = image_data["mime_type"]
             #image_filename = utils.storage_path() + f"/gallery/{image_uuid}.blob"
-            local_file_name = self._gallery_db.get_storage_path() + f"/{image_uuid}.blob"
+            local_file_name = self._gallery_db.get_storage_path() / f"{image_uuid}.blob"
             return send_file(local_file_name,
                 mimetype=mime_type,
                 as_attachment=False,
@@ -112,7 +110,7 @@ class GalleryFlaskApp:
                     image_uuid = image["image_uuid"]
                     file_name = self._get_file_name(count, image["mime_type"])
                     # todo do path stuff
-                    filepath = self._gallery_db.get_storage_path() + f"/{image_uuid}.blob"
+                    filepath = self._gallery_db.get_storage_path() / f"{image_uuid}.blob"
                     if os.path.exists(filepath):
                         zf.write(filepath, arcname=file_name)
                     count += 1

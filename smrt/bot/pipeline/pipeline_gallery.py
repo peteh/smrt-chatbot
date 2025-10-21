@@ -5,7 +5,6 @@ import hashlib
 import uuid
 import io
 import os
-import base64
 from PIL import Image
 from smrt.db import GalleryDatabase
 import smrt.utils.utils as utils
@@ -48,8 +47,8 @@ class GalleryPipeline(AbstractPipeline):
         """
         file_uuid = str(uuid.uuid4())
 
-        image_filename = self._gallery_db.get_storage_path() + f"/{file_uuid}.blob"
-        thumb_filename = self._gallery_db.get_storage_path() + f"/{file_uuid}_thumb.png"
+        image_filename = self._gallery_db.get_storage_path() / f"{file_uuid}.blob"
+        thumb_filename = self._gallery_db.get_storage_path() / f"{file_uuid}_thumb.png"
         # write binary to file: 
         with open(image_filename, "wb") as f:
             f.write(image_data)
@@ -77,6 +76,7 @@ class GalleryPipeline(AbstractPipeline):
                 mime_type, image_data = messenger.download_media(message)
                 
                 if mime_type not in ["image/png", "image/jpeg", "image/jpg"]:
+                    logging.debug(f"Skipping image with unsupported mime type: {mime_type}")
                     messenger.mark_skipped(message)
                     return
                 
@@ -87,6 +87,7 @@ class GalleryPipeline(AbstractPipeline):
                 width, height = img.size
                 
                 if width < 1024 or height < 1024:
+                    logging.debug(f"Skipping image with too small dimensions: {width}x{height}")
                     messenger.mark_skipped(message)
                     return
                 
@@ -94,6 +95,7 @@ class GalleryPipeline(AbstractPipeline):
                 sha256_hash = hashlib.sha256(image_data).hexdigest()
                 
                 if self._gallery_db.has_image(chat_id, sha256_hash):
+                    logging.debug(f"Skipping duplicate image with hash: {sha256_hash}")
                     messenger.mark_skipped(message)
                     return
 
@@ -169,8 +171,8 @@ class GalleryDeletePipeline(AbstractPipeline):
         return command in self._commands
 
     def _delete_image(self, chat_id: str, image_uuid: str):
-        os.remove(self._gallery_db.get_storage_path() + f"/{image_uuid}.blob")
-        os.remove(self._gallery_db.get_storage_path() + f"/{image_uuid}_thumb.png")
+        os.remove(self._gallery_db.get_storage_path() / f"{image_uuid}.blob")
+        os.remove(self._gallery_db.get_storage_path() / f"{image_uuid}_thumb.png")
         self._gallery_db.delete_image(chat_id, image_uuid)
         
     def process(self, messenger: MessengerInterface, message: dict):
