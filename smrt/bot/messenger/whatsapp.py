@@ -15,7 +15,7 @@ class WhatsappMessenger(MessengerInterface):
     REACT_HOURGLASS_HALF = "\u231b"
     REACT_HOURGLASS_FULL = "\u23f3"
     REACT_CHECKMARK = "\u2714\ufe0f"
-    REACT_SKIP = "\u1f518"
+    REACT_SKIP = "\U0001F4A4"
     REACT_FAIL = "\u274c"
 
     DEFAULT_TIMEOUT = 60
