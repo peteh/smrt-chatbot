@@ -5,6 +5,7 @@ from .pipeline_ha import HomeassistantSayCommandPipeline, HomeassistantTextComma
 from .pipeline_all import VoiceMessagePipeline, GrammarPipeline, URLSummaryPipeline, ImagePromptPipeline, ImageGenerationPipeline, TinderPipeline
 from .pipeline_tts import TextToSpeechPipeline
 from .pipeline_gaudeam import GaudeamBdayPipeline, GaudeamCalendarPipeline, GaudeamBdayScheduledTask, GaudeamEventsScheduledTask
+from .pipeline_gpt import MessageQuestionPipeline
 from .scheduled import ScheduledTaskInterface, AbstractScheduledTask
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "GaudeamCalendarPipeline",
     "GaudeamBdayScheduledTask",
     "GaudeamEventsScheduledTask",
+    "MessageQuestionPipeline",
     "VoiceMessagePipeline",
     "GrammarPipeline",
     "URLSummaryPipeline",

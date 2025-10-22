@@ -5,19 +5,15 @@ import threading
 from multiprocessing import Process
 from pathlib import Path
 import schedule
+import yaml
+from cerberus import Validator
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
-import yaml
-
 import smrt.db
 import smrt.bot.pipeline as pipeline
 import smrt.bot.messenger as messenger
 import smrt.bot.messagequeue as messagequeue
 from smrt.web.galleryweb import GalleryFlaskApp
-
-#from senate_stocks import SenateStockNotification
-
 import smrt.bot.tools
 
 schema = {
@@ -35,7 +31,8 @@ schema = {
         "type": "dict",
         "schema": {
             "wppconnect_api_key": {"type": "string", "required": True},
-            "wppconnect_server": {"type": "string", "required": True}
+            "wppconnect_server": {"type": "string", "required": True},
+            "lid": {"type": "string", "required": False}
         },
         "required": False
     },
@@ -158,6 +155,14 @@ schema = {
         },
         "required": False
     },
+    "message_gpt": {
+        "type": "dict",
+        "schema": {
+            "answer_bot": {"type": "string", "required": True},
+            "max_chat_history_messages": {"type": "integer", "required": False}
+        },
+        "required": False
+    },
     "gaudeam": {
         "type": "list",
         "schema": {
@@ -181,7 +186,7 @@ schema = {
     }
 }
 
-from cerberus import Validator
+
 def validate_config(config, schema):
     validator = Validator(schema)
     if validator.validate(config):
@@ -332,6 +337,20 @@ def run():
             schedule.every().day.at(schedule_time, "Europe/Berlin").do(event_task.run)
             logging.info(f"Scheduled Gaudeam event notifications at {schedule_time} daily.")
 
+    # message answer pipeline
+    CONFIG_MESSAGE_GPT = "message_gpt"
+    if CONFIG_MESSAGE_GPT in configuration:
+        config_ma = configuration[CONFIG_MESSAGE_GPT]
+        answer_bot = bot_loader.create(config_ma["answer_bot"])
+        chat_id_whitelist = config_ma.get("chat_id_whitelist", None)
+        chat_id_blacklist = config_ma.get("chat_id_blacklist", None)
+        max_chat_history_messages = config_ma.get("max_chat_history_messages", 20)
+        message_db = smrt.db.MessageDatabase(storage_path)
+        message_answer_pipeline = pipeline.MessageQuestionPipeline(message_db,answer_bot, max_chat_history_messages,
+                                                                   chat_id_whitelist, chat_id_blacklist)
+        mainpipe.add_pipeline(message_answer_pipeline)
+        logging.info("Loaded Message GPT Pipeline.")
+
     # voice message transcription with whsisper
     CONFIG_VOICE_TRANSCRIPTION = "voice_transcription"
     if CONFIG_VOICE_TRANSCRIPTION in configuration:
@@ -423,7 +442,7 @@ def run():
             logging.info(f"Started Gallery web server on port {gallery_port} (pid={message_server_proc.pid})")
         else:
             from waitress import serve
-            gallery_thread = threading.Thread(target=serve, args=(gallery_app._app,), kwargs={"port": gallery_port}, daemon=False)
+            gallery_thread = threading.Thread(target=serve, args=(gallery_app.get_app(),), kwargs={"port": gallery_port}, daemon=False)
             gallery_thread.start()
             logging.info(f"Started Gallery web server on port {gallery_port} in thread.")
 
@@ -453,7 +472,12 @@ def run():
     if CONFIG_WHATSAPP in configuration:
 
         config_whatsapp = configuration[CONFIG_WHATSAPP]
-        whatsapp = messenger.WhatsappMessenger(config_whatsapp["wppconnect_server"], "smrt", config_whatsapp["wppconnect_api_key"])
+        lid = config_whatsapp.get("lid", "")
+        whatsapp = messenger.WhatsappMessenger(config_whatsapp["wppconnect_server"],
+                                               "smrt", 
+                                               config_whatsapp["wppconnect_api_key"],
+                                               lid)
+
         messenger_manager.add_messenger(whatsapp)
         whatsapp_queue = messagequeue.WhatsappMessageQueue(whatsapp, mainpipe)
         whatsapp_queue.run_async()
@@ -468,7 +492,7 @@ def run():
 
     # run scheduled tasks continuously in background
     stop_run_continuously = run_schedule_continuously()
-    
+
     # run the message server
     message_server_port = 5000
     if debug_flag:
@@ -481,10 +505,9 @@ def run():
         logging.info(f"Started Message server on port {message_server_port} (pid={message_server_proc.pid})")
     else:
         from waitress import serve
-        gallery_thread = threading.Thread(target=serve, args=(message_server._app,), kwargs={"port": message_server_port}, daemon=False)
+        gallery_thread = threading.Thread(target=serve, args=(message_server.get_app(),), kwargs={"port": message_server_port}, daemon=False)
         gallery_thread.start()
         logging.info(f"Started Message server on port {message_server_port} in thread.")
-    
 
 
 def run_schedule_continuously(interval=10):

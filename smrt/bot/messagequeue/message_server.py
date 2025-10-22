@@ -12,6 +12,9 @@ class MessageServerFlaskApp:
         self._messenger_manager = messenger_manager
         self._register_routes()
         self._app.logger.setLevel(logging.INFO)
+    
+    def get_app(self) -> Flask:
+        return self._app
 
     def _register_routes(self):
         @self._app.route('/send_message', methods=['POST'])

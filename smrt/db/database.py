@@ -61,7 +61,7 @@ class MessageDatabase():
                         message, time.time()))
             self._db.commit()
 
-    def get_group_messages(self, chat_id: str, count: int) -> typing.List[dict]:
+    def get_messages(self, chat_id: str, count: int) -> typing.List[dict]:
         """Returns a list of the count newest group messages from a given group. 
 
         Args:
@@ -74,8 +74,8 @@ class MessageDatabase():
         with self._lock:
             cur = self._db.cursor()
             return_list = []
-            for row in cur.execute("SELECT group_id, sender, message FROM groups \
-                                    WHERE group_id = ? ORDER BY `time` DESC LIMIT ?",
+            for row in cur.execute("SELECT chat_id, sender, message FROM messages \
+                                    WHERE chat_id = ? ORDER BY `time` DESC LIMIT ?",
                                     (chat_id, count)):
                 entry = {
                     "chat_id": row['chat_id'],

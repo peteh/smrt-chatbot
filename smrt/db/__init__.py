@@ -1,3 +1,4 @@
-from .database import GalleryDatabase
+from .database import GalleryDatabase, MessageDatabase
 
-__all__ = ["GalleryDatabase"]
+__all__ = ["GalleryDatabase",
+           "MessageDatabase"]

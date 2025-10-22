@@ -1,4 +1,5 @@
 
+import logging
 import base64
 import subprocess
 import tempfile
@@ -213,9 +214,10 @@ class SignalMessenger(MessengerInterface):
     def is_bot_mentioned(self, message: dict):
         if "dataMessage" in message["envelope"] \
             and "mentions" in message["envelope"]["dataMessage"]:
-            # TODO: extract the number
             for mention in message["envelope"]["dataMessage"]["mentions"]:
+                logging.debug(f"Checking mention number: {mention.get('number')} against bot number: {self._number}")
                 if mention.get("number") == self._number:
+                    logging.debug("Bot mentioned in message.")
                     return True
         return False
 

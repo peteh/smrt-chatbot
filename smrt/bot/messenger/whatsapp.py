@@ -20,10 +20,12 @@ class WhatsappMessenger(MessengerInterface):
 
     DEFAULT_TIMEOUT = 60
 
-    def __init__(self, server: str, session: str, api_key: str):
+    def __init__(self, server: str, session: str, api_key: str, lid: str):
         self._server = server
         self._session = session
         self._api_key = api_key
+        self._jid = ""
+        self._lid = lid
         self._headers = {"Authorization": f"Bearer {self._api_key}"}
 
     def get_server(self) -> str:
@@ -44,6 +46,13 @@ class WhatsappMessenger(MessengerInterface):
                                  headers=self._headers,
                                  timeout=self.DEFAULT_TIMEOUT)
         logging.debug(response.json())
+        
+        response = requests.get(self._endpoint_url("get-phone-number"),
+                                headers=self._headers,
+                                timeout=self.DEFAULT_TIMEOUT)
+        self._jid = response.json().get("response", "")
+        logging.debug(f"WhatsApp JID: {self._jid}")
+        
     
     def send_message(self, chat_id: str, text: str):
         # The chat_id is in the format "whatsapp://<phone-number>@c.us"
@@ -209,10 +218,14 @@ class WhatsappMessenger(MessengerInterface):
         return message.get("type") == "image"
 
     def is_bot_mentioned(self, message: dict):
-        # TODO: extract this somehow
-        return 'mentionedJidList' in message \
-            and len(message['mentionedJidList']) == 1 \
-            and message['mentionedJidList'] == '4917658696957@c.us'
+        if "mentionedJidList" not in message:
+            return False
+        for jid in message['mentionedJidList']:
+            logging.debug(f"Checking mention JID: {jid} against bot JID: {self._jid} and LID: {self._lid}")
+            if jid == self._jid or jid == self._lid:
+                logging.debug("Bot mentioned in message.")
+                return True
+        return False
 
     def get_message_text(self, message: dict):
         # if the message is of type image, then the text you sent is in the caption field

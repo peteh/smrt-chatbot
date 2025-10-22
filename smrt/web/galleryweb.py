@@ -4,8 +4,6 @@ import os
 import io
 import zipfile
 from smrt.db.database import GalleryDatabase
-import json
-import base64
 from smrt.utils import utils
 
 class GalleryFlaskApp:
@@ -13,6 +11,9 @@ class GalleryFlaskApp:
         self._app = Flask(__name__)
         self._register_routes()
         self._gallery_db = gallery_db
+    
+    def get_app(self) -> Flask:
+        return self._app
 
     def _mime_type_to_extension(self, mime_type: str) -> str:
         mapping = {
