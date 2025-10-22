@@ -12,7 +12,7 @@ class MessageServerFlaskApp:
         self._messenger_manager = messenger_manager
         self._register_routes()
         self._app.logger.setLevel(logging.INFO)
-    
+
     def get_app(self) -> Flask:
         return self._app
 
@@ -53,7 +53,6 @@ class MessageServerFlaskApp:
             if len(error) > 0:
                 return jsonify({'status': 'error', 'message': error, 'sent_to': sent_to}), 500
             return jsonify({'status': 'success', 'sent_to': sent_to}), 200
-    
+
     def run(self, **kwargs):
         self._app.run(**kwargs)
-

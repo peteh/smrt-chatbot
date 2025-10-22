@@ -43,7 +43,7 @@ class SignalMessenger(MessengerInterface):
 
     def get_name(self) -> str:
         return "signal"
-    
+
     def _react(self, message: dict, reaction_text):
         if self.is_group_message(message):
             internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
@@ -72,7 +72,7 @@ class SignalMessenger(MessengerInterface):
 
     def mark_in_progress_done(self, message: dict):
         self._react(message, self.REACT_CHECKMARK)
-        
+
     def mark_skipped(self, message):
         self._react(message, self.REACT_SKIP)
 
@@ -110,7 +110,7 @@ class SignalMessenger(MessengerInterface):
         groups = response.json()
         for group in groups:
             self._group_cache[group["internal_id"]] = group["id"]
-    
+
     def send_message(self, chat_id: str, text: str):
         # The chat_id is in the format "signal://<group-id>" or "signal://<phone-number>"
         # We need to extract the group id or phone number part
@@ -124,7 +124,7 @@ class SignalMessenger(MessengerInterface):
             if recipient not in self._group_cache:
                 self._update_group_cache()
             recipient = self._group_cache.get(recipient, recipient)
-            
+
         data = {
             "message": text,
             "text_mode": "styled",
@@ -316,7 +316,7 @@ class SignalMessenger(MessengerInterface):
         self._send_audio(message["envelope"]["sourceNumber"], audio_file_path)
 
     def download_media(self, message: dict) -> Tuple[str, bytes]:
-        # TODO: looks like signal could return a list of attachments, 
+        # TODO: looks like signal could return a list of attachments,
         # thus we should have a list here too
         # we will just get the first one here for now though
         if "dataMessage" in message["envelope"] \
@@ -328,4 +328,3 @@ class SignalMessenger(MessengerInterface):
                             timeout=self.DEFAULT_TIMEOUT)
             return (content_type, response.content)
         return None
-

@@ -9,7 +9,8 @@
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
     "python.linting.pylintArgs": [
-        "--generated-members=numpy.* ,torch.*"
+        "--generated-members=numpy.* ,torch.*",
+        "--disable=W1203,"
         ],
         "[python]": {
             "editor.defaultFormatter": "ms-python.black-formatter"

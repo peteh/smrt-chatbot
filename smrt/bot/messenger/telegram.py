@@ -14,7 +14,7 @@ class TelegramMessenger(MessengerInterface):
 
     def get_telebot(self) -> telebot.TeleBot:
         return self._telebot
-    
+
     @override
     def get_name(self) -> str:
         return "telegram"
@@ -52,13 +52,12 @@ class TelegramMessenger(MessengerInterface):
     def is_self_message(self, message: dict):
         # TODO implement
         return False
-    
+
     @override
     def send_message(self, chat_id: str, text: str):
         # chat_id is in the format "telegram://<chat-id>"
         if chat_id.startswith("telegram://"):
             chat_id = chat_id.split("telegram://")[1]
- 
         self._telebot.send_message(chat_id, text, parse_mode='Markdown')
 
     @override

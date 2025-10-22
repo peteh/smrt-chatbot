@@ -46,14 +46,12 @@ class WhatsappMessenger(MessengerInterface):
                                  headers=self._headers,
                                  timeout=self.DEFAULT_TIMEOUT)
         logging.debug(response.json())
-        
         response = requests.get(self._endpoint_url("get-phone-number"),
                                 headers=self._headers,
                                 timeout=self.DEFAULT_TIMEOUT)
         self._jid = response.json().get("response", "")
         logging.debug(f"WhatsApp JID: {self._jid}")
-        
-    
+
     def send_message(self, chat_id: str, text: str):
         # The chat_id is in the format "whatsapp://<phone-number>@c.us"
         # We need to extract the phone number part
@@ -90,7 +88,7 @@ class WhatsappMessenger(MessengerInterface):
 
     def mark_in_progress_50(self, message: dict):
         self._react(message['id'], self.REACT_HOURGLASS_HALF)
-    
+
     def mark_skipped(self, message):
         self._react(message['id'], self.REACT_SKIP)
 
@@ -123,7 +121,7 @@ class WhatsappMessenger(MessengerInterface):
 
     def send_message_to_individual(self, message: dict, text: str):
         self._send_message(message['sender']['id'], False, text)
-    
+
     def get_name(self) -> str:
         return "whatsapp"
 

@@ -4,7 +4,7 @@ from typing import Tuple
 
 class MessengerInterface(ABC):
     """Interface for messengers to communicate with the underlying framework. """
-    
+
     @abstractmethod
     def get_name(self) -> str:
         """Returns the name of the messenger, e.g. 'whatsapp' or 'telegram'. 
@@ -24,7 +24,7 @@ class MessengerInterface(ABC):
     @abstractmethod
     def mark_in_progress_done(self, message: dict) -> None:
         """Marks a message that it's processing has been finished. """
-    
+
     def mark_skipped(self, message: dict) -> None:
         """Marks a message skipped from processing"""
 
@@ -151,10 +151,9 @@ class MessengerManager():
 
     def add_messenger(self, messenger: MessengerInterface):
         self._messengers[messenger.get_name()] = messenger
-    
+
     def get_messenger_by_chatid(self, chat_id: str) -> MessengerInterface | None:
         identifier = chat_id.split("://")[0]  # Extract the identifier from the chat_id
-        
         if identifier in self._messengers:
             return self._messengers[identifier]
         return None

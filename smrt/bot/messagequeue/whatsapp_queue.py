@@ -20,7 +20,7 @@ class WhatsappMessageQueue():
         self._sio.on('received-message', self.on_new_message)
         self._sio.on('message', self.on_message)
         self._sio.on('*', self.on_catch_all)
-    
+
     def run_async(self):
         self._thread = threading.Thread(target=self.run)
         self._thread.start()
@@ -33,8 +33,7 @@ class WhatsappMessageQueue():
 
     def on_message(self, data):
         logging.info(f"Received message: {data}")
-        
-    
+
     def on_new_message(self, data):
         logging.info(f"Received new message: {data}")
         self._mainpipe.process(self._messenger, data['response'])
@@ -56,4 +55,3 @@ class WhatsappMessageQueue():
         except Exception as e:
             logging.error(f"Error in WhatsappMessageQueue: {e}")
             self._sio.disconnect()
-            #raise e

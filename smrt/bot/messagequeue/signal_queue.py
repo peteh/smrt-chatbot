@@ -28,10 +28,10 @@ class SignalMessageQueue():
                     logging.info("Connected to Signal Service")
                 message = json.loads(web_sock.recv())
                 # TODO: fix logs
-                print(message)
-                print(f"is_group_message: {self._messenger.is_group_message(message)}")
-                print(f"has_audio_data: {self._messenger.has_audio_data(message)}")
-                print(f"get_message_text: {self._messenger.get_message_text(message)}")
+                logging.debug(message)
+                logging.debug(f"is_group_message: {self._messenger.is_group_message(message)}")
+                logging.debug(f"has_audio_data: {self._messenger.has_audio_data(message)}")
+                logging.debug(f"get_message_text: {self._messenger.get_message_text(message)}")
 
                 if "dataMessage" in message["envelope"]:
                     self._mainpipe.process(self._messenger, message)
@@ -40,7 +40,7 @@ class SignalMessageQueue():
                 logging.warning("Failed to connect to signal service, retrying")
                 web_sock = None
                 time.sleep(3)
-    
+
     def run_async(self):
         self._thread = threading.Thread(target=self.get_messages)
         self._thread.start()
