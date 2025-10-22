@@ -88,8 +88,11 @@ Input:
         chat_id = messenger.get_chat_id(message)
         self._message_db.add_message(chat_id, sender_name, message_text)
 
-        # do we need to handle a bot command?
-        if message_text.startswith(f"#{self.QUESTION_COMMAND}") or messenger.is_bot_mentioned(message):
+        # do we need to handle a bot command? 
+        # Pass: Bot mentioned without command or #question
+        # Skip: all other messages that are commands
+        if message_text.startswith(f"#{self.QUESTION_COMMAND}") \
+            or (messenger.is_bot_mentioned(message) and not message_text.startswith("#")):
             self._process_question_command(messenger, message)
 
     def get_help_text(self) -> str:

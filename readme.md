@@ -78,6 +78,7 @@ Whatsapp can be integrated using [WPPConnect Server](https://github.com/wppconne
 whatsapp:
   wppconnect_api_key: "Generated API Key"
   wppconnect_server: "http://127.0.0.1:21465"
+  lid: 153279329759289@lid # optional: the lid of the account, used to identify if the bot was tagged
 ```
 
 ### Signal Messenger
@@ -131,6 +132,17 @@ ollama:
 Models can be chosen via `llama_cpp:modelname`.
 
 Note: Models are actually not yet chosable as llama server only loads one model.
+
+### Message GPT Answering
+
+This feature allows to ask the chatbot questions to the messages in the chat. 
+
+```yaml
+message_gpt:
+  answer_bot: "llama_cpp:gemma3:12b" # bot to use for answering messages
+  max_chat_history_messages: 20 # optional: number of previous messages to include in the context
+
+```
 
 ### Gallery Creation
 

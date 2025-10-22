@@ -448,8 +448,10 @@ def run():
 
     CONFIG_CHATID = "chatid"
     if CONFIG_CHATID in configuration:
-        chatid_pipeline = smrt.bot.pipeline.ChatIdPipeline()
+        chatid_pipeline = pipeline.ChatIdPipeline()
         mainpipe.add_pipeline(chatid_pipeline)
+        lid_pipeline = pipeline.WhatsappLidPipeline()
+        mainpipe.add_pipeline(lid_pipeline)
 
     # load all messengers
     CONFIG_SIGNAL = "signal"

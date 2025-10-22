@@ -225,6 +225,14 @@ class WhatsappMessenger(MessengerInterface):
                 return True
         return False
 
+    def get_lids(self, message: dict):
+        if "mentionedJidList" not in message:
+            return []
+        lids = []
+        for jid in message['mentionedJidList']:
+            lids.append(jid)
+        return lids
+
     def get_message_text(self, message: dict):
         # if the message is of type image, then the text you sent is in the caption field
         if message.get("type") == "image":

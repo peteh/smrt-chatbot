@@ -9,7 +9,7 @@ import os
 
 from abc import ABC, abstractmethod
 
-from smrt.bot.messenger import MessengerInterface
+from smrt.bot.messenger import MessengerInterface, WhatsappMessenger
 
 class PipelineInterface(ABC):
     """Generic pipeline interface to process messages. """
@@ -161,8 +161,6 @@ class ChatIdPipeline(AbstractPipeline):
         return self.CHATID_COMMAND in command
 
     def process(self, messenger: MessengerInterface, message: dict):
-        messenger.get_chat_id(message)
-
         response_text = messenger.get_chat_id(message)
         messenger.reply_message(message, response_text)
 
@@ -172,6 +170,36 @@ class ChatIdPipeline(AbstractPipeline):
         return \
 f"""*ChatId Help*
 _#{self.CHATID_COMMAND}_ Returns the identifier of the current chat. """
+
+class WhatsappLidPipeline(AbstractPipeline):
+    """A pipeline that responds to chatid command with the unique identifier of the chat. """
+    WALID_COMMAND = "walid"
+
+    def __init__(self) -> None:
+        # allow in all chats
+        super().__init__(None, None)
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        command = PipelineHelper.extract_command(messenger.get_message_text(message))
+        return self.WALID_COMMAND in command
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        chat_id = messenger.get_chat_id(message)
+        if not chat_id.startswith("whatsapp:") or not isinstance(messenger, WhatsappMessenger):
+            messenger.reply_message(message, f"The #{self.WALID_COMMAND} command is only available in WhatsApp chats.")
+            messenger.mark_in_progress_fail(message)
+            return
+
+        lids = messenger.get_lids(message)
+        lid_text = ", ".join(lids)
+        response_text = f"Lids: {lid_text}"
+        messenger.reply_message(message, response_text)
+        messenger.mark_in_progress_done(message)
+
+    def get_help_text(self) -> str:
+        return \
+f"""*LidId Help*
+_#{self.WALID_COMMAND}_ Returns the lids of tagged contacts in the message. """
 
 
 class HelpPipeline(AbstractPipeline):
