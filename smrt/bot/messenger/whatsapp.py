@@ -105,7 +105,7 @@ class WhatsappMessenger(MessengerInterface):
             "phone": recipient,
             "isGroup": is_group_message
         }
-        requests.post(self._endpoint_url("mark-seen"),
+        requests.post(self._endpoint_url("send-seen"),
                       json=data,
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
