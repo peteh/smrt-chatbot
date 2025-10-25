@@ -69,8 +69,7 @@ class GaudeamCalendarPipeline(AbstractPipeline):
         # we check if the message is a ha command
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands
-                
-                
+
     def process(self, messenger: MessengerInterface, message: dict):
         (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
         if command == self.DATE_COMMAND:
@@ -100,23 +99,22 @@ class GaudeamUtils:
     def format_bday_message(bday_members: list[dict]) -> str:
         if len(bday_members) == 0:
             return "No birthdays today."
-        
+
         text = "Birthdays today:"
         for member in bday_members:
             first_name = member["first_name"]
             last_name = member["last_name"]
             age = member["age"]
-            
             text = text + f"\n - {first_name} {last_name} ({age})"
         text += "\n\nHappy Birthday! 🎉🎂"
         return text
-    
+
     @staticmethod
     def get_bdays_today(gaudeam: Gaudeam) -> list[dict]:
         # todays date in format dd.mm
         today_date = datetime.datetime.now().strftime("%d.%m")
         logging.debug(f"Today's date: {today_date}")
-        
+
         bday_members = []
 
         for member in gaudeam.members():
@@ -139,18 +137,18 @@ class GaudeamUtils:
     def format_events_message(events: list[dict]) -> str:
         if len(events) == 0:
             return "No upcoming events."
-        
+
         text = "Upcoming events:"
         for event in events:
             title = event["title"]
             start = event["start"] # format: "Thu, 02 Oct 2025 18:00:00 +0000"
             url = event["url"]
-            
+
             # take start date and convert to dd.mm.yyyy in Europe/Berlin timezone
             start_date = datetime.datetime.strptime(start, "%a, %d %b %Y %H:%M:%S %z")
             start_date = start_date.astimezone(datetime.timezone(datetime.timedelta(hours=2))) # Europe/Berlin timezone
             start_str = start_date.strftime("%d.%m.%Y")
-            
+
             text = text + f"\n - {start_str}: {title} ({url})"
         return text
 class GaudeamBdayScheduledTask(scheduled.AbstractScheduledTask):
@@ -166,9 +164,9 @@ class GaudeamBdayScheduledTask(scheduled.AbstractScheduledTask):
             if len(bdays) == 0:
                 logging.info("No birthdays today.")
                 return
-            
+
             text = GaudeamUtils.format_bday_message(bdays)
-            
+
             for chat_id in self.get_chat_ids():
                 try:
                     messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)
@@ -188,8 +186,7 @@ class GaudeamEventsScheduledTask(scheduled.AbstractScheduledTask):
         try: 
             # get day of week as an integer
             week_day = datetime.datetime.now().weekday()
-            
-            
+
             if week_day == 0: # 0 = Monday
                 # Monday, send events for the next 14 days
                 days_ahead = 14

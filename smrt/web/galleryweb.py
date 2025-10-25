@@ -51,11 +51,11 @@ class GalleryFlaskApp:
             count = 1
             for image in images:
                 image_entry = {
-                    "sender": image["sender"],
-                    "image_uuid": image["image_uuid"],
-                    "time": image["time"],
-                    "mime_type": image["mime_type"],
-                    "image_name": self._get_file_name(count, image["mime_type"]),
+                    "sender": image.sender,
+                    "image_uuid": image.image_uuid,
+                    "time": image.time,
+                    "mime_type": image.mime_type,
+                    "image_name": self._get_file_name(count, image.mime_type),
                 }
                 image_list.append(image_entry)
                 count += 1
@@ -67,7 +67,6 @@ class GalleryFlaskApp:
             image_data = self._gallery_db.get_image(chat_id, image_uuid)
             if not image_data:
                 abort(404, "Thumbnail not found")
-            image_uuid = image_data["image_uuid"]
             #image_filename = utils.storage_path() + f"/gallery/{image_uuid}.blob"
             thumb_filename = self._gallery_db.get_storage_path() / f"{image_uuid}_thumb.png"
             return send_file(thumb_filename,
@@ -82,8 +81,7 @@ class GalleryFlaskApp:
             image_data = self._gallery_db.get_image(chat_id, image_uuid)
             if not image_data:
                 abort(404, "Thumbnail not found")
-            image_uuid = image_data["image_uuid"]
-            mime_type = image_data["mime_type"]
+            mime_type = image_data.mime_type
             #image_filename = utils.storage_path() + f"/gallery/{image_uuid}.blob"
             local_file_name = self._gallery_db.get_storage_path() / f"{image_uuid}.blob"
             return send_file(local_file_name,
@@ -108,8 +106,8 @@ class GalleryFlaskApp:
             with zipfile.ZipFile(memory_file, 'w') as zf:
                 count = 1
                 for image in images:
-                    image_uuid = image["image_uuid"]
-                    file_name = self._get_file_name(count, image["mime_type"])
+                    image_uuid = image.image_uuid
+                    file_name = self._get_file_name(count, image.mime_type)
                     # todo do path stuff
                     filepath = self._gallery_db.get_storage_path() / f"{image_uuid}.blob"
                     if os.path.exists(filepath):

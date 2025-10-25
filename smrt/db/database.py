@@ -22,6 +22,17 @@ class Database:
     def close(self):
         self._con.close()
 
+class MessageEntry():
+    chat_id: str
+    sender: str
+    message: str
+    time: float
+    
+    def __init__(self, chat_id: str, sender: str, message: str, time: float):
+        self.chat_id = chat_id
+        self.sender = sender
+        self.message = message
+        self.time = time
 class MessageDatabase():
     
     def __init__(self, storage_path: Path):
@@ -61,7 +72,7 @@ class MessageDatabase():
                         message, time.time()))
             self._db.commit()
 
-    def get_messages(self, chat_id: str, count: int) -> typing.List[dict]:
+    def get_messages(self, chat_id: str, count: int) -> typing.List[MessageEntry]:
         """Returns a list of the count newest group messages from a given group. 
 
         Args:
@@ -77,15 +88,26 @@ class MessageDatabase():
             for row in cur.execute("SELECT chat_id, sender, message FROM messages \
                                     WHERE chat_id = ? ORDER BY `time` DESC LIMIT ?",
                                     (chat_id, count)):
-                entry = {
-                    "chat_id": row['chat_id'],
-                    "sender": row['sender'],
-                    "message": row['message']
-                }
+                entry = MessageEntry(chat_id=row['chat_id'], sender=row['sender'], message=row['message'], time=row['time'])
                 return_list.append(entry)
             return_list.reverse()
             return return_list
 
+class ImageEntry():
+    chat_id: str
+    sender: str
+    mime_type: str
+    image_uuid: str
+    image_hash: str
+    time: float
+
+    def __init__(self, chat_id: str, sender: str, mime_type: str, image_uuid: str, image_hash: str, time: float):
+        self.chat_id = chat_id
+        self.sender = sender
+        self.mime_type = mime_type
+        self.image_uuid = image_uuid
+        self.image_hash = image_hash
+        self.time = time
 class GalleryDatabase:
     """Database to store images from group chats for a gallery. """
 
@@ -115,7 +137,7 @@ class GalleryDatabase:
             cur.execute("""
             CREATE INDEX IF NOT EXISTS gallery_chat_index ON gallery(chat_id)
             """)
-            
+
             # create configuration table for group -> enabled/disabled
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS gallery_config (
@@ -194,10 +216,13 @@ class GalleryDatabase:
             cur = self._db.cursor()
             cur.execute("SELECT uuid FROM gallery_config WHERE chat_id = ? LIMIT 1", (chat_id,))
             row = cur.fetchone()
-            if row is None or row["uuid"] is None:
-                uuid_val = str(uuid.uuid4())
-            else:
-                uuid_val = row["uuid"]
+            #if row is None or row["uuid"] is None:
+            #    uuid_val = str(uuid.uuid4())
+            #else:
+            #    uuid_val = row["uuid"]
+
+            # always generate a new uuid even if there is one (changes uuid on re-enabling)
+            uuid_val = str(uuid.uuid4())
             cur.execute("INSERT OR REPLACE INTO gallery_config (chat_id, uuid, enabled) VALUES (?, ?, ?)",
                         (chat_id, uuid_val, 1 if enabled else 0))
             self._db.commit()
@@ -240,7 +265,7 @@ class GalleryDatabase:
                         time.time()))
             self._db.commit()
 
-    def get_images(self, chat_id : str) -> typing.List[dict]:
+    def get_images(self, chat_id : str) -> typing.List[ImageEntry]:
         """Returns a list of the count newest images from a given chat. 
 
         Args:
@@ -254,18 +279,17 @@ class GalleryDatabase:
             for row in self._db.cursor().execute("SELECT chat_id, sender, mime_type, image_uuid, image_hash, time FROM gallery \
                                     WHERE chat_id = ? ORDER BY `time` ASC",
                                     (chat_id, )):
-                entry = {
-                    "chat_id": row["chat_id"],
-                    "sender": row["sender"],
-                    "mime_type": row["mime_type"],
-                    "image_uuid": row["image_uuid"],
-                    "image_hash": row["image_hash"],
-                    "time": row["time"]
-                }
+
+                entry = ImageEntry(chat_id=row["chat_id"],
+                                   sender=row["sender"],
+                                   mime_type=row["mime_type"],
+                                   image_uuid=row["image_uuid"],
+                                   image_hash=row["image_hash"],
+                                   time=row["time"])
                 return_list.append(entry)
         return return_list
 
-    def get_image(self, chat_id: str, image_uuid: str) -> dict:
+    def get_image(self, chat_id: str, image_uuid: str) -> ImageEntry:
         """Returns a specific image entry from a given chat_id
 
         Args:
@@ -282,14 +306,12 @@ class GalleryDatabase:
             row = cur.fetchone()
             if row is None:
                 return None
-            entry = {
-                "chat_id": row["chat_id"],
-                "sender": row["sender"],
-                "mime_type": row["mime_type"],
-                "image_uuid": row["image_uuid"],
-                "image_hash": row["image_hash"],
-                "time": row["time"]
-            }
+            entry = ImageEntry(chat_id=row["chat_id"],
+                               sender=row["sender"],
+                               mime_type=row["mime_type"],
+                               image_uuid=row["image_uuid"],
+                               image_hash=row["image_hash"],
+                               time=row["time"])
             return entry
 
     def delete_image(self, chat_id: str, image_uuid: str) -> None:

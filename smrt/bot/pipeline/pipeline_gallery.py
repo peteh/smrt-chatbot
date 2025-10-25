@@ -1,14 +1,12 @@
-"""Implementations of a pipeline for processing text and voice for homeassistant. """
 import logging
 import typing
 import hashlib
 import uuid
 import io
 import os
+import time
 from PIL import Image
 from smrt.db import GalleryDatabase
-import smrt.utils.utils as utils
-import time
 
 from smrt.bot.messenger import MessengerInterface
 
@@ -17,7 +15,7 @@ class GalleryPipeline(AbstractPipeline):
     """Pipe to store images in a gallery from group chats. """
     GALLERY_COMMAND = "gallery"
 
-    def __init__(self, gallery_db: GalleryDatabase, base_url: str, chat_id_whitelist: typing.List[str] = None, chat_id_blacklist: typing.List[str] = None):
+    def __init__(self, gallery_db: GalleryDatabase, base_url: str, chat_id_whitelist: typing.List[str]|None = None, chat_id_blacklist: typing.List[str]|None = None):
         super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._commands = [self.GALLERY_COMMAND]
         self._gallery_db = gallery_db
@@ -27,11 +25,11 @@ class GalleryPipeline(AbstractPipeline):
         # not a group message, no need to process
         if not messenger.is_group_message(message):
             return False
-        
+
         # we have an image that we might need to process
         if messenger.has_image_data(message):
             return True
-        
+
         # gallery command
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands
@@ -70,30 +68,30 @@ class GalleryPipeline(AbstractPipeline):
                 if not self._gallery_db.is_enabled(chat_id):
                     # gallery not enabled for this group
                     return
-                
+
                 messenger.mark_in_progress_0(message)
-                # TODO: only insert if no duplicate in db
+
                 mime_type, image_data = messenger.download_media(message)
-                
+
                 if mime_type not in ["image/png", "image/jpeg", "image/jpg"]:
                     logging.debug(f"Skipping image with unsupported mime type: {mime_type}")
                     messenger.mark_skipped(message)
                     return
-                
+
                 # Load image from binary data
                 img = Image.open(io.BytesIO(image_data))
 
                 # Get width and height
                 width, height = img.size
-                
+
                 if width < 1024 or height < 1024:
                     logging.debug(f"Skipping image with too small dimensions: {width}x{height}")
                     messenger.mark_skipped(message)
                     return
-                
+
                 # Compute MD5 hash and skip duplicates in the same group
                 sha256_hash = hashlib.sha256(image_data).hexdigest()
-                
+
                 if self._gallery_db.has_image(chat_id, sha256_hash):
                     logging.debug(f"Skipping duplicate image with hash: {sha256_hash}")
                     messenger.mark_skipped(message)
@@ -101,15 +99,15 @@ class GalleryPipeline(AbstractPipeline):
 
                 file_uuid = self.process_image_store(image_data)
                 self._gallery_db.add_image(chat_id, messenger.get_sender_name(message), mime_type ,file_uuid, sha256_hash)
-                
+
                 messenger.mark_in_progress_done(message)
-                    
+ 
             except Exception as ex:
                 logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
                 messenger.mark_in_progress_fail(message)
                 return
             return
-        
+
         try:
             # gallery command
             command, _, params = PipelineHelper.extract_command_full(messenger.get_message_text(message))
@@ -134,9 +132,9 @@ class GalleryPipeline(AbstractPipeline):
                     self._gallery_db.set_enabled(messenger.get_chat_id(message), False)
                     messenger.reply_message(message, "Gallery disabled for this group.")
                     messenger.mark_in_progress_done(message)
-                    return  
+                    return
                 else:
-                    messenger.reply_message(message, "Unknown parameter. Use #gallery on/off to enable or disable the gallery, or just #gallery to get the link.")
+                    messenger.reply_message(message, f"Unknown parameter. Use #{self.GALLERY_COMMAND} on/off to enable or disable the gallery, or just #gallery to get the link.")
                     messenger.mark_in_progress_fail(message)
                     return
         except Exception as ex:
@@ -155,14 +153,14 @@ class GalleryDeletePipeline(AbstractPipeline):
     """Pipe to delete images from the gallery. """
     GALLERY_DELETE_COMMAND = "gallerydelete"
     GALLERY_DELETE_CONFIRM_COMMAND = "gallerydeleteconfirm"
-    
+
     CONFIRM_TIMEOUT_S = 30
 
     def __init__(self, gallery_db: GalleryDatabase, chat_id_whitelist: typing.List[str] = None, chat_id_blacklist: typing.List[str] = None):
         super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._commands = [self.GALLERY_DELETE_COMMAND, self.GALLERY_DELETE_CONFIRM_COMMAND]
         self._gallery_db = gallery_db
-        
+
         self._confirm_awaits = {}  #chat_id -> timestamp
 
     def matches(self, messenger: MessengerInterface, message: dict):
@@ -182,10 +180,10 @@ class GalleryDeletePipeline(AbstractPipeline):
             if command == self.GALLERY_DELETE_COMMAND:
                 messenger.mark_in_progress_0(message)
                 chat_id = messenger.get_chat_id(message)
-                
+
                 self._confirm_awaits[chat_id] = time.time()
-                
-                messenger.reply_message(message, f"To confirm deletion of all gallery images for this group, please send the command #gallerydeleteconfirm within the next {self.CONFIRM_TIMEOUT_S} seconds.")
+
+                messenger.reply_message(message, f"To confirm deletion of all gallery images for this group, please send the command #{self.GALLERY_DELETE_CONFIRM_COMMAND} within the next {self.CONFIRM_TIMEOUT_S} seconds.")
                 messenger.mark_in_progress_done(message)
                 return
 

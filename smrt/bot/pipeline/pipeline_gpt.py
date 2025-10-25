@@ -28,11 +28,11 @@ class MessageQuestionPipeline(AbstractPipeline):
         return False
 
     def _get_chat(self, chat_id, count) -> list[dict]:
-        messages = []
-        rows = self._message_db.get_messages(chat_id, count)
-        for row in rows:
-            messages.append({"sender": row['sender'], "message": row['message']})
-        return messages
+        result = []
+        messages = self._message_db.get_messages(chat_id, count)
+        for message in messages:
+            result.append({"sender": message.sender, "message": message.message})
+        return result
 
     def _process_question_command(self, messenger: MessengerInterface, message: dict):
         message_text = messenger.get_message_text(message)
@@ -88,7 +88,7 @@ Input:
         chat_id = messenger.get_chat_id(message)
         self._message_db.add_message(chat_id, sender_name, message_text)
 
-        # do we need to handle a bot command? 
+        # do we need to handle a bot command?
         # Pass: Bot mentioned without command or #question
         # Skip: all other messages that are commands
         if message_text.startswith(f"#{self.QUESTION_COMMAND}") \
