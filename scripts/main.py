@@ -7,14 +7,15 @@ from pathlib import Path
 import schedule
 import yaml
 from cerberus import Validator
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 import smrt.db
 import smrt.bot.pipeline as pipeline
 import smrt.bot.messenger as messenger
 import smrt.bot.messagequeue as messagequeue
 from smrt.web.galleryweb import GalleryFlaskApp
 import smrt.bot.tools
+from smrt.libgaudeam import Gaudeam, GaudeamSession
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 schema = {
     "storage_path": {"type": "string", "required": False},
@@ -315,9 +316,11 @@ def run():
     if CONFIG_GAUDEAM in configuration:
         gaudeam_configs = configuration[CONFIG_GAUDEAM]
         for gaudeam_config in gaudeam_configs:
-            gaudeam_session = gaudeam_config["gaudeam_session"]
+            gaudeam_session_cookie = gaudeam_config["gaudeam_session"]
             gaudeam_subdomain = gaudeam_config.get("gaudeam_subdomain")
-            gaudeam = smrt.libgaudeam.Gaudeam(gaudeam_session, gaudeam_subdomain)
+            gaudeam_session = GaudeamSession(gaudeam_session_cookie, gaudeam_subdomain)
+            gaudeam = Gaudeam(gaudeam_session)
+            
             chat_id_whitelist = gaudeam_config.get("chat_id_whitelist", None)
             chat_id_blacklist = gaudeam_config.get("chat_id_blacklist", None)
             gaudeam_pipeline = pipeline.GaudeamBdayPipeline(gaudeam, chat_id_whitelist, chat_id_blacklist)

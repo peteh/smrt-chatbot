@@ -1,3 +1,8 @@
-from .gaudeam import Gaudeam
+from .gaudeam import Gaudeam, GaudeamSession, GaudeamDriveFolder, GaudeamDrive, GaudeamDriveFile
 
-__all__ = ["Gaudeam"]
+__all__ = ["Gaudeam",
+           "GaudeamSession", 
+           "GaudeamDriveFolder", 
+           "GaudeamDrive", 
+           "GaudeamDriveFile"
+           ]
