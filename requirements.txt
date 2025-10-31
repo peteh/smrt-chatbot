@@ -10,7 +10,10 @@ cerberus
 flask
 waitress
 
+# text to speech
 faster_whisper
+wyoming
+
 trafilatura
 youtube-transcript-api
 # tts stuff

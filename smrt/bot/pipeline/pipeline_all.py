@@ -1,5 +1,4 @@
 """Implemenations of different pipelines to process messages. """
-import time
 import logging
 import re
 from typing import List
@@ -8,11 +7,10 @@ import tempfile
 import os
 
 from smrt.bot.tools.summary import SummaryInterface
-from smrt.bot.tools.transcript import TranscriptInterface
 from smrt.bot.messenger import MessengerInterface
 from smrt.bot.tools.question_bot import QuestionBotInterface, QuestionBotImageInterface
 import smrt.bot.tools.texttoimage as texttoimage
-import smrt.utils.utils as utils
+
 
 
 # article summary pipeline
@@ -103,81 +101,6 @@ class UndeletePipeline(AbstractPipeline):
 
     def get_help_text(self) -> str:
         return ""
-
-class VoiceMessagePipeline(AbstractPipeline):
-    """A pipe that converts audio messages to text and summarizes them. """
-    def __init__(self, transcriber: TranscriptInterface,
-                 summarizer: SummaryInterface,
-                 min_words_for_summary: int, chat_id_whitelist: List[str] = None, chat_id_blacklist: List[str] = None):
-        super().__init__(chat_id_whitelist, chat_id_blacklist)
-        self._transcriber = transcriber
-        self._summarizer = summarizer
-        self._min_words_for_summary = min_words_for_summary
-        self._store_files = False
-
-    def matches(self, messenger: MessengerInterface, message: dict):
-        if not messenger.has_audio_data(message):
-            return False
-        return True
-
-    def process(self, messenger: MessengerInterface, message: dict):
-        try:
-            print("Processing in Voice Pipeline")
-            debug = {}
-            messenger.mark_in_progress_0(message)
-
-            (_, decoded) = messenger.download_media(message)
-            if self._store_files:
-                with open('out.opus', 'wb') as output_file:
-                    output_file.write(decoded)
-
-            start = time.time()
-            transcript = self._transcriber.transcribe(decoded)
-            end = time.time()
-            debug['transcript_time'] = end - start
-
-            transcript_text = transcript['text']
-            words = transcript['words']
-            language = transcript['language']
-
-            response_message = f"Transcribed: \n{transcript_text}"
-            messenger.reply_message(message, response_message)
-
-            debug['transcript_language'] = language
-            debug['transcript_language_probability'] = transcript['language_probability']
-            debug['transcript_words'] = transcript['words']
-            debug['transcript_cost'] = transcript['cost']
-            if words > self._min_words_for_summary and self._summarizer is not None:
-                messenger.mark_in_progress_50(message)
-
-                start = time.time()
-                summary = self._summarizer.summarize(transcript_text, language)
-                end = time.time()
-                debug['summary_time'] = end - start
-
-                summary_text = summary['text']
-                debug['summary_cost'] = summary['cost']
-                messenger.reply_message(message, f"Summary: \n{summary_text}")
-
-            messenger.mark_in_progress_done(message)
-            if utils.is_debug():
-                debug_text = "Debug: \n"
-                for debug_key, debug_value in debug.items():
-                    debug_text += debug_key + ": " + str(debug_value) + "\n"
-                debug_text = debug_text.strip()
-                messenger.reply_message(message, debug_text)
-        except Exception as ex:
-            logging.critical(ex, exc_info=True)
-            messenger.mark_in_progress_fail(message)
-            return
-
-    def get_help_text(self) -> str:
-        return \
-"""*Voice Message Transcription*
-Forward voice messages to the bot to transcribe them. """
-
-# TODO split into message storage pipeline and command pipeline
-
 
 import requests
 import langid

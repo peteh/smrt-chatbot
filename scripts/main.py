@@ -360,7 +360,7 @@ def run():
         config_vt = configuration[CONFIG_VOICE_TRANSCRIPTION]
         vt_min_words_for_summary = config_vt.get("min_words_for_summary", 10)
         vt_chat_id_blacklist = config_vt.get("chat_id_blacklist", [])
-        vt_transcriber = smrt.bot.tools.FasterWhisperTranscript()
+        vt_transcriber = smrt.libtranscript.FasterWhisperTranscript()
         if "summary_bot" in config_vt:
             vt_summary_bot = bot_loader.create(config_vt["summary_bot"])
             vt_summarizer = smrt.bot.tools.QuestionBotSummary(vt_summary_bot)

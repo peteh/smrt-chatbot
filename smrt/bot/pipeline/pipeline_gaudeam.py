@@ -129,7 +129,7 @@ class GaudeamUtils:
         today_date = datetime.datetime.now()
         end_date = today_date + datetime.timedelta(days=days)
         logging.debug(f"Fetching events from {today_date} to {end_date}")
-        events = gaudeam.calendar(today_date.date(), end_date.date())
+        events = gaudeam.user_calendar(today_date.date(), end_date.date())
         events = sorted(events, key=lambda x: datetime.datetime.strptime(x["start"], "%a, %d %b %Y %H:%M:%S %z"))
         return events
 

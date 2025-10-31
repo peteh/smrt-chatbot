@@ -1,5 +1,5 @@
 import unittest
-from smrt.bot.tools import transcript
+from smrt.libtranscript import transcript
 from decouple import config
 
 class TranscriptTests(unittest.TestCase):
