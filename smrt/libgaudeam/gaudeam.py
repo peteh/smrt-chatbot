@@ -117,10 +117,21 @@ class Gaudeam:
             members.extend(response_members.json()["results"])
         return members
 
-    def calendar(self, start_date: datetime.date, end_date: datetime.date) -> list[dict]:
+    def user_calendar(self, start_date: datetime.date, end_date: datetime.date) -> list[dict]:
         start_str = start_date.strftime("%Y-%m-%dT00:00:00Z")
         end_str = end_date.strftime("%Y-%m-%dT00:00:00Z")
         url = f"{self._session.url()}/user_calendar.json?start={start_str}&end={end_str}&timeZone=UTC"
+        response = self._session.client().get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logging.error(f"Error fetching calendar: {response.status_code}, {response.text}")
+            return []
+
+    def global_calendar(self, start_date: datetime.date, end_date: datetime.date) -> list[dict]:
+        start_str = start_date.strftime("%Y-%m-%dT00:00:00Z")
+        end_str = end_date.strftime("%Y-%m-%dT00:00:00Z")
+        url = f"{self._session.url()}/global_calendar.json?start={start_str}&end={end_str}&timeZone=UTC"
         response = self._session.client().get(url)
         if response.status_code == 200:
             return response.json()
@@ -186,8 +197,8 @@ class GaudeamDriveFolder:
             for entry in response.json()["results"]:
                 entry_type = entry["type"]
                 if entry_type in ["Folder", "Gallery"]:
-                   folder = GaudeamDriveFolder(self._session, entry["id"])
-                   results.append(folder)
+                    folder = GaudeamDriveFolder(self._session, entry["id"])
+                    results.append(folder)
                 else:
                     logging.debug(f"Skipping non-folder entry: {entry['name']} ({entry_type})")
             return results
@@ -203,8 +214,8 @@ class GaudeamDriveFolder:
             for entry in response.json()["results"]:
                 entry_type = entry["type"]
                 if entry_type in ["Photo", "DriveFile"]:
-                   folder = GaudeamDriveFile(self._session, entry["id"])
-                   results.append(folder)
+                    folder = GaudeamDriveFile(self._session, entry["id"])
+                    results.append(folder)
                 else:
                     logging.debug(f"Skipping non-file entry: {entry['name']} ({entry_type})")
             return results
