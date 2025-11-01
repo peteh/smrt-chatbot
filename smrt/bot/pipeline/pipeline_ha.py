@@ -318,6 +318,10 @@ class HomeassistantVoiceCommandPipeline(AbstractHomeassistantPipeline):
             raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
 
         msg = json.loads(ws.recv())
+        if msg["event"]["type"] != "stt-vad-end":
+            raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
+
+        msg = json.loads(ws.recv())
         if msg["event"]["type"] != "stt-end":
             raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
         
