@@ -85,18 +85,23 @@ class WhatsappMessenger(MessengerInterface):
 
     def mark_in_progress_0(self, message: dict):
         self._react(message['id'], self.REACT_HOURGLASS_FULL)
+        self.send_typing(message, True)
 
     def mark_in_progress_50(self, message: dict):
         self._react(message['id'], self.REACT_HOURGLASS_HALF)
+        self.send_typing(message, True)
 
     def mark_skipped(self, message):
         self._react(message['id'], self.REACT_SKIP)
+        self.send_typing(message, False)
 
     def mark_in_progress_done(self, message: dict):
         self._react(message['id'], self.REACT_CHECKMARK)
+        self.send_typing(message, False)
 
     def mark_in_progress_fail(self, message: dict):
         self._react(message['id'], self.REACT_FAIL)
+        self.send_typing(message, False)
 
     def mark_seen(self, message: dict) -> None:
         is_group_message = self.is_group_message(message)
@@ -257,3 +262,16 @@ class WhatsappMessenger(MessengerInterface):
         decoded = base64.b64decode(data)
         mime_type = json_response['mimetype']
         return (mime_type, decoded)
+
+    def send_typing(self, message: dict, typing: bool):
+        is_group_message = self.is_group_message(message)
+        recipient = message['chatId'] if is_group_message else message['sender']['id']
+        data = {
+            "phone": recipient,
+            "isGroup": is_group_message,
+            "value": typing
+        }
+        requests.post(self._endpoint_url("typing"),
+                      json=data,
+                      headers=self._headers,
+                      timeout=self.DEFAULT_TIMEOUT)

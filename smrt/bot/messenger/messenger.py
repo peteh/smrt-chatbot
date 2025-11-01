@@ -144,6 +144,15 @@ class MessengerInterface(ABC):
             Tuple[str, bytes]: mime type and binary data of the downloaded media
         """
 
+    @abstractmethod
+    def send_typing(self, message: dict, typing: bool) -> None:
+        """Sends a typing event that the we are typing. 
+
+        Args:
+            message (dict): The message to reptly to
+            typing (bool): True: typing active, False: not typing
+        """
+
 class MessengerManager():
     def __init__(self):
 

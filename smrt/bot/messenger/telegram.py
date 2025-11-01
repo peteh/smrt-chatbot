@@ -1,7 +1,6 @@
-
-import telebot
 import tempfile
 from typing import override
+import telebot
 from .messenger import MessengerInterface
 
 
@@ -139,4 +138,7 @@ class TelegramMessenger(MessengerInterface):
         # TODO: implement
         #return (mime_type, decoded)
         return None
-    
+
+    @override
+    def send_typing(self, message: dict, typing: bool):
+        return

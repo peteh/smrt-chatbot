@@ -12,35 +12,37 @@ from smrt.bot.tools.texttospeech_piper import PiperTTSModel
 class TextToSpeechPipeline(AbstractPipeline):
     """Pipe to generate a voice messages based on input text. """
     TTS_COMMAND = "tts"
+    TTS_MODELS_COMMAND = "ttsmodels"
 
     def __init__(self, model_path: Path|str):
         super().__init__(None, None)
         self._tts_thorsten = None
         self._model_path = Path(model_path)
-        self._xtts_models = {}
+        self._models = {}
         logging.debug(f"Looking for models in {self._model_path}")
-        xtts_models = [d.name[5:] for d in self._model_path.iterdir() if d.is_dir() and d.name.startswith("xtts_")]
-        for subdir in xtts_models:
-            logging.info(f"Found xtts model: {subdir}")
-            self._xtts_models[subdir] = XttsModel(self._model_path / f"xtts_{subdir}")
         
-        piper_models = [d for d in self._model_path.iterdir() if d.is_dir() and d.name.startswith("piper_")]
-        for subdir in piper_models:
-            model_folder = self._model_path / subdir
-            model_name = subdir.name[6:]
-            logging.info(f"Found piper model: {model_name}")
-            onnx_files = list(model_folder.glob("*.onnx"))
-            if len(onnx_files) != 1:
-                logging.error(f"Folder {model_folder} does contain none or multiple onnx files")
-                continue
-            self._xtts_models[model_name] = PiperTTSModel(onnx_files[0])
-        self._xtts_models["thorsten"] = ThorstenTtsVoice()
-        self._xtts_models[""] = ThorstenTtsVoice() # default model
-        
-        self._commands = [self.TTS_COMMAND]
-        for model in self._xtts_models.keys():
-            self._commands.append(f"tts_{model}")
-            self._commands.append(f"tts_{model}_de")
+        for folder in self._model_path.iterdir():
+            if folder.name.startswith("xtts_"):
+                model_name = folder.name.removeprefix("xtts_")
+                logging.info(f"Found xtts model: {model_name}")
+                self._models[model_name] = XttsModel(folder)
+            if folder.name.startswith("piper_"):
+                model_name = folder.name.removeprefix("piper_")
+                logging.info(f"Found piper model: {model_name}")
+                onnx_files = list(folder.glob("*.onnx"))
+                if len(onnx_files) != 1:
+                    logging.error(f"Folder {folder} does contain none or multiple onnx files")
+                    continue
+                self._models[model_name] = PiperTTSModel(onnx_files[0])
+        thorsten = ThorstenTtsVoice()
+        self._models["thorsten"] = thorsten
+        self._models[""] = thorsten # default model
+
+        self._commands = [self.TTS_COMMAND, self.TTS_MODELS_COMMAND]
+        for model_name in self._models:
+            self._commands.append(f"tts_{model_name}")
+            self._commands.append(f"tts_{model_name}_de")
+            self._commands.append(f"tts_{model_name}_en")
 
     def get_model_name(self, command : str):
         if command.startswith("tts_"):
@@ -55,7 +57,7 @@ class TextToSpeechPipeline(AbstractPipeline):
     def get_model(self, model_name):
         if model_name is None:
             model_name = ""
-        return self._xtts_models[model_name]
+        return self._models[model_name]
 
     def matches(self, messenger: MessengerInterface, message: dict):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
@@ -64,8 +66,18 @@ class TextToSpeechPipeline(AbstractPipeline):
     def process(self, messenger: MessengerInterface, message: dict):
         (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
         messenger.mark_in_progress_0(message)
+
+        # list all models
+        if command == self.TTS_MODELS_COMMAND:
+            models_str = "The following models are available:\n"
+            models_str += "\n".join([f"* {m}" for m in sorted(self._models) if m != ""])
+            messenger.reply_message(message, models_str)
+            messenger.mark_in_progress_done(message)
+            return
+
+        # run a model request
         try:
-            model_name , language = self.get_model_name(command)
+            model_name, language = self.get_model_name(command)
             tts = None
             if model_name is not None:
                 tts = self.get_model(model_name)

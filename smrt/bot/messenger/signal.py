@@ -41,6 +41,7 @@ class SignalMessenger(MessengerInterface):
             return f"http://{self._host}:{self._port}/{endpoint}/{endpoint_param}"
         return f"http://{self._host}:{self._port}/{endpoint}"
 
+    @override
     def get_name(self) -> str:
         return "signal"
 
@@ -63,22 +64,32 @@ class SignalMessenger(MessengerInterface):
         requests.post(self._endpoint_url("v1/reactions", self._number),
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
-
+    @override
     def mark_in_progress_0(self, message: dict):
         self._react(message, self.REACT_HOURGLASS_FULL)
+        self.send_typing(message, True)
 
+    @override
     def mark_in_progress_50(self, message: dict):
         self._react(message, self.REACT_HOURGLASS_HALF)
+        self.send_typing(message, True)
 
+    @override
     def mark_in_progress_done(self, message: dict):
         self._react(message, self.REACT_CHECKMARK)
+        self.send_typing(message, False)
 
+    @override
     def mark_skipped(self, message):
         self._react(message, self.REACT_SKIP)
+        self.send_typing(message, False)
 
+    @override
     def mark_in_progress_fail(self, message: dict):
         self._react(message, self.REACT_FAIL)
+        self.send_typing(message, False)
 
+    @override
     def mark_seen(self, message: dict) -> None:
         if self.is_group_message(message):
             internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
@@ -96,10 +107,12 @@ class SignalMessenger(MessengerInterface):
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def is_group_message(self, message: dict):
         return ("dataMessage" in message["envelope"] \
             and "groupInfo" in message["envelope"]["dataMessage"])
 
+    @override
     def is_self_message(self, message: dict):
         # TODO: we currently don't get messages we send ourselves, but we could double check
         return False
@@ -111,6 +124,7 @@ class SignalMessenger(MessengerInterface):
         for group in groups:
             self._group_cache[group["internal_id"]] = group["id"]
 
+    @override
     def send_message(self, chat_id: str, text: str):
         # The chat_id is in the format "signal://<group-id>" or "signal://<phone-number>"
         # We need to extract the group id or phone number part
@@ -137,6 +151,7 @@ class SignalMessenger(MessengerInterface):
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def send_message_to_group(self, group_message: dict, text: str):
         internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
         if internal_id not in self._group_cache:
@@ -153,6 +168,7 @@ class SignalMessenger(MessengerInterface):
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def send_message_to_individual(self, message: dict, text: str):
         data = {
             "message": text,
@@ -166,6 +182,7 @@ class SignalMessenger(MessengerInterface):
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def reply_message(self, message: dict, text: str) -> None:
         if self.is_group_message(message):
             internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
@@ -189,9 +206,11 @@ class SignalMessenger(MessengerInterface):
                     json=data,
                     timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def delete_message(self, message: dict):
         pass
 
+    @override
     def has_audio_data(self, message: dict):
         if "dataMessage" in message["envelope"] \
             and "attachments" in message["envelope"]["dataMessage"]:
@@ -201,6 +220,7 @@ class SignalMessenger(MessengerInterface):
                     return True
         return False
 
+    @override
     def has_image_data(self, message: dict):
         if "dataMessage" in message["envelope"] \
             and "attachments" in message["envelope"]["dataMessage"]:
@@ -211,6 +231,7 @@ class SignalMessenger(MessengerInterface):
                     return True
         return False
 
+    @override
     def is_bot_mentioned(self, message: dict):
         if "dataMessage" in message["envelope"] \
             and "mentions" in message["envelope"]["dataMessage"]:
@@ -221,6 +242,7 @@ class SignalMessenger(MessengerInterface):
                     return True
         return False
 
+    @override
     def get_message_text(self, message: dict) -> str:
         if "dataMessage" in message["envelope"] \
             and "message" in message["envelope"]["dataMessage"] \
@@ -228,6 +250,7 @@ class SignalMessenger(MessengerInterface):
             return message["envelope"]["dataMessage"]["message"]
         return ""
 
+    @override
     def get_chat_id(self, message: dict) -> str:
         if self.is_group_message(message):
             chatid = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
@@ -235,9 +258,11 @@ class SignalMessenger(MessengerInterface):
             chatid = message["envelope"]["sourceNumber"]
         return f"signal://{chatid}"
 
+    @override
     def get_sender_name(self, message: dict):
         return message["envelope"]["sourceName"]
 
+    @override
     def send_image_to_group(self, group_message: dict, file_name: str,
                             binary_data: bytes, caption: str = ""):
         internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
@@ -262,6 +287,7 @@ class SignalMessenger(MessengerInterface):
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def send_image_to_individual(self, message, file_name, binary_data, caption = ""):
         base64data = base64.b64encode(binary_data).decode('utf-8')
         if file_name.endswith('.webp'):
@@ -306,15 +332,18 @@ class SignalMessenger(MessengerInterface):
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def send_audio_to_group(self, group_message, audio_file_path):
         internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
         if internal_id not in self._group_cache:
             self._update_group_cache()
         self._send_audio(self._group_cache[internal_id], audio_file_path)
 
+    @override
     def send_audio_to_individual(self, message, audio_file_path):
         self._send_audio(message["envelope"]["sourceNumber"], audio_file_path)
 
+    @override
     def download_media(self, message: dict) -> Tuple[str, bytes]:
         # TODO: looks like signal could return a list of attachments,
         # thus we should have a list here too
@@ -328,3 +357,30 @@ class SignalMessenger(MessengerInterface):
                             timeout=self.DEFAULT_TIMEOUT)
             return (content_type, response.content)
         return None
+
+    @override
+    def send_typing(self, message: dict, typing: bool):
+        if self.is_group_message(message):
+            internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
+            if internal_id not in self._group_cache:
+                self._update_group_cache()
+            recipient = self._group_cache[internal_id]
+        else:
+            recipient = message["envelope"]["sourceNumber"]
+
+        data = {
+            "recipient": recipient
+        }
+        endpoint = self._endpoint_url("v1/typing-indicator", self._number)
+        if typing:
+            response = requests.put(endpoint,
+                        json=data,
+                        timeout=self.DEFAULT_TIMEOUT)
+            if response.status_code != 200:
+                logging.warning(f"Failed to send typing indicator: {response.text} on {endpoint}")
+        else:
+            response = requests.delete(endpoint,
+                        json=data,
+                        timeout=self.DEFAULT_TIMEOUT)
+            if response.status_code != 200:
+                logging.warning(f"Failed to send typing indicator: {response.text} on {endpoint}")
