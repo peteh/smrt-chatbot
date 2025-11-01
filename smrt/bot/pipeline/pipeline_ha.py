@@ -118,7 +118,7 @@ class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
             raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
 
         msg = json.loads(ws.recv())
-        print("Pipeline response:", msg)
+        logging.debug(f"Pipeline response: {msg}")
         if msg["event"]["type"] != "intent-end":
             raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
         response_text = msg["event"]["data"]["intent_output"]["response"]["speech"]["plain"]["speech"]
@@ -131,7 +131,7 @@ class HomeassistantTextCommandPipeline(AbstractHomeassistantPipeline):
         if self._process_without_command:
             text = text.strip()
         if text.startswith(f"#{self.HA_COMMAND}"):
-            (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+            (_, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
 
         messenger.mark_in_progress_0(message)
         try:            
@@ -251,17 +251,20 @@ class HomeassistantVoiceCommandPipeline(AbstractHomeassistantPipeline):
             and messenger.get_chat_id(message) in self._get_chat_id_whitelist()
 
     def process_voice_command(self, wav_path: str, conversation_id: str) -> typing.Tuple[str, str]:
+        msg_timeout = 60
         ws =  websockets.sync.client.connect(self._ha_ws_api_url)
 
         # Step 1: Receive auth_required
-        ws.recv()
+        ws.recv(msg_timeout)
 
         # Step 2: Authenticate
         ws.send(json.dumps({
             "type": "auth",
             "access_token": self._ha_token
         }))
-        ws.recv()  # auth_ok
+        ws.recv(msg_timeout)  # auth_ok
+        
+        # TODO: check for auth ok
 
         # Step 3: Start the pipeline
         msg_id = 1
@@ -295,9 +298,7 @@ class HomeassistantVoiceCommandPipeline(AbstractHomeassistantPipeline):
             raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
 
         logging.debug(f"Pipeline started with conversation_id: {conversation_id}, stt_binary_handler_id: {stt_binary_handler_id}")
-
-        # Step 5: Stream audio in chunks
-        print("Streaming audio to pipeline...")
+        logging.debug("Streaming wav audio to pipeline...")
         with wave.open(wav_path, "rb") as wf:
             chunk_size = 2048
             while True:
@@ -308,42 +309,28 @@ class HomeassistantVoiceCommandPipeline(AbstractHomeassistantPipeline):
                 ws.send(bytes([stt_binary_handler_id]) + data)
                 time.sleep(0.01)  # slight delay to simulate streaming
 
-        # Step 6: Send audio end marker
+        # Send audio end marker
         ws.send(bytes([stt_binary_handler_id]))
-        print("Audio stream ended.")
+        logging.debug("Audio stream ended.")
 
-        # Step 7: Wait for response
-        msg = json.loads(ws.recv())
-        if msg["event"]["type"] != "stt-vad-start":
-            raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
-
-        msg = json.loads(ws.recv())
-        if msg["event"]["type"] != "stt-vad-end":
-            raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
-
-        msg = json.loads(ws.recv())
-        if msg["event"]["type"] != "stt-end":
-            raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
-        
-        command_text = msg["event"]["data"]["stt_output"]["text"]
-        print(f"STT output: {command_text}")
-
-        msg = json.loads(ws.recv())
-        if msg["event"]["type"] != "intent-start":
-            raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
-
-        msg = json.loads(ws.recv())
-        print("Pipeline response:", msg)
-        if msg["event"]["type"] != "intent-end":
-            raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}")
-        response_text = msg["event"]["data"]["intent_output"]["response"]["speech"]["plain"]["speech"]
-        logging.info(f"Response text: {response_text}")
-        ws.close()
-        return (command_text, response_text)
+        expected_responses = ["stt-vad-start", "stt-vad-end", "stt-end", "intent-start", "intent-end"]
+        command_text = ""
+        while True:
+            msg = json.loads(ws.recv(msg_timeout))
+            if msg["event"]["type"] not in expected_responses:
+                raise Exception(f"Unexpected message type: {msg['type']} with event {msg['event']['type']}, expected: {expected_responses}")
+            if msg["event"]["type"] == "stt-end":
+                command_text = msg["event"]["data"]["stt_output"]["text"]
+                logging.debug(f"STT output: {command_text}")
+            if msg["event"]["type"] == "intent-end":
+                response_text = msg["event"]["data"]["intent_output"]["response"]["speech"]["plain"]["speech"]
+                logging.info(f"Response text: {response_text}")
+                ws.close()
+                return (command_text, response_text)
 
     def process(self, messenger: MessengerInterface, message: dict):
         messenger.mark_in_progress_0(message)
-        try:            
+        try:
             (_, decoded) = messenger.download_media(message)
             with tempfile.TemporaryDirectory() as tmp:
                 voice_data_file_path = os.path.join(tmp, 'audio.opus')
@@ -351,6 +338,7 @@ class HomeassistantVoiceCommandPipeline(AbstractHomeassistantPipeline):
                 f.write(decoded)
                 f.close()
                 voice_data_wav_file_path = os.path.join(tmp, 'audio.wav')
+                # TODO: generalize the pcm reformatting, e.g. with transcript utils? 
                 subprocess.run(["ffmpeg", "-i", voice_data_file_path, "-ar", "16000", "-ac", "1", "-sample_fmt", "s16", voice_data_wav_file_path, ], check=True)
                 conversation_id = self._get_uuid_from_chat_id(messenger.get_chat_id(message))
                 command_text, responst_text = self.process_voice_command(voice_data_wav_file_path, str(conversation_id))
