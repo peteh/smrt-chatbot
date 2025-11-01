@@ -37,6 +37,7 @@ class XttsModel(TextToSpeechInterface):
         self._reference_wav = reference_wav
         self._model_path = model_path
         self._default_lang = default_lang
+        logging.debug(f"Creating xtts model from {self._model_path}")
 
     def tts(self, text: str, output_wav_file : str, language : str|None = None) -> None:
         config = XttsConfig()

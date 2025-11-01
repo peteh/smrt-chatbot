@@ -1,4 +1,4 @@
-from typing import List
+import logging
 from pathlib import Path
 import wave
 from piper import PiperVoice
@@ -9,6 +9,7 @@ from .texttospeech import TextToSpeechInterface
 class PiperTTSModel(TextToSpeechInterface):
     def __init__(self, onnx_path: Path|str) -> None:
         self._onnx_path = Path(onnx_path)
+        logging.debug(f"Creating xtts model from {self._onnx_path}")
     
     def tts(self, text: str, output_wav_file : Path|str, language : str = None) -> bool:
         voice = PiperVoice.load(self._onnx_path)

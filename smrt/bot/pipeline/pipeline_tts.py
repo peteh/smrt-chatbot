@@ -1,11 +1,9 @@
 """Implemenations of a pipeline for processing text to speech. """
 import logging
 import tempfile
-import os
 from pathlib import Path
 from smrt.bot.messenger import MessengerInterface
 from smrt.bot.pipeline import PipelineHelper, AbstractPipeline
-import smrt.utils.utils as utils
 
 from smrt.bot.tools.texttospeech import XttsModel, ThorstenTtsVoice
 from smrt.bot.tools.texttospeech_piper import PiperTTSModel
@@ -20,16 +18,16 @@ class TextToSpeechPipeline(AbstractPipeline):
         self._tts_thorsten = None
         self._model_path = Path(model_path)
         self._xtts_models = {}
-
-        xtts_models = [d[5:] for d in os.listdir(self._model_path) if os.path.isdir(os.path.join(self._model_path, d)) and d.startswith("xtts_")]
+        logging.debug(f"Looking for models in {self._model_path}")
+        xtts_models = [d.name[5:] for d in self._model_path.iterdir() if d.is_dir() and d.name.startswith("xtts_")]
         for subdir in xtts_models:
             logging.info(f"Found xtts model: {subdir}")
             self._xtts_models[subdir] = XttsModel(self._model_path / f"xtts_{subdir}")
         
-        piper_models = [d for d in os.listdir(self._model_path) if os.path.isdir(os.path.join(self._model_path, d)) and d.startswith("piper_")]
+        piper_models = [d for d in self._model_path.iterdir() if d.is_dir() and d.name.startswith("piper_")]
         for subdir in piper_models:
             model_folder = self._model_path / subdir
-            model_name = subdir[6:]
+            model_name = subdir.name[6:]
             logging.info(f"Found piper model: {model_name}")
             onnx_files = list(model_folder.glob("*.onnx"))
             if len(onnx_files) != 1:
