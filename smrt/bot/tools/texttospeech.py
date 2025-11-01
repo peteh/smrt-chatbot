@@ -30,7 +30,6 @@ class ThorstenTtsVoice(TextToSpeechInterface):
         tts.tts_to_file(text=text, file_path=output_wav_file)
 
 class XttsModel(TextToSpeechInterface):
-    # TODO: don't load directly but only when doing tts
     def __init__(self, model_path: str, reference_wav: str = "reference.wav", default_lang : str = "en") -> None:
         self._xtts_config = "config.json"
         xtts_checkpoint = "model.pth"

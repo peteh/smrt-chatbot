@@ -382,7 +382,7 @@ def run():
 
     CONFIG_TTS = "text_to_speech"
     if CONFIG_TTS in configuration:
-        tts_pipeline = pipeline.TextToSpeechPipeline()
+        tts_pipeline = pipeline.TextToSpeechPipeline(storage_path / "custom_models")
         mainpipe.add_pipeline(tts_pipeline)
     
     # load tinder pipeline if configured

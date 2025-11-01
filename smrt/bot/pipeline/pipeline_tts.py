@@ -15,16 +15,16 @@ class TextToSpeechPipeline(AbstractPipeline):
     """Pipe to generate a voice messages based on input text. """
     TTS_COMMAND = "tts"
 
-    def __init__(self):
+    def __init__(self, model_path: Path|str):
         super().__init__(None, None)
         self._tts_thorsten = None
-        self._model_path = Path(utils.storage_path()) / "custom_models"
+        self._model_path = Path(model_path)
         self._xtts_models = {}
 
         xtts_models = [d[5:] for d in os.listdir(self._model_path) if os.path.isdir(os.path.join(self._model_path, d)) and d.startswith("xtts_")]
         for subdir in xtts_models:
             logging.info(f"Found xtts model: {subdir}")
-            self._xtts_models[subdir] = XttsModel(f"{utils.storage_path()}/custom_models/xtts_{subdir}")
+            self._xtts_models[subdir] = XttsModel(self._model_path / f"xtts_{subdir}")
         
         piper_models = [d for d in os.listdir(self._model_path) if os.path.isdir(os.path.join(self._model_path, d)) and d.startswith("piper_")]
         for subdir in piper_models:
