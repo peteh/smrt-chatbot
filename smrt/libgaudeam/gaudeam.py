@@ -8,10 +8,10 @@ from pathlib import Path
 from os import scandir
 import requests
 from bs4 import BeautifulSoup
-
-
-
 class GaudeamSession():
+    """Session information to talk to Gaudeam. 
+    """
+
     def __init__(self, gaudeam_session_cookie: str, subdomain: str):
         """Creates a session for Gaudeam
 
@@ -26,7 +26,7 @@ class GaudeamSession():
 
         self._client = requests.Session()
         self._client.cookies.update({"_gaudeam_session": gaudeam_session_cookie})
-    
+
     @staticmethod
     def with_user_auth(email: str, password: str) -> GaudeamSession:
         """Logs in using user and password and creates a session. 
@@ -46,7 +46,6 @@ class GaudeamSession():
         response_login_page = temp_session.get(url_login)
         soup = BeautifulSoup(response_login_page.content, "html.parser")
         authenticity_token = soup.find("input", {"name": "authenticity_token"})["value"]
-        
         data = {
             "authenticity_token": authenticity_token,
             "user[email]": email,
@@ -61,13 +60,13 @@ class GaudeamSession():
 
         response_auth = temp_session.post(url_login, data, allow_redirects=False)
         status = response_auth.status_code
-        if (status == 302): # redirect, login successful
+        if status == 302: # redirect, login successful
             redirect_url = response_auth.headers.get("Location")
             subdomain = redirect_url.removeprefix("https://").split(".gaudeam.de")[0]
             session_cookie = response_auth.cookies["_gaudeam_session"]
 
             return GaudeamSession(session_cookie, subdomain)
-        else: 
+        else:
             raise ValueError("Failed to login to gaudeam, check credentials")
 
 
@@ -117,6 +116,8 @@ class GaudeamMembers:
             members.extend(response_members.json()["results"])
         return members
 class GaudeamCalendar:
+    """Class to access global and user calendar from gaudeam.de"""
+
     def __init__(self, gaudeam_session: GaudeamSession):
         self._session = gaudeam_session
 
@@ -162,8 +163,7 @@ class GaudeamCalendar:
                     events.append(event)
         events = sorted(events, key=lambda x: self.date_string_to_datetime(x["start"]))
         return events
-            
-    
+
 class GaudeamDriveFolder:
     def __init__(self, session: GaudeamSession, folder_id: str):
         self._session = session
@@ -457,7 +457,7 @@ class GaudeamDrive:
         else:
             logging.error(f"Error fetching folders: {response.status_code}, {response.text}")
             return []
-    
+
     def delete_folder(self, folder_id: str) -> bool:
         url = f"{self._session.url()}/api/v1/drive/folders/{folder_id}"
         response = self._session.client().delete(url)
