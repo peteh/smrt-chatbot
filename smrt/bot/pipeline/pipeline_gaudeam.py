@@ -115,7 +115,7 @@ class GaudeamUtils:
 
         bday_members = []
 
-        for member in gaudeam.members():
+        for member in gaudeam.get_members():
             birth_date = member["birthdate"]
             if birth_date and birth_date.startswith(today_date):
                 bday_members.append(member)
@@ -180,7 +180,7 @@ class GaudeamEventsScheduledTask(scheduled.AbstractScheduledTask):
         super().__init__(messenger_manager, chat_ids)
         self._gaudeam_calendar = gaudeam_calendar
     def run(self):
-        try: 
+        try:
             # get day of week as an integer
             week_day = datetime.datetime.now().weekday()
 
