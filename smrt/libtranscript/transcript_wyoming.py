@@ -1,83 +1,51 @@
-import io
-import socket
-import wave
-from wyoming.audio import AudioChunk
-from wyoming.event import Event
-from wyoming.asr import Transcribe, Transcript
+import asyncio
+from wyoming.client import AsyncClient
+from wyoming.audio import AudioStart, AudioChunk, AudioStop
+import langid
 from .transcript import TranscriptInterface, TranscriptResult
 
 class WyomingTranscript(TranscriptInterface):
-    """Implementation based on a Wyoming STT server instead of faster_whisper."""
+    """Implementation based on a Wyoming STT server"""
 
-    def __init__(self, host="127.0.0.1", port=10300):
-        self._host = host
-        self._port = port
+    RATE = 16000
+    CHANNELS = 1
+    WIDTH = 2
 
-    def _send_event(self, sock, event: Event):
-        sock.sendall(event.to_bytes())
+    def __init__(self, uri="tcp://127.0.0.1:10300"):
+        self._uri = uri
 
-    def _recv_event(self, sock):
-        header = sock.recv(8)
-        if not header:
-            return None
+    def _get_event_loop(self):
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError as e:
+            if str(e).startswith('There is no current event loop in thread'):
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            else:
+                raise
+        return loop
 
-        length = int.from_bytes(header[:4], "big")
-        event_type = header[4:].decode("ascii").strip()
-        payload = b""
-        while len(payload) < length:
-            chunk = sock.recv(length - len(payload))
-            if not chunk:
-                break
-            payload += chunk
-
-        return Event(event_type, payload)
+    async def _async_transcribe(self, audio_data: bytes) -> TranscriptResult:
+        """Internal async method for ASR communication."""
+        async with AsyncClient.from_uri(self._uri) as client:
+            # start audio processing
+            await client.write_event(AudioStart(rate=self.RATE, width=self.WIDTH, channels=self.CHANNELS).event())
+            # send audio data
+            chunk = AudioChunk(audio=audio_data, rate=self.RATE, width=self.WIDTH, channels=self.CHANNELS)
+            await client.write_event(chunk.event())
+            await client.write_event(AudioStop().event())
+            # Wait for the transcription response
+            while True:
+                event = await client.read_event()
+                if event.type == "transcript":
+                    text = event.data.get("text", "")
+                    lang, _ = langid.classify(text)
+                    text = text.strip()
+                    return TranscriptResult(text, lang)
+                elif event.type == "error":
+                    raise RuntimeError(f"ASR error: {event.data.get('message', 'unknown')}")
 
     def transcribe(self, audio_data: bytes):
-        """Send audio_data (bytes) to Wyoming STT and return transcript metadata."""
-
-        # Write audio_data into a temporary in-memory WAV file for chunked reading
-        audio_reader = io.BytesIO(audio_data)
-        with wave.open(audio_reader, "rb") as wf:
-            rate = wf.getframerate()
-            width = wf.getsampwidth()
-            channels = wf.getnchannels()
-
-            # Connect to Wyoming server
-            sock = socket.create_connection((self._host, self._port))
-
-            # Send transcribe request
-            self._send_event(sock, Transcribe().event())
-
-            # Send audio chunks
-            chunk_size = 1024
-            audio_reader.seek(0)
-            while True:
-                chunk = wf.readframes(chunk_size)
-                if not chunk:
-                    break
-                self._send_event(sock, AudioChunk(audio=chunk, rate=rate, width=width, channels=channels).event())
-
-            # End-of-audio marker
-            self._send_event(sock, AudioChunk(audio=b"").event())
-
-            # Wait for transcript
-            text = ""
-            language = "unknown"
-            language_probability = 1.0
-            duration = 0.0
-
-            while True:
-                event = self._recv_event(sock)
-                if event is None:
-                    break
-                if event.type == Transcript.type:
-                    transcript = Transcript.from_event(event)
-                    text = transcript.text.strip()
-                    language = getattr(transcript, "language", "unknown")
-                    language_probability = getattr(transcript, "language_probability", 1.0)
-                    break
-
-            sock.close()
-
-        words = len(text.split())
-        return TranscriptResult(text, language, duration)
+        # Schedule the coroutine safely in the background loop
+        result = self._get_event_loop().run_until_complete(self._async_transcribe(audio_data))
+        return result

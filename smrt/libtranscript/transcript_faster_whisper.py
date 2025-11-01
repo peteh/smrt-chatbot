@@ -38,6 +38,6 @@ class FasterWhisperTranscript(TranscriptInterface):
         language = info.language
         language_probability = info.language_probability
 
-        return TranscriptResult(text, language, duration)
+        return TranscriptResult(text, language)
 
 

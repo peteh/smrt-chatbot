@@ -2,12 +2,13 @@
 import logging
 import tempfile
 import os
-
+from pathlib import Path
+from smrt.bot.messenger import MessengerInterface
 from smrt.bot.pipeline import PipelineHelper, AbstractPipeline
 import smrt.utils.utils as utils
 
 from smrt.bot.tools.texttospeech import XttsModel, ThorstenTtsVoice
-from smrt.bot.messenger import MessengerInterface
+from smrt.bot.tools.texttospeech_piper import PiperTTSModel
 
 
 class TextToSpeechPipeline(AbstractPipeline):
@@ -17,16 +18,29 @@ class TextToSpeechPipeline(AbstractPipeline):
     def __init__(self):
         super().__init__(None, None)
         self._tts_thorsten = None
-        self._model_path = f"{utils.storage_path()}/custom_models/"
-        self._models = {}
+        self._model_path = Path(utils.storage_path()) / "custom_models"
+        self._xtts_models = {}
 
-        subdirectories = [d[5:] for d in os.listdir(self._model_path) if os.path.isdir(os.path.join(self._model_path, d)) and d.startswith("xtts_")]
-        for subdir in subdirectories:
+        xtts_models = [d[5:] for d in os.listdir(self._model_path) if os.path.isdir(os.path.join(self._model_path, d)) and d.startswith("xtts_")]
+        for subdir in xtts_models:
             logging.info(f"Found xtts model: {subdir}")
-            self._models[subdir] = None
-
+            self._xtts_models[subdir] = XttsModel(f"{utils.storage_path()}/custom_models/xtts_{subdir}")
+        
+        piper_models = [d for d in os.listdir(self._model_path) if os.path.isdir(os.path.join(self._model_path, d)) and d.startswith("piper_")]
+        for subdir in piper_models:
+            model_folder = self._model_path / subdir
+            model_name = subdir[6:]
+            logging.info(f"Found piper model: {model_name}")
+            onnx_files = list(model_folder.glob("*.onnx"))
+            if len(onnx_files) != 1:
+                logging.error(f"Folder {model_folder} does contain none or multiple onnx files")
+                continue
+            self._xtts_models[model_name] = PiperTTSModel(onnx_files[0])
+        self._xtts_models["thorsten"] = ThorstenTtsVoice()
+        self._xtts_models[""] = ThorstenTtsVoice() # default model
+        
         self._commands = [self.TTS_COMMAND]
-        for model in self._models.keys():
+        for model in self._xtts_models.keys():
             self._commands.append(f"tts_{model}")
             self._commands.append(f"tts_{model}_de")
 
@@ -41,16 +55,9 @@ class TextToSpeechPipeline(AbstractPipeline):
         return (None, None)
 
     def get_model(self, model_name):
-        # lazy loading
-        if self._models[model_name] is None:
-            self._models[model_name] = XttsModel(f"{utils.storage_path()}/custom_models/xtts_{model_name}")
-        return self._models[model_name]
-
-    def _get_tts_thorsten(self):
-        # lazy loading
-        if self._tts_thorsten is None:
-            self._tts_thorsten = ThorstenTtsVoice()
-        return self._tts_thorsten
+        if model_name is None:
+            model_name = ""
+        return self._xtts_models[model_name]
 
     def matches(self, messenger: MessengerInterface, message: dict):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
@@ -59,17 +66,17 @@ class TextToSpeechPipeline(AbstractPipeline):
     def process(self, messenger: MessengerInterface, message: dict):
         (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
         messenger.mark_in_progress_0(message)
-        try:            
+        try:
             model_name , language = self.get_model_name(command)
             tts = None
             if model_name is not None:
                 tts = self.get_model(model_name)
-            else: 
-                tts = self._get_tts_thorsten()
-                language = "en"
+            else:
+                tts = self.get_model("")
+
             with tempfile.TemporaryDirectory() as tmp:
-            # TODO build this with generic file names
-                output_file = os.path.join(tmp, 'output.wav')
+                tmp_path = Path(tmp)
+                output_file = tmp_path / "output.wav"
                 tts.tts(text, output_file, language)
 
                 if messenger.is_group_message(message):

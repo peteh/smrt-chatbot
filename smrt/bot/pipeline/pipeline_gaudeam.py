@@ -5,14 +5,14 @@ import datetime
 from smrt.bot.pipeline import PipelineHelper, AbstractPipeline
 from smrt.bot.messenger import MessengerInterface, MessengerManager
 from smrt.bot.pipeline import scheduled
-from smrt.libgaudeam import Gaudeam
+from smrt.libgaudeam import GaudeamCalendar, GaudeamMembers
 
 
 class GaudeamBdayPipeline(AbstractPipeline):
     """Pipe to handle ha commands in text. """
     BDAY_COMMAND = "gaubday"
 
-    def __init__(self, gaudeam: Gaudeam, chat_id_whitelist: typing.List[str] = None, chat_id_blacklist: typing.List[str] = None):
+    def __init__(self, gaudeam: GaudeamMembers, chat_id_whitelist: typing.List[str] = None, chat_id_blacklist: typing.List[str] = None):
         # can only be whitelisted chat ids
         super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._commands = [self.BDAY_COMMAND]
@@ -27,7 +27,6 @@ class GaudeamBdayPipeline(AbstractPipeline):
         command = PipelineHelper.extract_command(messenger.get_message_text(message))
         return command in self._commands
 
-                
     def process(self, messenger: MessengerInterface, message: dict):
         (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
         if command == self.BDAY_COMMAND:
@@ -38,9 +37,8 @@ class GaudeamBdayPipeline(AbstractPipeline):
                     messenger.send_message(messenger.get_chat_id(message), "No birthdays today.")
                     messenger.mark_in_progress_done(message)
                     return
-                
+
                 text = GaudeamUtils.format_bday_message(bdays)
-                
                 messenger.send_message(messenger.get_chat_id(message), text)
                 messenger.mark_in_progress_done(message)
             except Exception as ex:
@@ -56,7 +54,7 @@ class GaudeamCalendarPipeline(AbstractPipeline):
     """Pipe to handle ha commands in text. """
     DATE_COMMAND = "gauevents"
 
-    def __init__(self, gaudeam: Gaudeam, chat_id_whitelist: typing.List[str] = None, chat_id_blacklist: typing.List[str] = None):
+    def __init__(self, gaudeam: GaudeamCalendar, chat_id_whitelist: typing.List[str] = None, chat_id_blacklist: typing.List[str] = None):
         super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._commands = [self.DATE_COMMAND]
         self._gaudeam = gaudeam
@@ -110,7 +108,7 @@ class GaudeamUtils:
         return text
 
     @staticmethod
-    def get_bdays_today(gaudeam: Gaudeam) -> list[dict]:
+    def get_bdays_today(gaudeam: GaudeamMembers) -> list[dict]:
         # todays date in format dd.mm
         today_date = datetime.datetime.now().strftime("%d.%m")
         logging.debug(f"Today's date: {today_date}")
@@ -124,13 +122,12 @@ class GaudeamUtils:
         return bday_members
     
     @staticmethod
-    def get_events(gaudeam: Gaudeam, days: int) -> list[dict]:
+    def get_events(gaudeam: GaudeamCalendar, days: int) -> list[dict]:
         # todays date in format dd.mm
         today_date = datetime.datetime.now()
         end_date = today_date + datetime.timedelta(days=days)
         logging.debug(f"Fetching events from {today_date} to {end_date}")
-        events = gaudeam.user_calendar(today_date.date(), end_date.date())
-        events = sorted(events, key=lambda x: datetime.datetime.strptime(x["start"], "%a, %d %b %Y %H:%M:%S %z"))
+        events = gaudeam.global_calendar(today_date.date(), end_date.date(), filter_birthdays=True)
         return events
 
     @staticmethod
@@ -154,13 +151,13 @@ class GaudeamUtils:
 class GaudeamBdayScheduledTask(scheduled.AbstractScheduledTask):
     """Scheduled task to send birthday notifications. """
 
-    def __init__(self, messenger_manager: MessengerManager, chat_ids: list[str], gaudeam: Gaudeam):
+    def __init__(self, messenger_manager: MessengerManager, chat_ids: list[str], gaudeam_members: GaudeamMembers):
         super().__init__(messenger_manager, chat_ids)
-        self._gaudeam = gaudeam
+        self._gaudeam_members = gaudeam_members
 
     def run(self):
         try:
-            bdays = GaudeamUtils.get_bdays_today(self._gaudeam)
+            bdays = GaudeamUtils.get_bdays_today(self._gaudeam_members)
             if len(bdays) == 0:
                 logging.info("No birthdays today.")
                 return
@@ -179,9 +176,9 @@ class GaudeamBdayScheduledTask(scheduled.AbstractScheduledTask):
 class GaudeamEventsScheduledTask(scheduled.AbstractScheduledTask):
     """Scheduled task to send event notifications. """
 
-    def __init__(self, messenger_manager: MessengerManager, chat_ids: list[str], gaudeam: Gaudeam):
+    def __init__(self, messenger_manager: MessengerManager, chat_ids: list[str], gaudeam_calendar: GaudeamCalendar):
         super().__init__(messenger_manager, chat_ids)
-        self._gaudeam = gaudeam
+        self._gaudeam_calendar = gaudeam_calendar
     def run(self):
         try: 
             # get day of week as an integer
@@ -193,14 +190,14 @@ class GaudeamEventsScheduledTask(scheduled.AbstractScheduledTask):
             else:
                 # only send events of the current day if existing
                 days_ahead = 1
-            
-            events = GaudeamUtils.get_events(self._gaudeam, days_ahead)
+
+            events = GaudeamUtils.get_events(self._gaudeam_calendar, days_ahead)
             if len(events) == 0:
                 logging.info("No events upcoming.")
                 return
-            
+
             text = GaudeamUtils.format_events_message(events)
-            
+
             for chat_id in self.get_chat_ids():
                 try:
                     messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)

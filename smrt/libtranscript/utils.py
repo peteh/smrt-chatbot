@@ -1,13 +1,24 @@
+import logging
 import subprocess
 import os
 from pathlib import Path
 
 class TranscriptUtils():
+
     @staticmethod
     def to_pcm(in_file_path: Path|str, out_file_path: Path|str) -> bool: 
-        """
-        Recode any audio file to 16 kHz, mono, 16-bit PCM using ffmpeg.
+        """Recode any audio file to 16 kHz, mono, 16-bit PCM using ffmpeg.
         Output format: WAV (PCM s16le)
+
+        Args:
+            in_file_path (Path | str): Path of the file to convert
+            out_file_path (Path | str): Path of the output file
+
+        Raises:
+            FileNotFoundError: If input file was not found
+
+        Returns:
+            bool: If the process ran through
         """
         # make sure we really have path
         in_file_path = Path(in_file_path)
@@ -32,5 +43,5 @@ class TranscriptUtils():
 
         # Execute the command
         subprocess.run(cmd, check=True)
-        print(f"✅ Re-encoded to: {out_file_path}")
+        logging.debug(f"Re-encoded to: {out_file_path}")
         return True

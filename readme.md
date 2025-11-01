@@ -217,6 +217,7 @@ To use the AI summary function you must configure ollama.
 
 ```yml
 voice_transcription:
+  asr_engine: faster_whisper # optional, can be 'faster_whisper' for internal whisper or an uri string to a wyoming asr server, e.g. tcp://127.0.0.1:10300' (default: faster_whisper)
   min_words_for_summary: 100 # minimum number of words for a summary to be generated
   summary_bot: "ollama:gemma3:12b" # optional
   # blacklist chat ids for voice transcription

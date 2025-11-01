@@ -5,10 +5,9 @@ from abc import ABC, abstractmethod
 import requests
 
 class TranscriptResult():
-    def __init__(self, text: str, language: str, duration: float):
+    def __init__(self, text: str, language: str):
         self._text = text
         self._language = language
-        self._duration = duration
 
     def _get_text(self) -> str:
         return self._text
@@ -16,9 +15,6 @@ class TranscriptResult():
     def _get_language(self) -> str:
         return self._language
 
-    def _get_duration(self) -> float:
-        return self._duration
-    
     def _get_num_words(self) -> int:
         return len(self._text.split(" "))
 
@@ -36,13 +32,6 @@ class TranscriptResult():
         doc="The detected language code, e.g. 'de' or 'en'."
     )
 
-    duration = property(
-        fget=_get_duration,
-        fset=None,
-        fdel=None,
-        doc="The duration in seconds"
-    )
-    
     num_words = property(
         fget=_get_num_words,
         fset=None,
@@ -83,39 +72,3 @@ class OpenAIWhisperTranscript(TranscriptInterface):
         else:
             print(f"Error: {response.status_code}, {response.text}")
             return {}
-
-
-
- 
-
-class WhisperTranscript(TranscriptInterface):
-    """Implementation based on whisper asr webservice. """
-
-    def transcribe(self, audio_data):
-        url = 'http://localhost:9001/asr?task=transcribe&language=en&output=json'
-        files = {'audio_file': audio_data}
-        payload={}
-        payload = {'task': 'transcribe',
-                'output': 'json'}
-
-        response = requests.post(url, files=files,
-                                 json=payload,
-                                 headers={'accept': 'application/json'},
-                                 verify=False,
-                                 timeout=1200).json()
-        text = response['text']
-        duration = 0
-        for segment in response['segments']:
-            duration = segment['end']
-        language = response['language']
-        print(response)
-        words = len(text.split(' '))
-        return {
-            'text': text, 
-            'words': words,
-            'language': language,
-            'duration': duration,
-            'cost': 0
-        }
-
-

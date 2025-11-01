@@ -87,11 +87,11 @@ class GaudeamSession():
         """
         return f"https://{self._subdomain}.gaudeam.de"
 
-class Gaudeam:
+class GaudeamMembers:
     def __init__(self, gaudeam_session: GaudeamSession):
         self._session = gaudeam_session
 
-    def members(self, include_dead=False, include_alliances=False, include_resigned=False, seach_term=""):
+    def get_members(self, include_dead=False, include_alliances=False, include_resigned=False, seach_term=""):
         offset = 0
         limit = 100
         params = {
@@ -116,6 +116,18 @@ class Gaudeam:
             response_members = self._session.client().get(f"{self._session.url()}/api/v1/members/index", params=params)
             members.extend(response_members.json()["results"])
         return members
+class GaudeamCalendar:
+    def __init__(self, gaudeam_session: GaudeamSession):
+        self._session = gaudeam_session
+
+    @staticmethod
+    def date_string_to_datetime(date: str):
+        if date[-1] == "Z":
+            dt = datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ")
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        else:
+            dt = datetime.datetime.strptime(date, "%a, %d %b %Y %H:%M:%S %z")
+        return dt.astimezone(datetime.timezone.utc)
 
     def user_calendar(self, start_date: datetime.date, end_date: datetime.date) -> list[dict]:
         start_str = start_date.strftime("%Y-%m-%dT00:00:00Z")
@@ -123,21 +135,34 @@ class Gaudeam:
         url = f"{self._session.url()}/user_calendar.json?start={start_str}&end={end_str}&timeZone=UTC"
         response = self._session.client().get(url)
         if response.status_code == 200:
-            return response.json()
+            events = response.json()
+            events = sorted(events, key=lambda x: self.date_string_to_datetime(x["start"]))
+            return events
         else:
             logging.error(f"Error fetching calendar: {response.status_code}, {response.text}")
             return []
 
-    def global_calendar(self, start_date: datetime.date, end_date: datetime.date) -> list[dict]:
+    def global_calendar(self, start_date: datetime.date, end_date: datetime.date, filter_events = False, filter_birthdays = False) -> list[dict]:
         start_str = start_date.strftime("%Y-%m-%dT00:00:00Z")
         end_str = end_date.strftime("%Y-%m-%dT00:00:00Z")
         url = f"{self._session.url()}/global_calendar.json?start={start_str}&end={end_str}&timeZone=UTC"
         response = self._session.client().get(url)
-        if response.status_code == 200:
-            return response.json()
-        else:
+        if response.status_code != 200:
             logging.error(f"Error fetching calendar: {response.status_code}, {response.text}")
             return []
+
+        all_events = response.json()
+        events = []
+        for event in all_events:
+            if "personal_records" in event["url"]: # birthday
+                if not filter_birthdays:
+                    events.append(event)
+            else: # normal events
+                if not filter_events:
+                    events.append(event)
+        events = sorted(events, key=lambda x: self.date_string_to_datetime(x["start"]))
+        return events
+            
     
 class GaudeamDriveFolder:
     def __init__(self, session: GaudeamSession, folder_id: str):
@@ -161,7 +186,7 @@ class GaudeamDriveFolder:
     def get_name(self) -> str:
         return self._properties.get("name", None)
 
-    def create_sub_folder(self, name: str, description = "") -> any:
+    def create_sub_folder(self, name: str, description = "") -> GaudeamDriveFolder:
         owner_id_from_parent = self._properties["owner_id"]
         restrict_to_id_from_parent = self._properties["restrict_to"]["id"]
         data = {
@@ -189,7 +214,7 @@ class GaudeamDriveFolder:
             logging.error(f"Error creating sub-folder: {response.status_code}, {response.text}")
             return None
 
-    def get_sub_folders(self) -> typing.List[any]:
+    def get_sub_folders(self) -> typing.List[GaudeamDriveFolder]:
         url = f"{self._session.url()}/api/v1/drive/folders?parent_id={self._folder_id}&order=%3Ename&offset=0&limit=200000"
         response = self._session.client().get(url)
         results = []
@@ -206,7 +231,7 @@ class GaudeamDriveFolder:
             logging.error(f"Error fetching folder contents: {response.status_code}, {response.text}")
             return []
 
-    def get_files(self) -> typing.List[any]:
+    def get_files(self) -> typing.List[GaudeamDriveFile]:
         url = f"{self._session.url()}/api/v1/drive/folders?parent_id={self._folder_id}&order=%3Ename&offset=0&limit=200000"
         response = self._session.client().get(url)
         results = []
@@ -231,7 +256,7 @@ class GaudeamDriveFolder:
         else:
             logging.error(f"Error deleting folder: {response.status_code}, {response.text}")
             return False
-    
+
     def mime_type_from_filename(self, filename: str) -> str:
         extension = filename.split(".")[-1].lower()
         mime_types = {
@@ -293,6 +318,7 @@ class GaudeamDriveFolder:
         return True
 
     def upload_file(self, file_path: Path|str) -> bool:
+        file_path = Path(file_path)
         # get upload signature
         url = f"{self._session.url()}/api/v1/drive/sign"
         response = self._session.client().post(url)

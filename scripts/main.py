@@ -13,8 +13,8 @@ import smrt.bot.messenger as messenger
 import smrt.bot.messagequeue as messagequeue
 from smrt.web.galleryweb import GalleryFlaskApp
 import smrt.bot.tools
-from smrt.libgaudeam import Gaudeam, GaudeamSession
-
+from smrt.libgaudeam import GaudeamCalendar, GaudeamSession, GaudeamMembers
+from smrt.libtranscript import FasterWhisperTranscript, WyomingTranscript
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 schema = {
@@ -62,6 +62,7 @@ schema = {
         "type": "dict",
         "schema": {
             "min_words_for_summary": {"type": "integer", "required": True},
+            "asr_engine":  {"type": "string", "required": False},
             "summary_bot": {"type": "string", "required": False},
             "chat_id_blacklist": {
                 "type": "list",
@@ -319,24 +320,25 @@ def run():
             gaudeam_session_cookie = gaudeam_config["gaudeam_session"]
             gaudeam_subdomain = gaudeam_config.get("gaudeam_subdomain")
             gaudeam_session = GaudeamSession(gaudeam_session_cookie, gaudeam_subdomain)
-            gaudeam = Gaudeam(gaudeam_session)
+            gaudeam_calendar = GaudeamCalendar(gaudeam_session)
+            gaudeam_members = GaudeamMembers(gaudeam_session)
             
             chat_id_whitelist = gaudeam_config.get("chat_id_whitelist", None)
             chat_id_blacklist = gaudeam_config.get("chat_id_blacklist", None)
-            gaudeam_pipeline = pipeline.GaudeamBdayPipeline(gaudeam, chat_id_whitelist, chat_id_blacklist)
+            gaudeam_pipeline = pipeline.GaudeamBdayPipeline(gaudeam_members, chat_id_whitelist, chat_id_blacklist)
             mainpipe.add_pipeline(gaudeam_pipeline)
-            gaudeam_pipeline = pipeline.GaudeamCalendarPipeline(gaudeam, chat_id_whitelist, chat_id_blacklist)
+            gaudeam_pipeline = pipeline.GaudeamCalendarPipeline(gaudeam_calendar, chat_id_whitelist, chat_id_blacklist)
             mainpipe.add_pipeline(gaudeam_pipeline)
             
             schedule_time = "09:00"
             # schedule daily birthday notifications
-            bday_task = pipeline.GaudeamBdayScheduledTask(messenger_manager, chat_id_whitelist, gaudeam)
+            bday_task = pipeline.GaudeamBdayScheduledTask(messenger_manager, chat_id_whitelist, gaudeam_calendar)
             
             schedule.every().day.at(schedule_time, "Europe/Berlin").do(bday_task.run)
             logging.info(f"Scheduled Gaudeam birthday notifications at {schedule_time} daily.")
             
             # schedule event notifications every day
-            event_task = pipeline.GaudeamEventsScheduledTask(messenger_manager, chat_id_whitelist, gaudeam)
+            event_task = pipeline.GaudeamEventsScheduledTask(messenger_manager, chat_id_whitelist, gaudeam_calendar)
             schedule.every().day.at(schedule_time, "Europe/Berlin").do(event_task.run)
             logging.info(f"Scheduled Gaudeam event notifications at {schedule_time} daily.")
 
@@ -360,7 +362,13 @@ def run():
         config_vt = configuration[CONFIG_VOICE_TRANSCRIPTION]
         vt_min_words_for_summary = config_vt.get("min_words_for_summary", 10)
         vt_chat_id_blacklist = config_vt.get("chat_id_blacklist", [])
-        vt_transcriber = smrt.libtranscript.FasterWhisperTranscript()
+        asr_engine = config_vt.get("asr_engine", "faster_whisper")
+        if asr_engine == "faster_whisper":
+            vt_transcriber = FasterWhisperTranscript()
+        else:
+            if not asr_engine.startswith("tcp://"):
+                raise ValueError("asr_engine must 'faster_whisper' or uri to wyoming server, e.g. tcp://127.0.0.1:10300")
+            vt_transcriber = WyomingTranscript(asr_engine)
         if "summary_bot" in config_vt:
             vt_summary_bot = bot_loader.create(config_vt["summary_bot"])
             vt_summarizer = smrt.bot.tools.QuestionBotSummary(vt_summary_bot)
@@ -514,6 +522,9 @@ def run():
         gallery_thread.start()
         logging.info(f"Started Message server on port {message_server_port} in thread.")
 
+    # run mainapp forever
+    while True:
+        time.sleep(10)
 
 def run_schedule_continuously(interval=10):
     """Continuously run, while executing pending jobs at each
