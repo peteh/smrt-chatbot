@@ -85,10 +85,10 @@ class MessageDatabase():
         with self._lock:
             cur = self._db.cursor()
             return_list = []
-            for row in cur.execute("SELECT chat_id, sender, message FROM messages \
+            for row in cur.execute("SELECT chat_id, sender, message, time FROM messages \
                                     WHERE chat_id = ? ORDER BY `time` DESC LIMIT ?",
                                     (chat_id, count)):
-                entry = MessageEntry(chat_id=row['chat_id'], sender=row['sender'], message=row['message'], time=row['time'])
+                entry = MessageEntry(chat_id=row["chat_id"], sender=row["sender"], message=row["message"], time=row["time"])
                 return_list.append(entry)
             return_list.reverse()
             return return_list
