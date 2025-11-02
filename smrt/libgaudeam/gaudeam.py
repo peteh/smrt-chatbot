@@ -324,8 +324,11 @@ class GaudeamMedia():
         with open(file_path, "wb") as f:
             f.write(response.content)
         return True
-        
+
 class GaudeamDriveFolder:
+
+    DIRECTORY_LIST_LIMIT = 80
+
     def __init__(self, session: GaudeamSession, folder_id: str, properties = None):
         self._session = session
         self._folder_id = folder_id
@@ -365,7 +368,7 @@ class GaudeamDriveFolder:
         """
         owner_type = self._properties["owner_type"]
         owner_id_from_parent = self._properties["owner_id"]
-        
+
         data = {
             "inode": {
                 "description": description,
@@ -409,22 +412,31 @@ class GaudeamDriveFolder:
         Returns:
             typing.List[GaudeamDriveFolder]: List of sub folders
         """
-        url = f"{self._session.url()}/api/v1/drive/folders?parent_id={self._folder_id}&order=%3Ename&offset=0&limit=200000"
-        response = self._session.client().get(url)
+        offset = 0
         results = []
-        if response.status_code == 200:
-            for entry in response.json()["results"]:
-                entry_type = entry["type"]
+
+        while True:
+            url = f"{self._session.url()}/api/v1/drive/folders?parent_id={self._folder_id}&order=%3Ename&offset={offset}&limit={self.DIRECTORY_LIST_LIMIT}"
+            response = self._session.client().get(url)
+
+            if response.status_code != 200:
+                raise RuntimeError(f"Error fetching folder contents: {response.status_code}, {response.text}")
+
+            batch = response.json().get("results", [])
+            if not batch or len(batch) == 0:
+                break  # no more results
+
+            for entry in batch:
+                entry_type = entry.get("type")
                 if entry_type in ["Folder", "Gallery"]:
                     folder = GaudeamDriveFolder(self._session, entry["id"], entry)
                     results.append(folder)
-                else:
-                    #logging.debug(f"Skipping non-folder entry: {entry['name']} ({entry_type})")
-                    pass
-            return results
-        else:
-            logging.error(f"Error fetching folder contents: {response.status_code}, {response.text}")
-            return []
+
+            # move to next page
+            offset += self.DIRECTORY_LIST_LIMIT
+            if len(batch) < self.DIRECTORY_LIST_LIMIT:
+                break
+        return results
 
     def get_files(self) -> typing.List[GaudeamDriveFile]:
         """Gets a list of files in the folder
@@ -432,22 +444,31 @@ class GaudeamDriveFolder:
         Returns:
             typing.List[GaudeamDriveFile]: List of files
         """
-        url = f"{self._session.url()}/api/v1/drive/folders?parent_id={self._folder_id}&order=%3Ename&offset=0&limit=200000"
-        response = self._session.client().get(url)
+        offset = 0
         results = []
-        if response.status_code == 200:
-            for entry in response.json()["results"]:
-                entry_type = entry["type"]
+
+        while True:
+            url = f"{self._session.url()}/api/v1/drive/folders?parent_id={self._folder_id}&order=%3Ename&offset={offset}&limit={self.DIRECTORY_LIST_LIMIT}"
+            response = self._session.client().get(url)
+
+            if response.status_code != 200:
+                raise RuntimeError(f"Error fetching files from folder: {response.status_code}, {response.text}")
+
+            batch = response.json().get("results", [])
+            if not batch:
+                break  # no more results
+
+            for entry in batch:
+                entry_type = entry.get("type")
                 if entry_type in ["Photo", "DriveFile"]:
-                    folder = GaudeamDriveFile(self._session, entry["id"], entry)
-                    results.append(folder)
-                else:
-                    #logging.debug(f"Skipping non-file entry: {entry['name']} ({entry_type})")
-                    pass
-            return results
-        else:
-            logging.error(f"Error fetching folder contents: {response.status_code}, {response.text}")
-            return []
+                    file_entry = GaudeamDriveFile(self._session, entry["id"], entry)
+                    results.append(file_entry)
+            if len(batch) < self.DIRECTORY_LIST_LIMIT:
+                break
+            # move to next batch
+            offset += self.DIRECTORY_LIST_LIMIT
+
+        return results
 
     def delete(self) -> bool:
         """Deletes the folder including all files. 
@@ -462,7 +483,7 @@ class GaudeamDriveFolder:
         else:
             logging.error(f"Error deleting folder: {response.status_code}, {response.text}")
             return False
-    
+
     def delete_content(self) -> bool:
         """Deletes the content of a folder
 
@@ -806,13 +827,75 @@ class GaudeamResizedImageUploader():
                 # skip files that contain the substring which is in skipfile in the file name
                 return True
         return False
-    
+
     def _file_name_exists(self, file_name: str,  gaudeam_files_in_folder: typing.List[GaudeamDriveFile]):
         for file_in_folder in gaudeam_files_in_folder:
             if file_in_folder.get_download_name() == file_name:
                 return True
         return False
-    
+
+    def delete_duplicates(self, gaudeam_folder: GaudeamDriveFolder, dry_run = False):
+        sub_folders = gaudeam_folder.get_sub_folders()
+        sub_folders = sorted(sub_folders, key=lambda f: f.get_name())
+
+        # clean duplicate folders
+        if len(sub_folders) > 0:
+            first_folder = sub_folders.pop(0)
+            while len(sub_folders) > 0:
+                next_folder = sub_folders.pop(0)
+                if first_folder.get_name() == next_folder.get_name():
+                    # duplicate, eliminate
+                    if not dry_run:
+                        logging.warning(f"Duplicate folder '{next_folder.get_name()} - deleting'")
+                        next_folder.delete()
+                    else:
+                        logging.info(f"[DRY RUN] Duplicate folder '{next_folder.get_name()}'")
+                else: 
+                    # they are different, so we eliminated all duplicates
+                    first_folder = next_folder
+
+        sub_files = gaudeam_folder.get_files()
+        sub_files = sorted(sub_files, key=lambda f: f.get_name())
+
+        # clean duplicate files
+        if len(sub_files) > 0:
+            first_file = sub_files.pop(0)
+            while len(sub_files) > 0:
+                next_file = sub_files.pop(0)
+                if first_file.get_name() == next_file.get_name():
+                    # duplicate, eliminate
+                    if not dry_run:
+                        logging.warning(f"Duplicate file '{next_file.get_name()} - deleting'")
+                        next_file.delete()
+                    else:
+                        logging.info(f"[DRY RUN] Duplicate file '{next_file.get_name()}'")
+                else: 
+                    # they are different, so we elimnated all duplicates
+                    first_file = next_file
+        
+        # now reread and run on the leftover
+        sub_folders = gaudeam_folder.get_sub_folders()
+        for sub_folder in sub_folders:
+            self.delete_duplicates(sub_folder, dry_run)
+
+    def delete_empty_sub_folders(self, gaudeam_folder: GaudeamDriveFolder, dry_run = False):
+        sub_folders = gaudeam_folder.get_sub_folders()
+        if len(sub_folders) > 0:
+            # if we have folders we have to go in deep first
+            for sub_folder in sub_folders:
+                self.delete_empty_sub_folders(sub_folder, dry_run)
+            # refresh the folders, we might have deleted some
+            sub_folders = gaudeam_folder.get_sub_folders()
+        files = gaudeam_folder.get_files()
+        if len(sub_folders) + len(files) == 0:
+            # empty
+            if not dry_run:
+                logging.warning(f"Empty folder: {gaudeam_folder.get_name()} - deleting")
+                gaudeam_folder.delete()
+            else:
+                logging.info(f"[DRY RUN] Empty folder: {gaudeam_folder.get_name()}")
+            return
+
     def delete_remote_orphan_files(self, local_folder_path: Path|str, gaudeam_folder: GaudeamDriveFolder, dry_run = False):
         local_folder_path = Path(local_folder_path)
         local_sub_folders = [
