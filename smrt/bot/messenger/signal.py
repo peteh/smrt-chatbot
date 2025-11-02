@@ -45,17 +45,19 @@ class SignalMessenger(MessengerInterface):
     def get_name(self) -> str:
         return "signal"
 
+    def _get_group_id_from_message(self, message: dict):
+        internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
+        if internal_id not in self._group_cache:
+            self._update_group_cache()
+        return self._group_cache[internal_id]
+
     def _react(self, message: dict, reaction_text):
         if self.is_group_message(message):
-            internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
-            if internal_id not in self._group_cache:
-                self._update_group_cache()
-            recipient = self._group_cache[internal_id]
+            recipient = self._get_group_id_from_message(message)
         else:
             recipient = message["envelope"]["sourceNumber"]
         data = {
             "reaction": reaction_text,
-            # TODO: probably have to figure out group messages
             "recipient": recipient,
             "target_author": message["envelope"]["sourceNumber"],
             "timestamp": message["envelope"]["timestamp"]
@@ -92,10 +94,7 @@ class SignalMessenger(MessengerInterface):
     @override
     def mark_seen(self, message: dict) -> None:
         if self.is_group_message(message):
-            internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
-            if internal_id not in self._group_cache:
-                self._update_group_cache()
-            recipient = self._group_cache[internal_id]
+            recipient = self._get_group_id_from_message(message)
         else:
             recipient = message["envelope"]["sourceNumber"]
         data = {
@@ -103,9 +102,12 @@ class SignalMessenger(MessengerInterface):
             "recipient": recipient,
             "timestamp": message["envelope"]["timestamp"]
         }
-        requests.post(self._endpoint_url("v1/receipts", self._number),
+        endpoint = "v1/receipts"
+        response = requests.post(self._endpoint_url(endpoint, self._number),
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
+        if response.status_code != 204:
+                logging.warning(f"Failed to send receipt: {response.text} on {endpoint}, code: {response.status_code}")
 
     @override
     def is_group_message(self, message: dict):
@@ -153,15 +155,12 @@ class SignalMessenger(MessengerInterface):
 
     @override
     def send_message_to_group(self, group_message: dict, text: str):
-        internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
-        if internal_id not in self._group_cache:
-            self._update_group_cache()
         data = {
             "message": text,
             "text_mode": "styled",
             "number": self._number,
             "recipients": [
-                self._group_cache[internal_id]
+                self._get_group_id_from_message(group_message)
             ]
         }
         requests.post(self._endpoint_url("v2/send"),
@@ -185,10 +184,7 @@ class SignalMessenger(MessengerInterface):
     @override
     def reply_message(self, message: dict, text: str) -> None:
         if self.is_group_message(message):
-            internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
-            if internal_id not in self._group_cache:
-                self._update_group_cache()
-            recipient = self._group_cache[internal_id]
+            recipient = self._get_group_id_from_message(message)
         else:
             recipient = message["envelope"]["sourceNumber"]
 
@@ -265,9 +261,6 @@ class SignalMessenger(MessengerInterface):
     @override
     def send_image_to_group(self, group_message: dict, file_name: str,
                             binary_data: bytes, caption: str = ""):
-        internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
-        if internal_id not in self._group_cache:
-            self._update_group_cache()
         base64data = base64.b64encode(binary_data).decode('utf-8')
         if file_name.endswith('.webp'):
             data_type="image/webp"
@@ -280,7 +273,7 @@ class SignalMessenger(MessengerInterface):
             ],
             "number": self._number,
             "recipients": [
-                self._group_cache[internal_id]
+                self._get_group_id_from_message(group_message)
             ]
         }
         requests.post(self._endpoint_url("v2/send"),
@@ -334,10 +327,7 @@ class SignalMessenger(MessengerInterface):
 
     @override
     def send_audio_to_group(self, group_message, audio_file_path):
-        internal_id = group_message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
-        if internal_id not in self._group_cache:
-            self._update_group_cache()
-        self._send_audio(self._group_cache[internal_id], audio_file_path)
+        self._send_audio(self._get_group_id_from_message(group_message), audio_file_path)
 
     @override
     def send_audio_to_individual(self, message, audio_file_path):
@@ -361,10 +351,7 @@ class SignalMessenger(MessengerInterface):
     @override
     def send_typing(self, message: dict, typing: bool):
         if self.is_group_message(message):
-            internal_id = message["envelope"]["dataMessage"]["groupInfo"]["groupId"]
-            if internal_id not in self._group_cache:
-                self._update_group_cache()
-            recipient = self._group_cache[internal_id]
+            recipient = self._get_group_id_from_message(message)
         else:
             recipient = message["envelope"]["sourceNumber"]
 
