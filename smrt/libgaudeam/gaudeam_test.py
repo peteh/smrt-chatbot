@@ -1,7 +1,9 @@
 import logging
 import yaml
-import datetime
-from gaudeam import GaudeamDriveFolder, GaudeamSession, GaudeamCalendar
+import json
+from pathlib import Path
+from datetime import datetime, timedelta
+from gaudeam import GaudeamDriveFolder, GaudeamSession, GaudeamCalendar, GaudeamResizedImageUploader, GaudeamEvent, GaudeamMedia
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 config_file = open("config.yml", "r", encoding="utf-8")
@@ -14,20 +16,15 @@ config_file.close()
 subdomain = configuration["gaudeam"][0]["gaudeam_subdomain"]
 session_cookie = configuration["gaudeam"][0]["gaudeam_session"]
 session = GaudeamSession(session_cookie, subdomain)
-gaudeam = GaudeamCalendar(session)
+calendar = GaudeamCalendar(session)
 
-def get_events(gaudeam: GaudeamCalendar, days: int) -> list[dict]:
-    # todays date in format dd.mm
-    today_date = datetime.datetime.now()
-    end_date = today_date + datetime.timedelta(days=days)
-    logging.debug(f"Fetching events from {today_date} to {end_date}")
-    events = gaudeam.global_calendar(today_date.date(), end_date.date(), filter_birthdays=True)
-    events = sorted(events, key=lambda x: gaudeam.date_string_to_datetime(x["start"]))
-    return events
+today = datetime.now()
+past = today - timedelta(days=365)
 
-for event in get_events(gaudeam, 5):
-    print(event["title"])
-    print(event["url"])
-    formatted = gaudeam.date_string_to_datetime(event["start"]).strftime("%Y-%m-%d %H:%M")
-    print(formatted)
-    print("")
+events = calendar.global_calendar(past, today)
+base_path = Path("/home/pete/Downloads/test_images/")
+for event in events:
+    date_str = event.get_start_datetime().strftime("%Y-%m-%d")
+    folder_name = f"{date_str} {event.get_title()}"
+    event_path = base_path / folder_name
+    event.download_media(event_path)

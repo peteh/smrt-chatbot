@@ -5,7 +5,7 @@ import datetime
 from smrt.bot.pipeline import PipelineHelper, AbstractPipeline
 from smrt.bot.messenger import MessengerInterface, MessengerManager
 from smrt.bot.pipeline import scheduled
-from smrt.libgaudeam import GaudeamCalendar, GaudeamMembers
+from smrt.libgaudeam import GaudeamCalendar, GaudeamMembers, GaudeamEvent
 
 
 class GaudeamBdayPipeline(AbstractPipeline):
@@ -122,27 +122,27 @@ class GaudeamUtils:
         return bday_members
     
     @staticmethod
-    def get_events(gaudeam: GaudeamCalendar, days: int) -> list[dict]:
+    def get_events(gaudeam: GaudeamCalendar, days: int) -> list[GaudeamEvent]:
         # todays date in format dd.mm
         today_date = datetime.datetime.now()
         end_date = today_date + datetime.timedelta(days=days)
         logging.debug(f"Fetching events from {today_date} to {end_date}")
-        events = gaudeam.global_calendar(today_date.date(), end_date.date(), filter_birthdays=True)
+        events = gaudeam.global_calendar(today_date.date(), end_date.date())
         return events
 
     @staticmethod
-    def format_events_message(events: list[dict]) -> str:
+    def format_events_message(events: list[GaudeamEvent]) -> str:
         if len(events) == 0:
             return "No upcoming events."
 
         text = "Upcoming events:"
         for event in events:
-            title = event["title"]
-            start = event["start"] # format: "Thu, 02 Oct 2025 18:00:00 +0000"
-            url = event["url"]
+            title = event.get_title()
+            start_date = event.get_start_datetime()
+            url = event.get_event_url()
 
             # take start date and convert to dd.mm.yyyy in Europe/Berlin timezone
-            start_date = datetime.datetime.strptime(start, "%a, %d %b %Y %H:%M:%S %z")
+            # TODO: check timezone mess
             start_date = start_date.astimezone(datetime.timezone(datetime.timedelta(hours=2))) # Europe/Berlin timezone
             start_str = start_date.strftime("%d.%m.%Y")
 
