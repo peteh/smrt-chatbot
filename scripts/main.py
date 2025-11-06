@@ -10,7 +10,6 @@ from cerberus import Validator
 import smrt.db
 import smrt.bot.pipeline as pipeline
 import smrt.bot.messenger as messenger
-import smrt.bot.messagequeue as messagequeue
 from smrt.web.galleryweb import GalleryFlaskApp
 import smrt.bot.tools
 from smrt.libgaudeam import GaudeamCalendar, GaudeamSession, GaudeamMembers
@@ -240,7 +239,7 @@ def run():
     config_file.close()
 
     messenger_manager = messenger.MessengerManager()
-    message_server = messagequeue.MessageServerFlaskApp(messenger_manager)
+    message_server = messenger.MessageServerFlaskApp(messenger_manager)
 
     if not validate_config(configuration, schema):
         exit(1)
@@ -377,7 +376,7 @@ def run():
     if CONFIG_TTS in configuration:
         tts_pipeline = pipeline.TextToSpeechPipeline(storage_path / "custom_models")
         mainpipe.add_pipeline(tts_pipeline)
-    
+
     # load tinder pipeline if configured
     CONFIG_TINDER = "tinder"
     if CONFIG_TINDER in configuration:
@@ -387,7 +386,7 @@ def run():
         tinder_bot = bot_loader.create(config_tinder["tinder_bot"])
         tinder_pipeline = pipeline.TinderPipeline(tinder_bot, chat_id_whitelist, chat_id_blacklist)
         mainpipe.add_pipeline(tinder_pipeline)
-    
+
     # load pipeline for article summarization if configured
     CONFIG_ARTICLE_SUMMARY = "article_summary"
     if CONFIG_ARTICLE_SUMMARY in configuration:
@@ -398,7 +397,7 @@ def run():
         article_summarizer = smrt.bot.tools.QuestionBotSummary(article_summary_bot)
         article_summary_pipeline = pipeline.URLSummaryPipeline(article_summarizer, chat_id_whitelist, chat_id_blacklist)
         mainpipe.add_pipeline(article_summary_pipeline)
-    
+
     # image generation
     CONFIG_IMAGEGEN = "image_generation"
     if CONFIG_IMAGEGEN in configuration:
@@ -435,7 +434,7 @@ def run():
         mainpipe.add_pipeline(gallery_delete_pipe)
 
         gallery_app = GalleryFlaskApp(gallery_db)
-        
+
         # run gallery flask app if debug is True
         if debug_flag:
             def _serve_gallery(port):
@@ -463,15 +462,15 @@ def run():
         config_signal = configuration[CONFIG_SIGNAL]
         signal_messenger = messenger.SignalMessenger(config_signal["number"], config_signal["host"], int(config_signal["port"]))
         messenger_manager.add_messenger(signal_messenger)
-        signal_queue = messagequeue.SignalMessageQueue(signal_messenger, mainpipe)
+        signal_queue = messenger.SignalMessageQueue(signal_messenger, mainpipe.process)
         signal_queue.run_async()
-    
+
     CONFIG_TELEGRAM = "telegram"
     if CONFIG_TELEGRAM in configuration:
         config_telegram = configuration[CONFIG_TELEGRAM]
         telegram_messenger = messenger.TelegramMessenger(config_telegram["telegram_api_key"])
         messenger_manager.add_messenger(telegram_messenger)
-        telegram_queue = messagequeue.TelegramMessageQueue(telegram_messenger, mainpipe)
+        telegram_queue = messenger.TelegramMessageQueue(telegram_messenger, mainpipe.process)
         telegram_queue.run_async()
 
     CONFIG_WHATSAPP = "whatsapp"
@@ -485,7 +484,7 @@ def run():
                                                lid)
 
         messenger_manager.add_messenger(whatsapp)
-        whatsapp_queue = messagequeue.WhatsappMessageQueue(whatsapp, mainpipe)
+        whatsapp_queue = messenger.WhatsappMessageQueue(whatsapp, mainpipe.process)
         whatsapp_queue.run_async()
 
         try:

@@ -1,15 +1,17 @@
-
 import logging
+import threading
+import time
+import json
 import base64
 import subprocess
 import tempfile
 import os
-from typing import Tuple, override
-
 import requests
+import websockets.sync.client as wsclient
+import websockets.exceptions
+from typing import Tuple, override, Callable
 
 from .messenger import MessengerInterface
-
 
 class SignalMessenger(MessengerInterface):
     """Interface for messengers to communicate with the underlying framework. """
@@ -371,3 +373,42 @@ class SignalMessenger(MessengerInterface):
                         timeout=self.DEFAULT_TIMEOUT)
             if response.status_code != 200:
                 logging.warning(f"Failed to send typing indicator: {response.text} on {endpoint}")
+
+
+class SignalMessageQueue():
+    """Implementation to read messages from signal cli web service """
+    WEBSOCKET_TIMEOUT = 600
+    WEBSOCKET_MAXSIZE = 1024*1024*50
+
+    def __init__(self, messenger_instance: SignalMessenger, callback: Callable[[MessengerInterface, dict], None]) -> None:
+        self._messenger = messenger_instance
+        self._thread = None
+        self._callback = callback
+
+    def get_messages(self):
+        api_url = f"ws://{self._messenger.get_host()}:{self._messenger.get_port()}/v1/receive/{self._messenger.get_number()}"
+        web_sock = None
+
+        while True:
+            try:
+                if web_sock is None:
+                    web_sock = wsclient.connect(api_url, max_size=self.WEBSOCKET_MAXSIZE)
+                    logging.info("Connected to Signal Service")
+                message = json.loads(web_sock.recv())
+                # TODO: fix logs
+                logging.debug(message)
+                logging.debug(f"is_group_message: {self._messenger.is_group_message(message)}")
+                logging.debug(f"has_audio_data: {self._messenger.has_audio_data(message)}")
+                logging.debug(f"get_message_text: {self._messenger.get_message_text(message)}")
+
+                if "dataMessage" in message["envelope"]:
+                    self._callback(self._messenger, message)
+            except (TimeoutError, websockets.exceptions.ConnectionClosed, \
+                    ConnectionRefusedError, ConnectionError):
+                logging.warning("Failed to connect to signal service, retrying")
+                web_sock = None
+                time.sleep(3)
+
+    def run_async(self):
+        self._thread = threading.Thread(target=self.get_messages)
+        self._thread.start()
