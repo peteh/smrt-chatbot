@@ -125,8 +125,8 @@ Models can be chosen via `ollama:modelname`.
 Llama.cpp server can also be used.
 
 ```yml
-ollama:
-  host: "http://127.0.0.1:8000"
+llama_cpp:
+  host: "http://127.0.0.1:8002"
 ```
 
 Models can be chosen via `llama_cpp:modelname`.
