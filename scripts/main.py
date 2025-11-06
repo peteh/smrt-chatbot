@@ -252,18 +252,18 @@ def run():
         debug_flag = True
     storage_path = Path(configuration.get("storage_path", "/storage/"))
     logging.info(f"Using storage path: {storage_path}")
-    
+
      # create main pipeline
-    
+
     mainpipe = pipeline.MainPipeline()
     #database = db.Database("data")
-    
+
     #questionbot_image = questionbot.QuestionBotOllama("llava")
     #image_prompt_pipeline = pipeline.ImagePromptPipeline(questionbot_image)
     #questionbot_openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
     #gpt_pipeline = pipeline.GptPipeline(questionbot_openai)
     #grammar_pipeline = pipeline.GrammarPipeline(question_bot)
-    
+
     # image generation
     #processors = [texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
     #imagegen_api = texttoimage.FallbackTextToImageProcessor(processors)
@@ -275,8 +275,7 @@ def run():
     #mainpipe.add_pipeline(gpt_pipeline)
     #mainpipe.add_pipeline(image_prompt_pipeline)
     #mainpipe.add_pipeline(grammar_pipeline)
-    
-  
+
     # load ollama config if present
     bot_loader = BotLoader()
     CONFIG_OLLAMA = "ollama"
@@ -311,7 +310,7 @@ def run():
         mainpipe.add_pipeline(ha_text_pipeline)
         mainpipe.add_pipeline(ha_voice_pipeline)
         mainpipe.add_pipeline(ha_say_pipeline)
-    
+
     # gaudeam integration
     CONFIG_GAUDEAM = "gaudeam"
     if CONFIG_GAUDEAM in configuration:
@@ -322,21 +321,21 @@ def run():
             gaudeam_session = GaudeamSession(gaudeam_session_cookie, gaudeam_subdomain)
             gaudeam_calendar = GaudeamCalendar(gaudeam_session)
             gaudeam_members = GaudeamMembers(gaudeam_session)
-            
+
             chat_id_whitelist = gaudeam_config.get("chat_id_whitelist", None)
             chat_id_blacklist = gaudeam_config.get("chat_id_blacklist", None)
             gaudeam_pipeline = pipeline.GaudeamBdayPipeline(gaudeam_members, chat_id_whitelist, chat_id_blacklist)
             mainpipe.add_pipeline(gaudeam_pipeline)
             gaudeam_pipeline = pipeline.GaudeamCalendarPipeline(gaudeam_calendar, chat_id_whitelist, chat_id_blacklist)
             mainpipe.add_pipeline(gaudeam_pipeline)
-            
+
             schedule_time = "09:00"
             # schedule daily birthday notifications
-            bday_task = pipeline.GaudeamBdayScheduledTask(messenger_manager, chat_id_whitelist, gaudeam_calendar)
-            
+            bday_task = pipeline.GaudeamBdayScheduledTask(messenger_manager, chat_id_whitelist, gaudeam_members)
+
             schedule.every().day.at(schedule_time, "Europe/Berlin").do(bday_task.run)
             logging.info(f"Scheduled Gaudeam birthday notifications at {schedule_time} daily.")
-            
+
             # schedule event notifications every day
             event_task = pipeline.GaudeamEventsScheduledTask(messenger_manager, chat_id_whitelist, gaudeam_calendar)
             schedule.every().day.at(schedule_time, "Europe/Berlin").do(event_task.run)
