@@ -208,12 +208,12 @@ class BotLoader():
         """Set the ollama server to use."""
         self._ollama_server = server
         logging.info(f"Using ollama server: {self._ollama_server}")
-        
+
     def set_llama_cpp_server(self, server: str):
         """Set the llama.cpp server to use."""
         self._llama_cpp_server = server
         logging.info(f"Using llama.cpp server: {self._llama_cpp_server}")
-        
+
     def create(self, bot_name: str) -> smrt.bot.tools.QuestionBotInterface:
         """Factory function to create a question bot instance based on the bot name."""
         if bot_name.startswith("ollama:"):
@@ -238,14 +238,13 @@ def run():
     config_file = open("config.yml", "r", encoding="utf-8")
     configuration = yaml.safe_load(config_file)
     config_file.close()
-    
+
     messenger_manager = messenger.MessengerManager()
     message_server = messagequeue.MessageServerFlaskApp(messenger_manager)
-    
 
     if not validate_config(configuration, schema):
         exit(1)
-        
+
     CONFIG_DEBUG = "debug"
     debug_flag = False
     if CONFIG_DEBUG in configuration:
@@ -260,19 +259,14 @@ def run():
 
     #questionbot_image = questionbot.QuestionBotOllama("llava")
     #image_prompt_pipeline = pipeline.ImagePromptPipeline(questionbot_image)
-    #questionbot_openai = questionbot.QuestionBotOpenAIAPI(config("OPENAI_APIKEY"))
-    #gpt_pipeline = pipeline.GptPipeline(questionbot_openai)
     #grammar_pipeline = pipeline.GrammarPipeline(question_bot)
 
     # image generation
     #processors = [texttoimage.StableHordeTextToImage(config("STABLEHORDE_APIKEY"))]
     #imagegen_api = texttoimage.FallbackTextToImageProcessor(processors)
     #imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
-    #group_message_pipeline = pipeline.GroupMessageQuestionPipeline(database, summarizer, question_bot)
     #mainpipe.add_pipeline(group_message_pipeline)
     #mainpipe.add_pipeline(imagegen_pipeline)
-    #mainpipe.add_pipeline(tts_pipeline)
-    #mainpipe.add_pipeline(gpt_pipeline)
     #mainpipe.add_pipeline(image_prompt_pipeline)
     #mainpipe.add_pipeline(grammar_pipeline)
 

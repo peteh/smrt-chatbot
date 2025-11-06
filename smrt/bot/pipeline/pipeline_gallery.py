@@ -59,7 +59,7 @@ class GalleryPipeline(AbstractPipeline):
         img.save(thumb_filename, format = "png")
         logging.debug(f"Thumbnail saved as {thumb_filename}")
         return file_uuid
-                
+
     def process(self, messenger: MessengerInterface, message: dict):
         # we have an image that we might need to process
         if messenger.has_image_data(message):
@@ -101,7 +101,7 @@ class GalleryPipeline(AbstractPipeline):
                 self._gallery_db.add_image(chat_id, messenger.get_sender_name(message), mime_type ,file_uuid, sha256_hash)
 
                 messenger.mark_in_progress_done(message)
- 
+
             except Exception as ex:
                 logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
                 messenger.mark_in_progress_fail(message)
@@ -172,7 +172,7 @@ class GalleryDeletePipeline(AbstractPipeline):
         os.remove(self._gallery_db.get_storage_path() / f"{image_uuid}.blob")
         os.remove(self._gallery_db.get_storage_path() / f"{image_uuid}_thumb.png")
         self._gallery_db.delete_image(chat_id, image_uuid)
-        
+
     def process(self, messenger: MessengerInterface, message: dict):
         try:
             # gallery delete command

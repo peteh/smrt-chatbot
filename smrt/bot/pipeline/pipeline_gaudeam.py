@@ -120,7 +120,7 @@ class GaudeamUtils:
             if birth_date and birth_date.startswith(today_date):
                 bday_members.append(member)
         return bday_members
-    
+
     @staticmethod
     def get_events(gaudeam: GaudeamCalendar, days: int) -> list[GaudeamEvent]:
         # todays date in format dd.mm
