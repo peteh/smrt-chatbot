@@ -108,9 +108,13 @@ class GaudeamMembers:
         }
 
         response_count = self._session.client().get(f"{self._session.url()}/api/v1/members/count", params=params)
+        if response_count.status_code != 200: 
+            raise RuntimeError(f"Error fetching members: {response_count.status_code}, {response_count.text}")
         num_records = response_count.json()["count"]
 
         response_members = self._session.client().get(f"{self._session.url()}/api/v1/members/index", params=params)
+        if response_members.status_code != 200:
+            raise RuntimeError(f"Error fetching members: {response_count.status_code}, {response_count.text}")
         members = response_members.json()["results"]
         while len(members) < num_records:
             offset += limit
@@ -162,8 +166,7 @@ class GaudeamCalendar:
             events = sorted(events, key=lambda x: self.date_string_to_datetime(x["start"]))
             return events
         else:
-            logging.error(f"Error fetching calendar: {response.status_code}, {response.text}")
-            return []
+            raise RuntimeError(f"Error fetching calendar: {response.status_code}, {response.text}")
 
     def global_calendar(self, start_date: datetime.date, end_date: datetime.date) -> list[GaudeamEvent]:
         """Returns events from the global calendar of the instance. 
@@ -180,8 +183,7 @@ class GaudeamCalendar:
         url = f"{self._session.url()}/global_calendar.json?start={start_str}&end={end_str}&timeZone=UTC"
         response = self._session.client().get(url)
         if response.status_code != 200:
-            logging.error(f"Error fetching calendar: {response.status_code}, {response.text}")
-            return []
+            raise RuntimeError(f"Error fetching calendar: {response.status_code}, {response.text}")
 
         all_events = response.json()
         events = []
@@ -210,7 +212,7 @@ class GaudeamEvent():
         if response.status_code == 200:
             return response.json()
         else:
-            raise ValueError(f"Error fetching event properties for event '{self._event_id}': {response.status_code}, {response.text}")
+            raise RuntimeError(f"Error fetching event properties for event '{self._event_id}': {response.status_code}, {response.text}")
 
     def get_title(self) -> str:
         return self._properties["title"]
@@ -231,7 +233,7 @@ class GaudeamEvent():
                 if not sub_folder.exists():
                     sub_folder.mkdir(parents=True)
                 file_name = media.get_download_name()
-                
+
                 save_path = sub_folder / file_name
                 if save_path.exists():
                     logging.info(f"Skipping {save_path}: File already exists")
@@ -252,10 +254,10 @@ class GaudeamEvent():
                 post_list.append(post)
             return post_list
         else:
-            raise ValueError(f"Could not get posts for event_id '{self._event_id}'")
+            raise RuntimeError(f"Could not get posts for event_id '{self._event_id}'")
 
 class EventPost():
-    
+
     def __init__(self, session: GaudeamSession, event_id: str, post_id: str, properties = None):
         self._session = session
         self._event_id = event_id
@@ -271,12 +273,12 @@ class EventPost():
         if response.status_code == 200:
             return response.json()
         else:
-            raise ValueError(f"Error fetching post properties for post '{self._post_id}': {response.status_code}, {response.text}")
+            raise RuntimeError(f"Error fetching post properties for post '{self._post_id}': {response.status_code}, {response.text}")
 
     def get_creator_name(self) -> str:
         return self._properties["creator"]["full_name"]
         
-    def get_media(self) -> GaudeamMedia: 
+    def get_media(self) -> GaudeamMedia:
         #/api/v1/posts/post_id/event_media
         url = f"{self._session.url()}/api/v1/posts/{self._post_id}/event_media"
         response = self._session.client().get(url)
@@ -287,20 +289,20 @@ class EventPost():
                 media_list.append(GaudeamMedia(self._session, media_id, media_data))
             return media_list
         else:
-            raise ValueError(f"Could not get media for post_id '{self._post_id}'")
+            raise ValueError(f"Could not get media for post_id '{self._post_id}': {response.status_code}, {response.text}")
 
 class GaudeamMedia():
     def __init__(self, session: GaudeamSession, media_id: str, properties: dict):
         self._session = session
         self._media_id = media_id
         self._properties = properties
-    
+
     def get_properties(self):
         return self._properties
-    
+
     def get_download_name(self) -> str:
         return self._properties["uploaded_file"]["file_name"]
-    
+
     def download(self, file_path: str|Path) -> bool:
         """Downloads a file to a local path
 
@@ -317,7 +319,7 @@ class GaudeamMedia():
         url = self._properties["uploaded_file"]["original"]["url"]
         response = self._session.client().get(url)
         if response.status_code != 200:
-            raise ValueError(f"Could not download media '{self._media_id}' on {url}")
+            raise RuntimeError(f"Could not download media '{self._media_id}' on {url}")
         # TODO: error handling
 
         # Save as binary file
@@ -403,8 +405,7 @@ class GaudeamDriveFolder:
             logging.debug(f"Created sub-folder '{name}' with ID: {new_folder_id}")
             return GaudeamDriveFolder(self._session, new_folder_id)
         else:
-            logging.error(f"Error creating sub-folder: {response.status_code}, {response.text}")
-            return None
+            raise RuntimeError(f"Error creating sub-folder: {response.status_code}, {response.text}")
 
     def get_sub_folders(self) -> typing.List[GaudeamDriveFolder]:
         """Returns a lift of sub folders in the current folder. 
@@ -481,8 +482,7 @@ class GaudeamDriveFolder:
         if response.status_code == 200:
             return True
         else:
-            logging.error(f"Error deleting folder: {response.status_code}, {response.text}")
-            return False
+            raise RuntimeError(f"Error deleting folder: {response.status_code}, {response.text}")
 
     def delete_content(self) -> bool:
         """Deletes the content of a folder
