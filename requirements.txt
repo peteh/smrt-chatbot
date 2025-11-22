@@ -16,6 +16,7 @@ wyoming
 
 trafilatura
 youtube-transcript-api
+yt_dlp
 # tts stuff
 coqui-tts
 spacy

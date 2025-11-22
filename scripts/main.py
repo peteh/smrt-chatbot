@@ -14,179 +14,209 @@ from smrt.web.galleryweb import GalleryFlaskApp
 import smrt.bot.tools
 from smrt.libgaudeam import GaudeamCalendar, GaudeamSession, GaudeamMembers
 from smrt.libtranscript import FasterWhisperTranscript, WyomingTranscript
+from smrt.bot.tools.question_bot import QuestionBotInterface, QuestionBotOllama, QuestionBotLlamaCppServer
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-schema = {
-    "storage_path": {"type": "string", "required": False},
-    "signal": {
-        "type": "dict",
-        "schema": {
-            "host": {"type": "string", "required": True},
-            "port": {"type": "integer", "required": True},
-            "number": {"type": "string", "required": True}
-        },
-        "required": False
+schema = {}
+schema["storage_path"] = {"type": "string", "required": False}
+
+schema["article_summary"] = {
+    "type": "dict",
+    "schema": {
+        "summary_bot": {"type": "string", "required": True}
     },
-    "whatsapp": {
-        "type": "dict",
-        "schema": {
-            "wppconnect_api_key": {"type": "string", "required": True},
-            "wppconnect_server": {"type": "string", "required": True},
-            "lid": {"type": "string", "required": False}
-        },
-        "required": False
-    },
-    "telegram": {
-        "type": "dict",
-        "schema": {
-            "telegram_api_key": {"type": "string", "required": True},
-        },
-        "required": False
-    },
-    "ollama": {
-        "type": "dict",
-        "schema": {
-            "host": {"type": "string", "required": True}
-        },
-        "required": False
-    },
-    "llama_cpp": {
-        "type": "dict",
-        "schema": {
-            "host": {"type": "string", "required": True}  # URL of the llama.cpp server, e.g. http://localhost:8000
-        },
-        "required": False
-    },
-    "voice_transcription": {
-        "type": "dict",
-        "schema": {
-            "min_words_for_summary": {"type": "integer", "required": True},
-            "asr_engine":  {"type": "string", "required": False},
-            "summary_bot": {"type": "string", "required": False},
-            "chat_id_blacklist": {
-                "type": "list",
-                "schema": {"type": "string"},
-                "required": False
-            }
-        },
-        "required": False
-    },
-    "article_summary": {
-        "type": "dict",
-        "schema": {
-            "summary_bot": {"type": "string", "required": True}
-        },
-        "required": False
-    },
-    "text_to_speech": {
-        "type": "dict",
-        "schema": {},
-        "nullable": True,  # Accepts `null` or empty dict as valid
-        "required": False
-    },
-    "tinder": {
-        "type": "dict",
-        "schema": {
-            "tinder_bot": {"type": "string", "required": True},
-            "chat_id_whitelist": {
-                "type": "list",
-                "schema": {"type": "string"},
-                "required": False
-            },
-            "chat_id_blacklist": {
-                "type": "list",
-                "schema": {"type": "string"},
-                "required": False
-            }
-        },
-        "required": False
-    },
-    "image_generation": {
-        "type": "dict",
-        "schema": {
-            "generator": {"type": "string", "required": True}
-        },
-        "required": False
-    },
-    "homeassistant": {
-        "type": "dict",
-        "schema": {
-            "token": {"type": "string", "required": True},
-            "ws_api_url": {"type": "string", "required": True},
-            "chat_id_whitelist": {
-                "type": "list",
-                "schema": {"type": "string"},
-                "required": False
-            },
-            "process_without_command": {
-                "type": "boolean",
-                "default": False,  # Default to False if not specified
-                "required": False
-            }
-        },
-        "required": False
-    },
-    "chatid": {
-        "type": "dict",
-        "schema": {},
-        "nullable": True,  # Accepts `null` or empty dict as valid
-        "required": False
-    },
-    "debug": {
-        "type": "dict",
-        "schema": {},
-        "nullable": True,  # Accepts `null` or empty dict as valid
-        "required": False
-    },
-    "gallery": {
-        "type": "dict",
-        "schema": {
-            "base_url": {"type": "string", "required": True},
-            "port": {"type": "integer", "required": True},
-            "chat_id_whitelist": {
-                "type": "list",
-                "schema": {"type": "string"},
-                "required": False
-            },
-            "chat_id_blacklist": {
-                "type": "list",
-                "schema": {"type": "string"},
-                "required": False
-            }
-        },
-        "required": False
-    },
-    "message_gpt": {
-        "type": "dict",
-        "schema": {
-            "answer_bot": {"type": "string", "required": True},
-            "max_chat_history_messages": {"type": "integer", "required": False}
-        },
-        "required": False
-    },
-    "gaudeam": {
-        "type": "list",
-        "schema": {
-            "type": "dict",
-            "schema": {
-                "gaudeam_session": {"type": "string", "required": True},
-                "gaudeam_subdomain": {"type": "string", "required": True},
-                "chat_id_whitelist": {
-                    "type": "list",
-                    "schema": {"type": "string"},
-                    "required": False
-                },
-                "chat_id_blacklist": {
-                    "type": "list",
-                    "schema": {"type": "string"},
-                    "required": False
-                }
-            }
-        },
-        "required": False
-    }
+    "required": False
 }
 
+schema["image_generation"] = {
+    "type": "dict",
+    "schema": {
+        "generator": {"type": "string", "required": True}
+    },
+    "required": False
+}
+
+schema["chatid"] = {
+    "type": "dict",
+    "schema": {},
+    "nullable": True,  # Accepts `null` or empty dict as valid
+    "required": False
+}
+
+schema["debug"] = {
+    "type": "dict",
+    "schema": {},
+    "nullable": True,  # Accepts `null` or empty dict as valid
+    "required": False
+}
+
+## messenger configuration schemas
+schema["signal"] = {
+    "type": "dict",
+    "schema": {
+        "host": {"type": "string", "required": True},
+        "port": {"type": "integer", "required": True},
+        "number": {"type": "string", "required": True}
+    },
+    "required": False
+}
+
+schema["whatsapp"] = {
+    "type": "dict",
+    "schema": {
+        "wppconnect_api_key": {"type": "string", "required": True},
+        "wppconnect_server": {"type": "string", "required": True},
+        "lid": {"type": "string", "required": False}
+    },
+    "required": False
+}
+
+schema["telegram"] = {
+    "type": "dict",
+    "schema": {
+        "telegram_api_key": {"type": "string", "required": True},
+    },
+    "required": False
+}
+
+schema["text_to_speech"] = {
+    "type": "dict",
+    "schema": {},
+    "nullable": True,  # Accepts `null` or empty dict as valid
+    "required": False
+}
+
+schema["tinder"] = {
+    "type": "dict",
+    "schema": {
+        "tinder_bot": {"type": "string", "required": True},
+        "chat_id_whitelist": {
+            "type": "list",
+            "schema": {"type": "string"},
+            "required": False
+        },
+        "chat_id_blacklist": {
+            "type": "list",
+            "schema": {"type": "string"},
+            "required": False
+        }
+    },
+    "required": False
+}
+
+schema["voice_transcription"] = {
+    "type": "dict",
+    "schema": {
+        "min_words_for_summary": {"type": "integer", "required": True},
+        "asr_engine":  {"type": "string", "required": False},
+        "summary_bot": {"type": "string", "required": False},
+        "chat_id_blacklist": {
+            "type": "list",
+            "schema": {"type": "string"},
+            "required": False
+        }
+    },
+    "required": False
+}
+
+schema["homeassistant"] = {
+    "type": "dict",
+    "schema": {
+        "token": {"type": "string", "required": True},
+        "ws_api_url": {"type": "string", "required": True},
+        "chat_id_whitelist": {
+            "type": "list",
+            "schema": {"type": "string"},
+            "required": False
+        },
+        "process_without_command": {
+            "type": "boolean",
+            "default": False,  # Default to False if not specified
+            "required": False
+        }
+    },
+    "required": False
+}
+
+schema["gallery"] = {
+    "type": "dict",
+    "schema": {
+        "base_url": {"type": "string", "required": True},
+        "port": {"type": "integer", "required": True},
+        "chat_id_whitelist": {
+            "type": "list",
+            "schema": {"type": "string"},
+            "required": False
+        },
+        "chat_id_blacklist": {
+            "type": "list",
+            "schema": {"type": "string"},
+            "required": False
+        }
+    },
+    "required": False
+}
+
+schema["message_gpt"] = {
+    "type": "dict",
+    "schema": {
+        "answer_bot": {"type": "string", "required": True},
+        "max_chat_history_messages": {"type": "integer", "required": False}
+    },
+    "required": False
+}
+
+schema["gaudeam"]= {
+    "type": "list",
+    "schema": {
+        "type": "dict",
+        "schema": {
+            "gaudeam_session": {"type": "string", "required": True},
+            "gaudeam_subdomain": {"type": "string", "required": True},
+            "chat_id_whitelist": {
+                "type": "list",
+                "schema": {"type": "string"},
+                "required": False
+            },
+            "chat_id_blacklist": {
+                "type": "list",
+                "schema": {"type": "string"},
+                "required": False
+            }
+        }
+    },
+    "required": False
+}
+
+schema["ai"] = {
+    "type": "list",
+    "schema": {
+        "type": "dict",
+        "schema": {
+            "ollama": {
+                "type": "dict",
+                "schema": {
+                    "name": {"type": "string", "required": True},     # mandatory
+                    "model": {"type": "string", "required": True},    # mandatory
+                    "host": {"type": "string", "required": True},     # mandatory
+                    # optional fields can be added here
+                },
+                "required": False
+            },
+            "llama_cpp": {
+                "type": "dict",
+                "schema": {
+                    "name": {"type": "string", "required": True},     # mandatory
+                    "model": {"type": "string", "required": True},    # mandatory
+                    "host": {"type": "string", "required": True},     # mandatory
+                    # optional fields can be added here
+                },
+                "required": False
+            }
+        }
+    },
+    "required": False
+}
 
 def validate_config(config, schema):
     validator = Validator(schema)
@@ -202,36 +232,21 @@ class BotLoader():
     def __init__(self):
         self._ollama_server = None
         self._llama_cpp_server = None
+        
+        self._bots = {}
 
-    def set_ollama_server(self, server: str):
-        """Set the ollama server to use."""
-        self._ollama_server = server
-        logging.info(f"Using ollama server: {self._ollama_server}")
+    def add_bot(self, bot_name: str, bot_instance: QuestionBotInterface):
+        """Add a bot instance with the given name."""
+        if bot_name in self._bots:
+            raise ValueError(f"Bot with name {bot_name} already exists.")
+        self._bots[bot_name] = bot_instance
+    
+    def get_bot(self, bot_name: str) -> QuestionBotInterface:
+        """Get a bot instance by name."""
+        if bot_name not in self._bots:
+            raise ValueError(f"Bot with name {bot_name} does not exist.")
+        return self._bots[bot_name]
 
-    def set_llama_cpp_server(self, server: str):
-        """Set the llama.cpp server to use."""
-        self._llama_cpp_server = server
-        logging.info(f"Using llama.cpp server: {self._llama_cpp_server}")
-
-    def create(self, bot_name: str) -> smrt.bot.tools.QuestionBotInterface:
-        """Factory function to create a question bot instance based on the bot name."""
-        if bot_name.startswith("ollama:"):
-            if self._ollama_server is None:
-                raise ValueError("Ollama server not set. Use \"ollama:\" configuration option to set it.")
-            model_name = bot_name[bot_name.find(":")+1:]
-            logging.debug(f"Creating QuestionBotOllama with model: {model_name}")
-            return smrt.bot.tools.question_bot.QuestionBotOllama(self._ollama_server, model_name)
-        elif bot_name.startswith("llama_cpp:"):
-            if self._llama_cpp_server is None:
-                raise ValueError("Llama.cpp server not set. Use set_llama_cpp_server() to set it.")
-            #model_name = bot_name[bot_name.find(":")+1:]
-            #logging.debug(f"Creating QuestionBotLlamaCppServer with model: {model_name}")
-            return smrt.bot.tools.question_bot.QuestionBotLlamaCppServer(self._llama_cpp_server)
-        elif bot_name.startswith("openai:"):
-            api_key = bot_name[bot_name.find(":"):]
-            return smrt.bot.tools.question_bot.QuestionBotOpenAIAPI(api_key)
-        else:
-            raise ValueError(f"Unknown bot name: {bot_name}")
 
 def run():
     config_file = open("config.yml", "r", encoding="utf-8")
@@ -271,18 +286,22 @@ def run():
 
     # load ollama config if present
     bot_loader = BotLoader()
-    CONFIG_OLLAMA = "ollama"
-    if CONFIG_OLLAMA in configuration:
-        ollama_server = configuration[CONFIG_OLLAMA]["host"]
-        logging.info(f"Using Ollama server for question bots: {ollama_server}")
-        bot_loader.set_ollama_server(ollama_server)
-
-    # load llama.cpp config if present
-    CONFIG_LLAMA_CPP = "llama_cpp"
-    if CONFIG_LLAMA_CPP in configuration:
-        llama_cpp_server = configuration[CONFIG_LLAMA_CPP]["host"]
-        logging.info(f"Using llama.cpp server for question bots: {llama_cpp_server}")
-        bot_loader.set_llama_cpp_server(llama_cpp_server)
+    
+    CONFIG_AI = "ai"
+    if CONFIG_AI in configuration:
+        ai_configs = configuration[CONFIG_AI]
+        for ai_config in ai_configs:
+            if "ollama" in ai_config:
+                ollama_conf = ai_config["ollama"]
+                ollama_server = ollama_conf["host"]
+                bot_loader.add_bot(ollama_conf["name"], QuestionBotOllama(ollama_conf["model"], ollama_server))
+                logging.info(f"Registered Ollama model {ollama_conf['name']} at {ollama_server}")
+            if "llama_cpp" in ai_config:
+                llama_cpp_conf = ai_config["llama_cpp"]
+                llama_cpp_server = llama_cpp_conf["host"]
+                bot_loader.add_bot(llama_cpp_conf["name"], QuestionBotLlamaCppServer(llama_cpp_server))
+                logging.info(f"Registered llama.cpp model {llama_cpp_conf['name']} at {llama_cpp_server}")
+    
     # General pipelines
     mark_seen_pipeline = pipeline.MarkSeenPipeline()
     mainpipe.add_pipeline(mark_seen_pipeline)
@@ -338,7 +357,7 @@ def run():
     CONFIG_MESSAGE_GPT = "message_gpt"
     if CONFIG_MESSAGE_GPT in configuration:
         config_ma = configuration[CONFIG_MESSAGE_GPT]
-        answer_bot = bot_loader.create(config_ma["answer_bot"])
+        answer_bot = bot_loader.get_bot(config_ma["answer_bot"])
         chat_id_whitelist = config_ma.get("chat_id_whitelist", None)
         chat_id_blacklist = config_ma.get("chat_id_blacklist", None)
         max_chat_history_messages = config_ma.get("max_chat_history_messages", 20)
@@ -362,7 +381,7 @@ def run():
                 raise ValueError("asr_engine must 'faster_whisper' or uri to wyoming server, e.g. tcp://127.0.0.1:10300")
             vt_transcriber = WyomingTranscript(asr_engine)
         if "summary_bot" in config_vt:
-            vt_summary_bot = bot_loader.create(config_vt["summary_bot"])
+            vt_summary_bot = bot_loader.get_bot(config_vt["summary_bot"])
             vt_summarizer = smrt.bot.tools.QuestionBotSummary(vt_summary_bot)
         else:
             vt_summarizer = None
@@ -383,7 +402,7 @@ def run():
         config_tinder = configuration[CONFIG_TINDER]
         chat_id_whitelist = config_tinder.get("chat_id_whitelist", None)
         chat_id_blacklist = config_tinder.get("chat_id_blacklist", None)
-        tinder_bot = bot_loader.create(config_tinder["tinder_bot"])
+        tinder_bot = bot_loader.get_bot(config_tinder["tinder_bot"])
         tinder_pipeline = pipeline.TinderPipeline(tinder_bot, chat_id_whitelist, chat_id_blacklist)
         mainpipe.add_pipeline(tinder_pipeline)
 
@@ -393,7 +412,7 @@ def run():
         config_article_summary = configuration[CONFIG_ARTICLE_SUMMARY]
         chat_id_whitelist = config_article_summary.get("chat_id_whitelist", None)
         chat_id_blacklist = config_article_summary.get("chat_id_blacklist", None)
-        article_summary_bot = bot_loader.create(config_article_summary["summary_bot"])
+        article_summary_bot = bot_loader.get_bot(config_article_summary["summary_bot"])
         article_summarizer = smrt.bot.tools.QuestionBotSummary(article_summary_bot)
         article_summary_pipeline = pipeline.URLSummaryPipeline(article_summarizer, chat_id_whitelist, chat_id_blacklist)
         mainpipe.add_pipeline(article_summary_pipeline)

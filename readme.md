@@ -107,31 +107,26 @@ telegram:
   telegram_api_key: "XXXX:YYYY" 
 ```
 
-### Ollama
+### Ollama and llama.cpp
 
-Ollama can be used in some of the commands, e.g. for summaries in voice transcriptions.
+Ollama or llama.cpp can be used in some of the commands, e.g. for summaries in voice transcriptions. When using Ollama and the model is not yet downloaded, the bot will try to request and download the model through ollama.
 
 Configure ollama with the following settings.
 
 ```yml
-ollama:
-  host: "http://127.0.0.1:11434"
+ai: 
+  - ollama: 
+      name: "ollama:gemma3:12b" # identifer to use in other parts of config
+      model: "gemma3:12b" # nodel name
+      host: "http://ha.homebrain.dev:11434" # host address of api host
+  - llama_cpp:
+      name: "llama_cpp:gemma3:12b" # identifer to use in other parts of config
+      model: "gemma3:12b" # nodel name
+      host: "http://ha.homebrain.dev:8002" # host address of api host
+
 ```
 
-Models can be chosen via `ollama:modelname`.
-
-### llama.cpp
-
-Llama.cpp server can also be used.
-
-```yml
-llama_cpp:
-  host: "http://127.0.0.1:8002"
-```
-
-Models can be chosen via `llama_cpp:modelname`.
-
-Note: Models are actually not yet chosable as llama server only loads one model.
+Models in other configuration entries can be chosen by using the name from the `name` field. 
 
 ### Message GPT Answering
 
