@@ -95,10 +95,8 @@ class SignalMessenger(MessengerInterface):
 
     @override
     def mark_seen(self, message: dict) -> None:
-        if self.is_group_message(message):
-            recipient = self._get_group_id_from_message(message)
-        else:
-            recipient = message["envelope"]["sourceNumber"]
+        # read receipts are always based on individual message sender, even in groups
+        recipient = message["envelope"]["sourceNumber"]
         data = {
             "receipt_type": "read",
             "recipient": recipient,
@@ -109,7 +107,7 @@ class SignalMessenger(MessengerInterface):
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
         if response.status_code != 204:
-                logging.warning(f"Failed to send receipt: {response.text} on {endpoint}, code: {response.status_code}")
+            logging.warning(f"Failed to send receipt: {response.text} on {endpoint}, code: {response.status_code}")
 
     @override
     def is_group_message(self, message: dict):
@@ -213,8 +211,7 @@ class SignalMessenger(MessengerInterface):
         if "dataMessage" in message["envelope"] \
             and "attachments" in message["envelope"]["dataMessage"]:
             for attachment in message["envelope"]["dataMessage"]["attachments"]:
-                if attachment["contentType"] == "audio/aac" \
-                    or attachment["contentType"] == "audio/ogg; codecs=opus":
+                if attachment["contentType"] in ["audio/aac", "audio/ogg; codecs=opus"]:
                     return True
         return False
 
@@ -223,9 +220,7 @@ class SignalMessenger(MessengerInterface):
         if "dataMessage" in message["envelope"] \
             and "attachments" in message["envelope"]["dataMessage"]:
             for attachment in message["envelope"]["dataMessage"]["attachments"]:
-                if attachment["contentType"] == "image/png" \
-                    or attachment["contentType"] == "image/jpeg" \
-                    or attachment["contentType"] == "image/jpg":
+                if attachment["contentType"] in ["image/png", "image/jpeg", "image/jpg"]:
                     return True
         return False
 
