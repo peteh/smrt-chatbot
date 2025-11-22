@@ -6,7 +6,11 @@ import telebot
 from .messenger import MessengerInterface
 class TelegramMessenger(MessengerInterface):
     """Messenger implemention based on telebot api"""
-
+    REACT_HOURGLASS_HALF = "\u231b"
+    REACT_HOURGLASS_FULL = "\u23f3"
+    REACT_CHECKMARK = "\u2714\ufe0f"
+    REACT_SKIP = "\U0001F4A4"
+    REACT_FAIL = "\u274c"
 
     def __init__(self, api_key: str):
         self._telebot = telebot.TeleBot(api_key)
@@ -19,27 +23,23 @@ class TelegramMessenger(MessengerInterface):
         return "telegram"
 
     @override
-    def mark_in_progress_0(self, message: dict):
-        # Message reactions are not supported by Telegram API
-        pass
+    def mark_in_progress_0(self, message: dict | telebot.types.Message):
+        self._telebot.set_message_reaction(message.chat.id, message.message_id, telebot.types.ReactionTypeCustomEmoji(self.REACT_HOURGLASS_FULL))
 
     @override
-    def mark_in_progress_50(self, message: dict):
-        # Message reactions are not supported by Telegram API
-        pass
+    def mark_in_progress_50(self, message: dict | telebot.types.Message):
+        self._telebot.set_message_reaction(message.chat.id, message.message_id, telebot.types.ReactionTypeCustomEmoji(self.REACT_HOURGLASS_HALF))
 
     @override
-    def mark_in_progress_done(self, message: dict):
-        # Message reactions are not supported by Telegram API
-        pass
+    def mark_in_progress_done(self, message: dict | telebot.types.Message):
+        self._telebot.set_message_reaction(message.chat.id, message.message_id, telebot.types.ReactionTypeCustomEmoji(self.REACT_CHECKMARK))
 
     @override
-    def mark_in_progress_fail(self, message: dict):
-        # Message reactions are not supported by Telegram API
-        pass
+    def mark_in_progress_fail(self, message: dict | telebot.types.Message):
+        self._telebot.set_message_reaction(message.chat.id, message.message_id, telebot.types.ReactionTypeCustomEmoji(self.REACT_FAIL))
 
     @override
-    def mark_seen(self, message: dict) -> None:
+    def mark_seen(self, message: dict | telebot.types.Message) -> None:
         # Telegram API does not support marking messages as seen
         return
 
