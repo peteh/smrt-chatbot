@@ -10,29 +10,47 @@ class CCCScheduledTask(AbstractScheduledTask):
     def __init__(self, messenger_manager, chat_ids):
         super().__init__(messenger_manager, chat_ids)
         logging.info("Initialized CCC Scheduled Task")
+        
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/128.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1"
+        }
+        self._session = requests.Session()
+        self._session.headers.update(headers)
 
     def run(self):
-        session = requests.Session()
-
         while True:
             try:
-                r = session.get("https://tickets.events.ccc.de/39c3/secondhand/?item=&sort=price_asc")
+                r = self._session.get("https://tickets.events.ccc.de/39c3/secondhand/?item=&sort=price_asc")
                 print(r.status_code)
 
                 if "You are now in our queue!" in r.text:
-                    logging.debug("In queue, waiting...")
+                    logging.debug("CCC: In queue, waiting...")
                     # need to refresh queue quickly < 1min
                     time.sleep(30)
                     continue
                 if "No tickets available at the moment." in r.text:
-                    logging.debug("No tickets available.")
-                    
+                    logging.debug("CCC: No tickets available.")
+                    #for chat_id in self.get_chat_ids():
+                    #    messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)
+                    #    messenger.send_message(chat_id, "No Tickets available! Check https://tickets.events.ccc.de/39c3/secondhand/")
+                    time.sleep(3*60)
                     # no tickets, next try
                     time.sleep(3*60)
                     continue
 
                 # Got tickets page
-                logging.info("Found tickets on page!")
+                logging.info("CCC: Found tickets on page!")
                 for chat_id in self.get_chat_ids():
                     messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)
                     messenger.send_message(chat_id, "Tickets available! Check https://tickets.events.ccc.de/39c3/secondhand/")
