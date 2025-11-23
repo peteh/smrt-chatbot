@@ -39,6 +39,7 @@ langid
 bs4
 yfinance
 pyTelegramBotAPI
+telethon
 
 # image processing
 Pillow

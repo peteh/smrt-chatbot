@@ -167,6 +167,18 @@ schema["gallery"] = {
     "required": False
 }
 
+schema["ccc"] = {
+    "type": "dict",
+    "schema": {
+        "chat_id_whitelist": {
+            "type": "list",
+            "schema": {"type": "string"},
+            "required": True
+        }
+    },
+    "required": False
+}
+
 schema["message_gpt"] = {
     "type": "dict",
     "schema": {
@@ -484,6 +496,14 @@ def run():
         mainpipe.add_pipeline(chatid_pipeline)
         lid_pipeline = pipeline.WhatsappLidPipeline()
         mainpipe.add_pipeline(lid_pipeline)
+
+    CONFIG_CCC = "ccc"
+    if CONFIG_CCC in configuration:
+        config_ccc = configuration[CONFIG_CCC]
+        chat_id_whitelist = config_ccc.get("chat_id_whitelist", [])
+        ccc_task = pipeline.CCCScheduledTask(messenger_manager, chat_id_whitelist)
+        # run in background thread as we want to schedule internally
+        threading.Thread(target=ccc_task.run, daemon=True).start()
 
     # load all messengers
     CONFIG_SIGNAL = "signal"
