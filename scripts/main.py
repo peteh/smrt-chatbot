@@ -79,6 +79,16 @@ schema["telegram"] = {
     "required": False
 }
 
+schema["telethon"] = {
+    "type": "dict",
+    "schema": {
+        "api_id": {"type": "integer", "required": True},
+        "api_key": {"type": "string", "required": True},
+        "bot_token": {"type": "string", "required": True},
+    },
+    "required": False
+}
+
 schema["text_to_speech"] = {
     "type": "dict",
     "schema": {},
@@ -491,6 +501,14 @@ def run():
         messenger_manager.add_messenger(telegram_messenger)
         telegram_queue = messenger.TelegramMessageQueue(telegram_messenger, mainpipe.process)
         telegram_queue.run_async()
+    
+    CONFIG_TELETHON = "telethon"
+    if CONFIG_TELETHON in configuration:
+        config_telethon = configuration[CONFIG_TELETHON]
+        telethon_messenger = messenger.TelethonMessenger(config_telethon["api_id"], config_telethon["api_key"], config_telethon["bot_token"])
+        messenger_manager.add_messenger(telethon_messenger)
+        telethon_queue = messenger.TelethonMessageQueue(telethon_messenger, mainpipe.process)
+        telethon_queue.run_async()
 
     CONFIG_WHATSAPP = "whatsapp"
     if CONFIG_WHATSAPP in configuration:
