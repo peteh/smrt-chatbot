@@ -15,7 +15,7 @@ import smrt.bot.pipeline as pipeline
 import smrt.bot.messenger as messenger
 from smrt.web.galleryweb import GalleryFlaskApp
 import smrt.bot.tools
-from smrt.libtranscript import FasterWhisperTranscript, WyomingTranscript
+from smrt.libtranscript import FasterWhisperTranscript, WyomingTranscript, Qwen35Transcript
 from smrt.bot.tools.question_bot import (
     QuestionBotInterface,
     QuestionBotOllama,
@@ -473,10 +473,12 @@ def run():
         asr_engine = config_vt.get("asr_engine", "faster_whisper")
         if asr_engine == "faster_whisper":
             vt_transcriber = FasterWhisperTranscript()
+        elif asr_engine == "qwen":
+            vt_transcriber = Qwen35Transcript()
         else:
             if not asr_engine.startswith("tcp://"):
                 raise ValueError(
-                    "asr_engine must 'faster_whisper' or uri to wyoming server, e.g. tcp://127.0.0.1:10300"
+                    "asr_engine must 'faster_whisper', 'qwen' or uri to wyoming server, e.g. tcp://127.0.0.1:10300"
                 )
             vt_transcriber = WyomingTranscript(asr_engine)
         if "summary_bot" in config_vt:

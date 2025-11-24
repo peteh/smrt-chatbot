@@ -23,7 +23,8 @@ spacy
 piper-tts
 torchcodec
 
-#deepspeed
+# qwen 3.5 ASR
+qwen-asr
 
 # scheduling recurring tasks
 schedule
