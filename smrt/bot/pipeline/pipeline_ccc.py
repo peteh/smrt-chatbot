@@ -44,9 +44,8 @@ class CCCScheduledTask(AbstractScheduledTask):
                     #for chat_id in self.get_chat_ids():
                     #    messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)
                     #    messenger.send_message(chat_id, "No Tickets available! Check https://tickets.events.ccc.de/39c3/secondhand/")
-                    time.sleep(3*60)
                     # no tickets, next try
-                    time.sleep(3*60)
+                    time.sleep(30)
                     continue
 
                 # Got tickets page
