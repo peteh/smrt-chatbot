@@ -264,9 +264,6 @@ def validate_config(config, schema):
 
 class BotLoader():
     def __init__(self):
-        self._ollama_server = None
-        self._llama_cpp_server = None
-        
         self._bots = {}
 
     def add_bot(self, bot_name: str, bot_instance: QuestionBotInterface):
@@ -274,7 +271,7 @@ class BotLoader():
         if bot_name in self._bots:
             raise ValueError(f"Bot with name {bot_name} already exists.")
         self._bots[bot_name] = bot_instance
-    
+
     def get_bot(self, bot_name: str) -> QuestionBotInterface:
         """Get a bot instance by name."""
         if bot_name not in self._bots:
@@ -328,8 +325,9 @@ def run():
             if "ollama" in ai_config:
                 ollama_conf = ai_config["ollama"]
                 ollama_server = ollama_conf["host"]
-                bot_loader.add_bot(ollama_conf["name"], QuestionBotOllama(ollama_conf["model"], ollama_server))
-                logging.info(f"Registered Ollama model {ollama_conf['name']} at {ollama_server}")
+                model = ollama_conf["model"]
+                bot_loader.add_bot(ollama_conf["name"], QuestionBotOllama(ollama_server, model))
+                logging.info(f"Registered Ollama '{ollama_conf['name']}' with model '{model}' at {ollama_server}")
             if "llama_cpp" in ai_config:
                 llama_cpp_conf = ai_config["llama_cpp"]
                 llama_cpp_server = llama_cpp_conf["host"]
