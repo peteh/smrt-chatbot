@@ -119,6 +119,7 @@ class CCCScheduledTask(AbstractSniperTask):
 
                 # Got tickets page
                 logging.info("CCC: Found tickets on page!")
+                logging.debug(r.text)
                 for chat_id in self.get_chat_ids():
                     messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)
                     messenger.send_message(chat_id, "Tickets available! Check https://tickets.events.ccc.de/39c3/secondhand/")
