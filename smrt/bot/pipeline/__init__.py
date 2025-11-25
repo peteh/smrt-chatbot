@@ -8,6 +8,7 @@ from .pipeline_tts import TextToSpeechPipeline
 from .pipeline_gaudeam import GaudeamBdayPipeline, GaudeamCalendarPipeline, GaudeamBdayScheduledTask, GaudeamEventsScheduledTask
 from .pipeline_gpt import MessageQuestionPipeline
 from .pipeline_ccc import CCCScheduledTask
+from .pipeline_netcup import NetcupScheduledTask
 from .scheduled import ScheduledTaskInterface, AbstractScheduledTask
 
 __all__ = [
@@ -39,4 +40,5 @@ __all__ = [
     "AbstractScheduledTask",
     "WhatsappLidPipeline",
     "CCCScheduledTask",
+    "NetcupScheduledTask",
 ]

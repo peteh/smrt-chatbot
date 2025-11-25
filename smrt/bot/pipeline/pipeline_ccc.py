@@ -3,8 +3,6 @@ import logging
 
 import requests
 from .scheduled import AbstractScheduledTask
-session = requests.Session()
-
 class CCCScheduledTask(AbstractScheduledTask):
     
     def __init__(self, messenger_manager, chat_ids):
@@ -32,7 +30,6 @@ class CCCScheduledTask(AbstractScheduledTask):
         while True:
             try:
                 r = self._session.get("https://tickets.events.ccc.de/39c3/secondhand/?item=&sort=price_asc")
-                print(r.status_code)
 
                 if "You are now in our queue!" in r.text:
                     logging.debug("CCC: In queue, waiting...")

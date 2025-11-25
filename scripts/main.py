@@ -179,6 +179,18 @@ schema["ccc"] = {
     "required": False
 }
 
+schema["netcup"] = {
+    "type": "dict",
+    "schema": {
+        "chat_id_whitelist": {
+            "type": "list",
+            "schema": {"type": "string"},
+            "required": True
+        }
+    },
+    "required": False
+}
+
 schema["message_gpt"] = {
     "type": "dict",
     "schema": {
@@ -504,6 +516,14 @@ def run():
         ccc_task = pipeline.CCCScheduledTask(messenger_manager, chat_id_whitelist)
         # run in background thread as we want to schedule internally
         threading.Thread(target=ccc_task.run, daemon=True).start()
+    
+    CONFIG_NETCUP = "netcup"
+    if CONFIG_NETCUP in configuration:
+        config_netcup = configuration[CONFIG_NETCUP]
+        chat_id_whitelist = config_netcup.get("chat_id_whitelist", [])
+        netcup_task = pipeline.NetcupScheduledTask(messenger_manager, chat_id_whitelist)
+        # run in background thread as we want to schedule internally
+        threading.Thread(target=netcup_task.run, daemon=True).start()
 
     # load all messengers
     CONFIG_SIGNAL = "signal"
