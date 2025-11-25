@@ -42,7 +42,7 @@ class NetcupScheduledTask(AbstractSniperTask):
         r = session.get("https://www.netcup.com/de/deals/black-friday")
         if "unschlagbare Rabatte. Sei dabei und sichere dir dein Schnäppchen!" not in r.text:
             logging.debug("Netcup Black Friday page not ready, waiting...")
-            raise Exception("Netcup Black Friday page not ready")
+            raise RuntimeError("Netcup Black Friday page not ready")
         new_products = {}
         soup = BeautifulSoup(r.text, "html.parser")
         # Select all elements with the class "deal-card-container"
@@ -70,6 +70,7 @@ class NetcupScheduledTask(AbstractSniperTask):
 
                 # grab current products
                 new_products = self.get_products(session)
+                logging.debug(f"Netcup Black Friday products found: {len(new_products)}")
 
                 # Figure out what's removed
                 for product, link in old_products.items():
