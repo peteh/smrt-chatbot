@@ -149,6 +149,7 @@ class SignalMessenger(MessengerInterface):
                 recipient
             ]
         }
+        #TODO: handle error codes
         requests.post(self._endpoint_url("v2/send"),
                       json=data,
                       timeout=self.DEFAULT_TIMEOUT)
