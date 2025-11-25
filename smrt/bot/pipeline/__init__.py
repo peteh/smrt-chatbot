@@ -7,8 +7,7 @@ from .pipeline_voice import VoiceMessagePipeline
 from .pipeline_tts import TextToSpeechPipeline
 from .pipeline_gaudeam import GaudeamBdayPipeline, GaudeamCalendarPipeline, GaudeamBdayScheduledTask, GaudeamEventsScheduledTask
 from .pipeline_gpt import MessageQuestionPipeline
-from .pipeline_ccc import CCCScheduledTask
-from .pipeline_netcup import NetcupScheduledTask
+from .pipeline_sniper import CCCScheduledTask, NetcupScheduledTask
 from .scheduled import ScheduledTaskInterface, AbstractScheduledTask
 
 __all__ = [
