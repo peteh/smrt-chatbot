@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from .scheduled import AbstractScheduledTask
 
 class AbstractSniperTask(AbstractScheduledTask):
-    def __init__(self, messenger_manager, chat_ids):
+    def __init__(self, messenger_manager, chat_ids, language="en-US"):
         super().__init__(messenger_manager, chat_ids)
 
         self._headers = {
@@ -14,7 +14,7 @@ class AbstractSniperTask(AbstractScheduledTask):
                 "Mozilla/5.0 (X11; Linux x86_64; rv:144.0) Gecko/20100101 Firefox/144.0"
             ),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "de-DE,en;q=0.9",
+            "Accept-Language": f"{language},en;q=0.9",
             "Cache-Control": "no-cache",
             "Pragma": "no-cache",
             "DNT": "1",
@@ -30,7 +30,7 @@ class AbstractSniperTask(AbstractScheduledTask):
 class NetcupScheduledTask(AbstractSniperTask):
 
     def __init__(self, messenger_manager, chat_ids):
-        super().__init__(messenger_manager, chat_ids)
+        super().__init__(messenger_manager, chat_ids, "de-DE")
         logging.info("Initialized Netcup Scheduled Task")
         self._old_products = {}
 
@@ -108,7 +108,8 @@ class CCCScheduledTask(AbstractSniperTask):
                     # need to refresh queue quickly < 1min
                     time.sleep(30)
                     continue
-                if "No tickets available at the moment." in r.text:
+                if "No tickets available at the moment." in r.text \
+                    or "Derzeit sind keine Tickets verfügbar. Schau später noch mal vorbei!" in r.text:
                     logging.debug("CCC: No tickets available.")
                     #for chat_id in self.get_chat_ids():
                     #    messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)
