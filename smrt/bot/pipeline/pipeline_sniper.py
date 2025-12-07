@@ -110,6 +110,11 @@ class CCCScheduledTask(AbstractSniperTask):
                 if counter % 40 == 0:
                     session = self.new_session()
                 r = session.get("https://tickets.events.ccc.de/39c3/secondhand/?item=&sort=price_asc")
+                
+                if r.status_code != 200:
+                    logging.debug(f"CCC: Unexpected status code {r.status_code}, waiting...")
+                    time.sleep(60)
+                    continue
 
                 if "You are now in our queue!" in r.text:
                     logging.debug("CCC: In queue, waiting...")
