@@ -156,7 +156,7 @@ class GalleryDatabase:
         """
         return self._storage_path
 
-    def get_gallery_uuid_from_chat_id(self, chat_id: str) -> str:
+    def get_gallery_uuid_from_chat_id(self, chat_id: str) -> str|None:
         """Returns the gallery uuid for a given chat_id
 
         Args:
@@ -172,7 +172,7 @@ class GalleryDatabase:
                 return None
             return row["uuid"]
     
-    def get_chat_id_from_gallery_uuid(self, gallery_uuid: str) -> str:
+    def get_chat_id_from_gallery_uuid(self, gallery_uuid: str) -> str|None:
         """Returns the chat_id for a given gallery uuid
 
         Args:
@@ -289,7 +289,7 @@ class GalleryDatabase:
                 return_list.append(entry)
         return return_list
 
-    def get_image(self, chat_id: str, image_uuid: str) -> ImageEntry:
+    def get_image(self, chat_id: str, image_uuid: str) -> ImageEntry|None:
         """Returns a specific image entry from a given chat_id
 
         Args:
@@ -325,3 +325,48 @@ class GalleryDatabase:
             cur = self._db.cursor()
             cur.execute("DELETE FROM gallery WHERE chat_id = ? AND image_uuid = ?", (chat_id, image_uuid))
             self._db.commit()
+
+class InstaMessageSeenDB:
+    """Database to store seen message ids for Instagram messenger. """
+
+    def __init__(self, storage_path: Path):
+        self._db = Database(storage_path, "insta_seen.db")
+        self._lock = threading.Lock()  # Mutex for all DB operations
+        self._create_tables()
+
+    def _create_tables(self):
+        with self._lock:
+            cur = self._db.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS seen_messages (
+                    message_id TEXT PRIMARY KEY
+                )
+                """)
+            self._db.commit()
+
+    def add_seen_message(self, message_id: str) -> None:
+        """Adds a seen message id to the database
+
+        Args:
+            message_id (str): The message id to add
+        """
+        with self._lock:
+            cur = self._db.cursor()
+            cur.execute("INSERT OR IGNORE INTO seen_messages (message_id) VALUES (?)",
+                        (message_id,))
+            self._db.commit()
+
+    def has_seen_message(self, message_id: str) -> bool:
+        """Checks if a message id has been seen
+
+        Args:
+            message_id (str): The message id to check
+        Returns:
+            bool: True if the message id has been seen, False otherwise
+        """
+        with self._lock:
+            cur = self._db.cursor()
+            cur.execute("SELECT 1 FROM seen_messages WHERE message_id = ? LIMIT 1",
+                        (message_id,))
+            row = cur.fetchone()
+            return row is not None

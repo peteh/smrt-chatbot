@@ -38,8 +38,13 @@ langid
 
 bs4
 yfinance
+
+# telegram
 pyTelegramBotAPI
 telethon
+
+# instagram
+instagrapi
 
 # image processing
 Pillow

@@ -1,4 +1,5 @@
-from .database import GalleryDatabase, MessageDatabase
+from .database import GalleryDatabase, MessageDatabase, InstaMessageSeenDB
 
 __all__ = ["GalleryDatabase",
-           "MessageDatabase"]
+           "MessageDatabase",
+           "InstaMessageSeenDB"]
