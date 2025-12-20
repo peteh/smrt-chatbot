@@ -179,7 +179,7 @@ schema["ccc"] = {
     "required": False
 }
 
-schema["kleinzeigen"] = {
+schema["kleinanzeigen"] = {
     "type": "dict",
     "schema": {
         "chat_id_whitelist": {
@@ -531,7 +531,7 @@ def run():
         # run in background thread as we want to schedule internally
         threading.Thread(target=ccc_task.run, daemon=True).start()
     
-    CONFIG_KLEINANZEIGEN = "kleinzeigen"
+    CONFIG_KLEINANZEIGEN = "kleinanzeigen"
     if CONFIG_KLEINANZEIGEN in configuration:
         config_kleinanzeigen = configuration[CONFIG_KLEINANZEIGEN]
         chat_id_whitelist = config_kleinanzeigen.get("chat_id_whitelist", [])
