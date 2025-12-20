@@ -21,6 +21,17 @@
             }
         },
         {
+            "name": "Run Debug Script",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/debug.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
             "name": "Run Gallery",
             "type": "debugpy",
             "request": "launch",

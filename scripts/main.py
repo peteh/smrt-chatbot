@@ -179,6 +179,22 @@ schema["ccc"] = {
     "required": False
 }
 
+schema["kleinzeigen"] = {
+    "type": "dict",
+    "schema": {
+        "chat_id_whitelist": {
+            "type": "list",
+            "schema": {"type": "string"},
+            "required": True
+        },
+        "keyword": {
+            "type": "string",
+            "required": True
+        }
+    },
+    "required": False
+}
+
 schema["netcup"] = {
     "type": "dict",
     "schema": {
@@ -317,7 +333,7 @@ def run():
 
     # load ollama config if present
     bot_loader = BotLoader()
-    
+
     CONFIG_AI = "ai"
     if CONFIG_AI in configuration:
         ai_configs = configuration[CONFIG_AI]
@@ -515,6 +531,15 @@ def run():
         # run in background thread as we want to schedule internally
         threading.Thread(target=ccc_task.run, daemon=True).start()
     
+    CONFIG_KLEINANZEIGEN = "kleinzeigen"
+    if CONFIG_KLEINANZEIGEN in configuration:
+        config_kleinanzeigen = configuration[CONFIG_KLEINANZEIGEN]
+        chat_id_whitelist = config_kleinanzeigen.get("chat_id_whitelist", [])
+        keyword = config_kleinanzeigen.get("keyword")
+        kleinanzeigen_task = pipeline.KleinanzeigenScheduledTask(keyword, messenger_manager, chat_id_whitelist)
+        # run in background thread as we want to schedule internally
+        threading.Thread(target=kleinanzeigen_task.run, daemon=True).start()
+
     CONFIG_NETCUP = "netcup"
     if CONFIG_NETCUP in configuration:
         config_netcup = configuration[CONFIG_NETCUP]
