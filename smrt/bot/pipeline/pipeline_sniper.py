@@ -113,6 +113,11 @@ class CCCScheduledTask(AbstractSniperTask):
                     time.sleep(60)
                     continue
 
+                if "Ticket marketplace is not currently active" in r.text:
+                    logging.debug("CCC: Ticket marketplace not active, waiting...")
+                    time.sleep(5*60)
+                    continue
+
                 if "You are now in our queue!" in r.text:
                     logging.debug("CCC: In queue, waiting...")
                     # need to refresh queue quickly < 1min
