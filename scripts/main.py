@@ -133,6 +133,8 @@ schema["voice_transcription"] = {
         "min_words_for_summary": {"type": "integer", "required": True},
         "asr_engine": {"type": "string", "required": False},
         "summary_bot": {"type": "string", "required": False},
+        "transcribe_group_chats": {"type": "boolean", "required": False},
+        "transcribe_private_chats": {"type": "boolean", "required": False},
         "chat_id_blacklist": {
             "type": "list",
             "schema": {"type": "string"},
@@ -482,11 +484,17 @@ def run():
             vt_summarizer = smrt.bot.tools.QuestionBotSummary(vt_summary_bot)
         else:
             vt_summarizer = None
+        
+        transcribe_group_chats = config_vt.get("transcribe_group_chats", True)
+        transcribe_private_chats = config_vt.get("transcribe_private_chats", True)
+        
         voice_pipeline = pipeline.VoiceMessagePipeline(
             vt_transcriber,
             vt_summarizer,
             vt_min_words_for_summary,
             chat_id_blacklist=vt_chat_id_blacklist,
+            transcribe_group_chats=transcribe_group_chats,
+            transcribe_private_chats=transcribe_private_chats
         )
         main_pipe.add_pipeline(voice_pipeline)
 

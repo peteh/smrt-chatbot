@@ -218,6 +218,8 @@ voice_transcription:
   asr_engine: faster_whisper # optional, can be 'faster_whisper' for internal whisper or an uri string to a wyoming asr server, e.g. tcp://127.0.0.1:10300' (default: faster_whisper)
   min_words_for_summary: 100 # minimum number of words for a summary to be generated
   summary_bot: "ollama:gemma3:12b" # optional
+  transcribe_group_chats: true # optional: automatically transcribes group chats, default: true
+  transcribe_private_chats: true # optional: automatically transcribes private chats, default: true
   # blacklist chat ids for voice transcription
   chat_id_blacklist: [
     "signal://XXXX", # Signal Home group
