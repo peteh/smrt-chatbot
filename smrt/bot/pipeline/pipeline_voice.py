@@ -30,8 +30,8 @@ class VoiceMessagePipeline(AbstractPipeline):
         self._transcribe_group_chats = transcribe_group_chats
         self._transcribe_private_chats = transcribe_private_chats
         logging.info("VoiceMessagePipeline initialized")
-        logging.info(f"  transcribe_group_chats: {self._transcribe_group_chats}")
-        logging.info(f"  transcribe_private_chats: {self._transcribe_private_chats}")
+        logging.info(f"  Transcribe group chats: {self._transcribe_group_chats}")
+        logging.info(f"  Transcribe private chats: {self._transcribe_private_chats}")
 
     def matches(self, messenger: MessengerInterface, message: dict):
         if not messenger.has_audio_data(message):
