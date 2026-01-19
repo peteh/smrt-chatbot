@@ -2,17 +2,18 @@
 import logging
 import typing
 import datetime
+from igitur import GaudeamCalendar, GaudeamMembers, GaudeamEvent
 from smrt.bot.pipeline import PipelineHelper, AbstractPipeline
 from smrt.bot.messenger import MessengerInterface, MessengerManager
 from smrt.bot.pipeline import scheduled
-from smrt.libgaudeam import GaudeamCalendar, GaudeamMembers, GaudeamEvent
+
 
 
 class GaudeamBdayPipeline(AbstractPipeline):
     """Pipe to handle ha commands in text. """
     BDAY_COMMAND = "gaubday"
 
-    def __init__(self, gaudeam: GaudeamMembers, chat_id_whitelist: typing.List[str] = None, chat_id_blacklist: typing.List[str] = None):
+    def __init__(self, gaudeam: GaudeamMembers, chat_id_whitelist: typing.List[str]|None = None, chat_id_blacklist: typing.List[str]|None = None):
         # can only be whitelisted chat ids
         super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._commands = [self.BDAY_COMMAND]
@@ -54,7 +55,7 @@ class GaudeamCalendarPipeline(AbstractPipeline):
     """Pipe to handle ha commands in text. """
     DATE_COMMAND = "gauevents"
 
-    def __init__(self, gaudeam: GaudeamCalendar, chat_id_whitelist: typing.List[str] = None, chat_id_blacklist: typing.List[str] = None):
+    def __init__(self, gaudeam: GaudeamCalendar, chat_id_whitelist: typing.List[str]|None = None, chat_id_blacklist: typing.List[str]|None = None):
         super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._commands = [self.DATE_COMMAND]
         self._gaudeam = gaudeam

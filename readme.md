@@ -189,12 +189,14 @@ Available commands:
 
 ```yml
 gaudeam:
-  - gaudeam_session: "xxx1" # session code extracted from cookie
+  - user_email: "bla@blubb.de" # User Email of the account
+    user_password: "mypassword" # The password of the account
     chat_id_whitelist: [
       "signal://XXXX", # Signal Group
       "whatsapp://123456@g.us" # Whatsapp group
     ]
-  - gaudeam_session: "xxx2" # session code extracted from cookie
+  - user_email: "bla2@blubb.de" # User Email of the account
+    user_password: "myotherpassword" # The password of the account
     chat_id_whitelist: [
       "signal://YYYY", # Signal Group
       "whatsapp://645321@g.us" # Whatsapp group

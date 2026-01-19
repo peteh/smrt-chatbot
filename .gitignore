@@ -12,3 +12,4 @@ smrt_config
 config.yml
 test_message.sh
 storage/gallery/*
+bot.session

@@ -49,3 +49,6 @@ instagrapi
 
 # image processing
 Pillow
+
+# gaudeam lib
+git+https://github.com/peteh/python-igitur.git@773f9dd
