@@ -78,6 +78,7 @@ Whatsapp can be integrated using [WPPConnect Server](https://github.com/wppconne
 whatsapp:
   wppconnect_api_key: "Generated API Key"
   wppconnect_server: "http://127.0.0.1:21465"
+  wppconnect_session_name: "smrt" # the session name for wppconnect-server for which the api keys is valid
   lid: 153279329759289@lid # optional: the lid of the account, used to identify if the bot was tagged
 ```
 
@@ -175,7 +176,7 @@ homeassistant:
     "signal://XXXX", # Signal Home Group
     "whatsapp://123456@g.us" # Whatsapp Home group
     ]
-  process_without_command: true # optional, default = false if true, will process any text command without the #ha prefix
+  process_without_command: true # optional, default = false - if true, will process any text command without the #ha prefix
 ```
 
 ### Gaudeam Integration

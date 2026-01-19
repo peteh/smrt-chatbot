@@ -48,6 +48,13 @@ schema["chatid"] = {
     "required": False,
 }
 
+schema["mark_seen"] = {
+    "type": "dict",
+    "schema": {},
+    "nullable": True,  # Accepts `null` or empty dict as valid
+    "required": False,
+}
+
 schema["debug"] = {
     "type": "dict",
     "schema": {},
@@ -70,6 +77,7 @@ schema["whatsapp"] = {
     "type": "dict",
     "schema": {
         "wppconnect_api_key": {"type": "string", "required": True},
+        "wppconnect_session_name": {"type": "string", "required": True},
         "wppconnect_server": {"type": "string", "required": True},
         "lid": {"type": "string", "required": False},
     },
@@ -363,8 +371,10 @@ def run():
                 )
 
     # General pipelines
-    mark_seen_pipeline = pipeline.MarkSeenPipeline()
-    main_pipe.add_pipeline(mark_seen_pipeline)
+    CONFIG_MARKSEEN = "mark_seen"
+    if CONFIG_MARKSEEN in configuration:
+        mark_seen_pipeline = pipeline.MarkSeenPipeline()
+        main_pipe.add_pipeline(mark_seen_pipeline)
 
     # homeassistant commands and pipelines
     CONFIG_HOMEASSISTANT = "homeassistant"
@@ -669,7 +679,7 @@ def run():
         lid = config_whatsapp.get("lid", "")
         whatsapp = messenger.WhatsappMessenger(
             config_whatsapp["wppconnect_server"],
-            "smrt",
+            config_whatsapp["wppconnect_session_name"],
             config_whatsapp["wppconnect_api_key"],
             lid,
         )
