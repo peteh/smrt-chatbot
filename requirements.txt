@@ -25,6 +25,7 @@ torchcodec
 
 # qwen 3.5 ASR
 qwen-asr
+torchaudio
 
 # scheduling recurring tasks
 schedule
