@@ -1,6 +1,7 @@
 import io
 import logging
 import torch
+import tempfile
 from qwen_asr import Qwen3ASRModel
 
 from .transcript import TranscriptInterface, TranscriptResult
@@ -22,28 +23,33 @@ class Qwen35Transcript(TranscriptInterface):
         )
 
     def transcribe(self, audio_data) -> TranscriptResult:
-        audio_reader = io.BytesIO(audio_data)
-        # Transcribe local audio file
-        results = self._model.transcribe(
-            audio=audio_reader,
-            language=None,             # auto language detection
-            return_time_stamps=False,  # set True if you want timestamps
-        )
 
-        # The results list contains objects with attributes `.text`, `.language`, etc.
-        logging.debug(f"Transcript: {results[0].text}")
-        logging.debug(f"Detected language: {results[0].language}")
+        # write to temp file
+        with tempfile.NamedTemporaryFile(suffix=".wav") as temp_audio_file:
+            temp_audio_file.write(audio_data)
+            temp_audio_file.flush()  # Ensure data is written to disk
+            temp_audio_file.close()
 
-        supported_languages = ['en', 'de', 'es', 'fr', 'zh']
-        if results[0].language not in supported_languages:
-            print(f"Warning: language detected as '{results[0].language}', therefore we redo as 'en'")
-            audio_reader.seek(0)
+            # Transcribe local audio file
             results = self._model.transcribe(
-            audio=audio_reader,
-            language="en",
-            return_time_stamps=False,  # set True if you want timestamps
-        )
-        audio_reader.close()
+                audio=temp_audio_file.name,  # local file path
+                language=None,             # auto language detection
+                return_time_stamps=False,  # set True if you want timestamps
+            )
+
+            # The results list contains objects with attributes `.text`, `.language`, etc.
+            logging.debug(f"Transcript: {results[0].text}")
+            logging.debug(f"Detected language: {results[0].language}")
+
+            supported_languages = ['en', 'de', 'es', 'fr', 'zh']
+            if results[0].language not in supported_languages:
+                logging.debug(f"Warning: language detected as '{results[0].language}', therefore we redo as 'en'")
+                results = self._model.transcribe(
+                audio=temp_audio_file.name,  # local file path
+                language="en",
+                return_time_stamps=False,  # set True if you want timestamps
+            )
+
         text = ""
         for segment in results:
             text += segment.text.strip() + "\n"
