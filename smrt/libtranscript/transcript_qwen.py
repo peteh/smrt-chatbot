@@ -48,5 +48,49 @@ class Qwen35Transcript(TranscriptInterface):
             text += segment.text.strip() + "\n"
         text = text.strip()
         language = results[0].language
+        
+        # Supported languages according to https://github.com/QwenLM/Qwen3-ASR/blob/main/README.md
+        # Chinese (zh), English (en), Cantonese (yue), Arabic (ar), German (de), French (fr), 
+        # Spanish (es), Portuguese (pt), Indonesian (id), Italian (it), Korean (ko), Russian (ru), 
+        # Thai (th), Vietnamese (vi), Japanese (ja), Turkish (tr), Hindi (hi), Malay (ms), Dutch (nl), 
+        # Swedish (sv), Danish (da), Finnish (fi), Polish (pl), Czech (cs), Filipino (fil), Persian (fa), 
+        # Greek (el), Hungarian (hu), Macedonian (mk), Romanian (ro)
+        
+        # mapping to ISO 639-1 codes
+        language_mapping = {
+            "Chinese": "zh",
+            "English": "en",
+            "Cantonese": "yue",
+            "Arabic": "ar",
+            "German": "de",
+            "French": "fr",
+            "Spanish": "es",
+            "Portuguese": "pt",
+            "Indonesian": "id",
+            "Italian": "it",
+            "Korean": "ko",
+            "Russian": "ru",
+            "Thai": "th",
+            "Vietnamese": "vi",
+            "Japanese": "ja",
+            "Turkish": "tr",
+            "Hindi": "hi",
+            "Malay": "ms",
+            "Dutch": "nl",
+            "Swedish": "sv",
+            "Danish": "da",
+            "Finnish": "fi",
+            "Polish": "pl",
+            "Czech": "cs",
+            "Filipino": "fil",
+            "Persian": "fa",
+            "Greek": "el",
+            "Hungarian": "hu",
+            "Macedonian": "mk",
+            "Romanian": "ro"
+        }
+        if "," in language:
+            language = language.split(",")[0].strip()  # Take the first language if multiple are detected
+        language = language_mapping.get(language, "unknown")
 
         return TranscriptResult(text, language)
