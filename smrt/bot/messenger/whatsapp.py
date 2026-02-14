@@ -337,7 +337,7 @@ class WhatsappMessageQueue():
 
     def on_new_message(self, data):
         # shorten the log message in the middle with '...' if it's too long
-        max_length = 500
+        max_length = 750
         if len(str(data)) > max_length:
             logging.info(f"Received new message: {str(data)[:int(max_length/2)]}...{str(data)[-int(max_length/2):]}")
         else:
