@@ -286,6 +286,9 @@ class WhatsappMessenger(MessengerInterface):
                                 timeout=self.DEFAULT_TIMEOUT)
 
         json_response = response.json()
+        if 'base64' not in json_response or 'mimetype' not in json_response:
+            logging.error(f"Invalid media response, missing 'base64' or 'mimetype' fields: {json_response}")
+            raise ValueError("Invalid media response from server, missing 'base64' or 'mimetype' fields")
         data = json_response['base64']
         decoded = base64.b64decode(data)
         mime_type = json_response['mimetype']
