@@ -15,12 +15,13 @@ class VoiceMessagePipeline(AbstractPipeline):
     def __init__(
         self,
         transcriber: TranscriptInterface,
-        summarizer: SummaryInterface,
+        summarizer: SummaryInterface|None,
         min_words_for_summary: int,
         chat_id_whitelist: List[str] | None = None,
         chat_id_blacklist: List[str] | None = None,
         transcribe_group_chats: bool = True,
         transcribe_private_chats: bool = True,
+        mark_unseen_after_processing: bool = False,
     ) -> None:
         super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._transcriber = transcriber
@@ -29,6 +30,7 @@ class VoiceMessagePipeline(AbstractPipeline):
         self._store_files = False
         self._transcribe_group_chats = transcribe_group_chats
         self._transcribe_private_chats = transcribe_private_chats
+        self._mark_unseen_after_processing = mark_unseen_after_processing
         logging.info("VoiceMessagePipeline initialized")
         logging.info(f"  Transcribe group chats: {self._transcribe_group_chats}")
         logging.info(f"  Transcribe private chats: {self._transcribe_private_chats}")
@@ -81,6 +83,9 @@ class VoiceMessagePipeline(AbstractPipeline):
                 messenger.reply_message(message, f"Summary: \n{summary_text}")
 
             messenger.mark_in_progress_done(message)
+
+            if self._mark_unseen_after_processing:
+                messenger.mark_unseen(message)
         except Exception as ex:
             logging.critical(ex, exc_info=True)
             messenger.mark_in_progress_fail(message)

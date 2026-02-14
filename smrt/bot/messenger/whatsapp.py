@@ -6,7 +6,7 @@ import base64
 import requests
 import threading
 import time
-from typing import Callable
+from typing import Callable, override
 
 import socketio
 from .messenger import MessengerInterface
@@ -116,6 +116,18 @@ class WhatsappMessenger(MessengerInterface):
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    def mark_unseen(self, message: dict) -> None:
+        is_group_message = self.is_group_message(message)
+        recipient = message['chatId'] if is_group_message else message['sender']['id']
+        data = {
+            "phone": recipient,
+            "isGroup": is_group_message
+        }
+        requests.post(self._endpoint_url("mark-unseen"),
+                      json=data,
+                      headers=self._headers,
+                      timeout=self.DEFAULT_TIMEOUT)
+
     def is_group_message(self, message: dict):
         return 'isGroupMsg' in message and message['isGroupMsg'] is True
 
@@ -190,6 +202,21 @@ class WhatsappMessenger(MessengerInterface):
 
     def send_audio_to_individual(self, message, audio_file_path):
         self._send_audio(message['sender']['id'], False, audio_file_path)
+
+    @override
+    def create_poll(self, message: dict, question: str, options: list[str]):
+        # TODO: implement create poll using buttons
+        pass
+
+    @override
+    def vote_poll(self, message: dict, option_index: int):
+        # TODO: implement vote poll using buttons
+        pass
+
+    @override
+    def close_poll(self, message: dict):
+        # TODO: implement close poll using buttons
+        pass
 
     def _send_audio(self, recipient: str, is_group: bool, audio_file_path: str):
         with tempfile.TemporaryDirectory() as tmp:

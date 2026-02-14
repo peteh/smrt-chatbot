@@ -54,6 +54,11 @@ class TelethonMessenger(MessengerInterface):
     def mark_seen(self, message: dict | Message) -> None:
         # Telegram API does not support marking messages as seen
         return
+    
+    @override
+    def mark_unseen(self, message: dict | Message) -> None:
+        # Telegram API does not support marking messages as unseen
+        return
 
     @override
     def is_group_message(self, message: dict | Message) -> bool:
@@ -116,6 +121,18 @@ class TelethonMessenger(MessengerInterface):
 
     @override
     def send_audio_to_individual(self, message: dict | Message, audio_file_path):
+        pass
+    
+    @override
+    def create_poll(self, message: dict | Message, question: str, options: list[str]):
+        pass
+    
+    @override
+    def vote_poll(self, message: dict | Message, option_index: int):
+        pass
+    
+    @override
+    def close_poll(self, message: dict | Message):
         pass
 
     @override

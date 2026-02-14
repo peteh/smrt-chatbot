@@ -41,6 +41,14 @@ class MessengerInterface(ABC):
         """
 
     @abstractmethod
+    def mark_unseen(self, message: dict) -> None:
+        """Marks a message/chat from the message as not seen. 
+
+        Args:
+            message (dict): The message to mark the chat as not seen. 
+        """
+
+    @abstractmethod
     def is_group_message(self, message: dict) -> bool:
         """Checks if a message is a group message"""
 
@@ -77,6 +85,18 @@ class MessengerInterface(ABC):
     @abstractmethod
     def delete_message(self, message: dict):
         """Deletes a message from the server"""
+
+    @abstractmethod
+    def create_poll(self, message: dict, question: str, options: list[str]):
+        """Creates a poll in the group of the original message. """
+
+    @abstractmethod
+    def vote_poll(self, message: dict, option_index: int):
+        """Votes in a poll in the group of the original message. """
+
+    @abstractmethod
+    def close_poll(self, message: dict):
+        """Closes a poll from the group of the original message. """
 
     @abstractmethod
     def has_audio_data(self, message: dict) -> bool:

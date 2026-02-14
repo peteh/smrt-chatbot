@@ -78,6 +78,18 @@ class TelegramMessenger(MessengerInterface):
         pass
 
     @override
+    def create_poll(self, message: dict, question: str, options: list[str]):
+        pass
+    
+    @override
+    def vote_poll(self, message: dict, option_index: int):
+        pass
+    
+    @override
+    def close_poll(self, message: dict):
+        pass
+
+    @override
     def _send_image(self, chat_id, file_name, binary_data, caption=""):
         with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
             temp_file.write(binary_data)

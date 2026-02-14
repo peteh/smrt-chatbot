@@ -220,6 +220,7 @@ voice_transcription:
   summary_bot: "ollama:gemma3:12b" # optional
   transcribe_group_chats: true # optional: automatically transcribes group chats, default: true
   transcribe_private_chats: true # optional: automatically transcribes private chats, default: true
+  mark_unseen_after_processing: false # optional: marks the chat unseen after sending transcription/summary (because if we send a message it's usually marked seen)
   # blacklist chat ids for voice transcription
   chat_id_blacklist: [
     "signal://XXXX", # Signal Home group

@@ -8,8 +8,9 @@ import os
 
 from smrt.bot.tools.summary import SummaryInterface
 from smrt.bot.messenger import MessengerInterface
-from smrt.bot.tools.question_bot import QuestionBotInterface, QuestionBotImageInterface
+from smrt.bot.tools.question_bot import QuestionBotInterface
 import smrt.bot.tools.texttoimage as texttoimage
+
 
 
 
@@ -237,7 +238,7 @@ class ImagePromptPipeline(AbstractPipeline):
     """Pipe to turn prompts into images. """
     COMMAND = "llava"
 
-    def __init__(self, image_api: QuestionBotImageInterface):
+    def __init__(self, image_api: texttoimage.ImagePromptInterface):
         super().__init__(None, None)
         self._image_api = image_api
 

@@ -110,6 +110,11 @@ class SignalMessenger(MessengerInterface):
             logging.warning(f"Failed to send receipt: {response.text} on {endpoint}, code: {response.status_code}")
 
     @override
+    def mark_unseen(self, message: dict) -> None:
+        # Signal API does not support marking messages as unseen, so we will just not send a read receipt
+        return
+
+    @override
     def is_group_message(self, message: dict):
         return ("dataMessage" in message["envelope"] \
             and "groupInfo" in message["envelope"]["dataMessage"])
@@ -205,6 +210,16 @@ class SignalMessenger(MessengerInterface):
 
     @override
     def delete_message(self, message: dict):
+        pass
+
+    @override
+    def create_poll(self, message: dict, question: str, options: list[str]):
+        pass
+
+    def vote_poll(self, message: dict, option_index: int):
+        pass
+
+    def close_poll(self, message: dict):
         pass
 
     @override
