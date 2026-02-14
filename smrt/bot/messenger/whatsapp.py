@@ -336,7 +336,12 @@ class WhatsappMessageQueue():
         logging.info(f"Received message: {data}")
 
     def on_new_message(self, data):
-        logging.info(f"Received new message: {data}")
+        # shorten the log message in the middle with '...' if it's too long
+        max_length = 500
+        if len(str(data)) > max_length:
+            logging.info(f"Received new message: {str(data)[:int(max_length/2)]}...{str(data)[-int(max_length/2):]}")
+        else:
+            logging.info(f"Received new message: {data}")
         self._callback(self._messenger, data['response'])
 
     def on_catch_all(self, identifier, data):
