@@ -46,29 +46,34 @@ class TranscriptInterface(ABC):
     def transcribe(self, audio_data) -> TranscriptResult:
         """Creates a transcript for the given audio data"""
 
-class OpenAIWhisperTranscript(TranscriptInterface):
+class OpenAIApiTranscript(TranscriptInterface):
     """Implementation based on OpenAI's web services. """
-    def __init__(self, api_key):
+    def __init__(self, 
+                 api_url: str = "https://api.openai.com/v1/audio/transcribe", 
+                 api_key: str|None = None):
         self._api_key = api_key
-        self._api_url = "https://api.openai.com/v1/audio/transcribe"
+        self._api_url = api_url
 
 
-    def transcribe(self, audio_data) -> dict:
+    def transcribe(self, audio_data) -> TranscriptResult:
         headers = {
-            "Content-Type": "audio/mp3",
-            "Authorization": f"Bearer {self._api_key}"
+            "Content-Type": "audio/wav",
         }
+        if self._api_key is not None:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+
 
         files = {
-            "audio": ("file.mp3", io.BytesIO(audio_data), "audio/mp3")
+            "audio": ("file.wav", io.BytesIO(audio_data), "audio/wav")
         }
 
         response = requests.post(self._api_url, headers=headers, files=files)
 
         if response.status_code == 200:
             transcript = response.json()
-            # TODO: map data
-            return transcript
+            text = transcript.get("text")
+            language = transcript.get("language")
+            return TranscriptResult(text=text, language=language)
         else:
             print(f"Error: {response.status_code}, {response.text}")
-            return {}
+            return TranscriptResult(text=None, language=None)
