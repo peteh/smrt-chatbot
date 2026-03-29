@@ -17,14 +17,13 @@ class Qwen35Transcript(TranscriptInterface):
         """
         self._model_name = model_name
         # Load model on CPU
-        self._model = Qwen3ASRModel.from_pretrained(
+
+    def transcribe(self, audio_data) -> TranscriptResult:
+        model = Qwen3ASRModel.from_pretrained(
             self._model_name,
             device_map="cpu",               # CPU only
             dtype=torch.float32,        # use full precision on CPU
         )
-
-    def transcribe(self, audio_data) -> TranscriptResult:
-
         with tempfile.TemporaryDirectory() as tmpdir:
             wav_path = Path(tmpdir) / "output.wav"
         
@@ -33,7 +32,7 @@ class Qwen35Transcript(TranscriptInterface):
             audio_file = wav_path.as_posix()  # Convert Path to string for the model
 
             # Transcribe local audio file
-            results = self._model.transcribe(
+            results = model.transcribe(
                 audio=audio_file,  # local file path
                 language=None,             # auto language detection
                 return_time_stamps=False,  # set True if you want timestamps
