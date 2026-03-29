@@ -366,8 +366,9 @@ def run():
             if "llama_cpp" in ai_config:
                 llama_cpp_conf = ai_config["llama_cpp"]
                 llama_cpp_server = llama_cpp_conf["host"]
+                model = llama_cpp_conf["model"]
                 bot_loader.add_bot(
-                    llama_cpp_conf["name"], QuestionBotLlamaCppServer(llama_cpp_server)
+                    llama_cpp_conf["name"], QuestionBotLlamaCppServer(llama_cpp_server, model)
                 )
                 logging.info(
                     f"Registered llama.cpp model {llama_cpp_conf['name']} at {llama_cpp_server}"

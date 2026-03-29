@@ -67,15 +67,17 @@ class QuestionBotOpenAIAPI(QuestionBotInterface):
         
 class QuestionBotLlamaCppServer(QuestionBotInterface):
     """Question bot based on llama.cpp server."""
-    def __init__(self, llama_cpp_server: str) -> None:
+    def __init__(self, llama_cpp_server: str, model: str) -> None:
         """_summary_
 
         Args:
             llama_cpp_server (str): The URL of the llama.cpp server, e.g. http://localhost:8000
+            model (str): The model to use for inference
         """
         super().__init__()
         self._cost_per_token = 0.
-        self._llama_cpp_server = llama_cpp_server   
+        self._llama_cpp_server = llama_cpp_server
+        self._model = model
 
     def answer(self, prompt: str):
         url = f"{self._llama_cpp_server}/v1/chat/completions"
@@ -85,7 +87,7 @@ class QuestionBotLlamaCppServer(QuestionBotInterface):
         }
 
         data = {
-            #"model": "gpt-3.5-turbo",
+            "model": self._model,
             "messages": [{"role": "user", "content": prompt}]
         }
 
