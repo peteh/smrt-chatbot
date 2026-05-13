@@ -6,8 +6,11 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
-            "cwd": "${fileDirname}",
-            "console": "integratedTerminal"
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         },
         {
             "name": "Run Bot Script",
