@@ -33,6 +33,9 @@ class WhatsappMessenger(MessengerInterface):
 
     def get_server(self) -> str:
         return self._server
+    
+    def get_session(self) -> str:
+        return self._session
 
     def _endpoint_url(self, endpoint, endpoint_param = None) -> str:
         if endpoint_param is not None:
@@ -387,10 +390,23 @@ class WhatsappMessageQueue():
     def on_new_message(self, data):
         # shorten the log message in the middle with '...' if it's too long
         max_length = 750
+        if "response" not in data:
+            logging.warning(f"Received message without 'response' field: {data}")
+            return
+        
+        if "session" not in data["response"]:
+            logging.warning(f"Received message without 'session' field in response: {data}")
+            return
+        
+        session = data["response"]["session"]
+        if session != self._messenger.get_session():
+            logging.warning(f"Received message for session {session}, but current session is {self._messenger.get_session()}. Ignoring message.")
+            return
+        
         if len(str(data)) > max_length:
-            logging.info(f"Received new message: {str(data)[:int(max_length/2)]}...{str(data)[-int(max_length/2):]}")
+            logging.info(f"Message: {str(data)[:int(max_length/2)]}...{str(data)[-int(max_length/2):]}")
         else:
-            logging.info(f"Received new message: {data}")
+            logging.info(f"Message: {data}")
         self._callback(self._messenger, data['response'])
 
     def on_catch_all(self, identifier, data):
@@ -405,7 +421,6 @@ class WhatsappMessageQueue():
             while True:
                 time.sleep(3)
             # TODO: reconnect handling
-
             self._sio.disconnect()
         except Exception as e:
             logging.error(f"Error in WhatsappMessageQueue: {e}")
