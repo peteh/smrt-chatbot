@@ -2,6 +2,11 @@
 
 import time
 import logging
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.DEBUG,
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 import threading
 from multiprocessing import Process
@@ -23,11 +28,6 @@ from smrt.bot.tools.question_bot import (
     QuestionBotLlamaCppServer,
 )
 
-logging.basicConfig(
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    level=logging.DEBUG,
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
 
 schema = {}
 schema["storage_path"] = {"type": "string", "required": False}

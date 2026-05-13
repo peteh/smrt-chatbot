@@ -53,4 +53,4 @@ instagrapi
 Pillow
 
 # gaudeam lib
-git+https://github.com/peteh/python-igitur.git@773f9dd
+git+https://github.com/peteh/python-igitur.git@8a0dbff
