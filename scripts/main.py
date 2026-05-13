@@ -2,6 +2,7 @@
 
 import time
 import logging
+
 import threading
 from multiprocessing import Process
 from pathlib import Path
@@ -23,7 +24,9 @@ from smrt.bot.tools.question_bot import (
 )
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.DEBUG,
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
 
 schema = {}

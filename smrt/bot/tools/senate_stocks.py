@@ -8,9 +8,6 @@ from smrt.bot import messenger, pipeline
 import yfinance as yf
 
 
-logging.basicConfig(level=logging.INFO)
-
-
 class StockInfo:
     def __init__(self) -> None:
         #self._session = requests_cache.CachedSession("/tmp/yfinance.cache")
