@@ -53,6 +53,7 @@ class WhatsappMessenger(MessengerInterface):
         self._jid = response.json().get("response", "")
         logging.debug(f"WhatsApp JID: {self._jid}")
 
+    @override
     def send_message(self, chat_id: str, text: str):
         # The chat_id is in the format "whatsapp://<phone-number>@c.us"
         # We need to extract the phone number part
@@ -84,26 +85,32 @@ class WhatsappMessenger(MessengerInterface):
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def mark_in_progress_0(self, message: dict):
         self._react(message['id'], self.REACT_HOURGLASS_FULL)
         self.send_typing(message, True)
 
+    @override
     def mark_in_progress_50(self, message: dict):
         self._react(message['id'], self.REACT_HOURGLASS_HALF)
         self.send_typing(message, True)
 
+    @override
     def mark_skipped(self, message):
         self._react(message['id'], self.REACT_SKIP)
         self.send_typing(message, False)
 
+    @override
     def mark_in_progress_done(self, message: dict):
         self._react(message['id'], self.REACT_CHECKMARK)
         self.send_typing(message, False)
 
+    @override
     def mark_in_progress_fail(self, message: dict):
         self._react(message['id'], self.REACT_FAIL)
         self.send_typing(message, False)
 
+    @override
     def mark_seen(self, message: dict) -> None:
         is_group_message = self.is_group_message(message)
         recipient = message['chatId'] if is_group_message else message['sender']['id']
@@ -116,6 +123,7 @@ class WhatsappMessenger(MessengerInterface):
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def mark_unseen(self, message: dict) -> None:
         is_group_message = self.is_group_message(message)
         recipient = message['chatId'] if is_group_message else message['sender']['id']
@@ -128,21 +136,27 @@ class WhatsappMessenger(MessengerInterface):
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def is_group_message(self, message: dict):
         return 'isGroupMsg' in message and message['isGroupMsg'] is True
 
+    @override
     def is_self_message(self, message: dict):
         return "fromMe" in message and message["fromMe"]
 
+    @override
     def send_message_to_group(self, group_message: dict, text: str):
         self._send_message(group_message['chatId'], True, text)
 
+    @override
     def send_message_to_individual(self, message: dict, text: str):
         self._send_message(message['sender']['id'], False, text)
 
+    @override
     def get_name(self) -> str:
         return "whatsapp"
 
+    @override
     def reply_message(self, message: dict, text: str) -> None:
         is_group_message = self.is_group_message(message)
         recipient = message['chatId'] if is_group_message else message['sender']['id']
@@ -157,6 +171,7 @@ class WhatsappMessenger(MessengerInterface):
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def delete_message(self, message: dict):
         is_group = self.is_group_message(message)
         recpipient = message['chatId'] if is_group else message['sender']['id']
@@ -191,15 +206,19 @@ class WhatsappMessenger(MessengerInterface):
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def send_image_to_group(self, group_message, file_name, binary_data, caption = ""):
         self._send_image(group_message['chatId'], True, file_name, binary_data, caption)
 
+    @override
     def send_image_to_individual(self, message, file_name, binary_data, caption = ""):
         self._send_image(message['sender']['id'], False, file_name, binary_data, caption)
 
+    @override
     def send_audio_to_group(self, group_message, audio_file_path):
         self._send_audio(group_message['chatId'], True, audio_file_path)
 
+    @override
     def send_audio_to_individual(self, message, audio_file_path):
         self._send_audio(message['sender']['id'], False, audio_file_path)
 
@@ -237,9 +256,11 @@ class WhatsappMessenger(MessengerInterface):
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
 
+    @override
     def has_audio_data(self, message: dict):
         return 'mimetype' in message and message['mimetype'] == "audio/ogg; codecs=opus"
 
+    @override
     def has_image_data(self, message: dict):
         #logging.info(f"Testing for image, mime-type: {message.get('mimetype')}")
         #return 'mimetype' in message and \
@@ -248,6 +269,7 @@ class WhatsappMessenger(MessengerInterface):
         #        or message['mimetype'] == "image/jpg")
         return message.get("type") == "image"
 
+    @override
     def is_bot_mentioned(self, message: dict):
         if "mentionedJidList" not in message:
             return False
@@ -266,6 +288,7 @@ class WhatsappMessenger(MessengerInterface):
             lids.append(jid)
         return lids
 
+    @override
     def get_message_text(self, message: dict):
         # if the message is of type image, then the text you sent is in the caption field
         if message.get("type") == "image":
@@ -273,12 +296,15 @@ class WhatsappMessenger(MessengerInterface):
         # otherwise we can get the text from the content field
         return message.get("content", "")
 
+    @override
     def get_chat_id(self, message: dict) -> str:
         return f"whatsapp://{message['chatId']}"
 
+    @override
     def get_sender_name(self, message: dict):
         return message['sender']['pushname']
 
+    @override
     def download_media(self, message):
         msg_id = message['id']
         response = requests.get(self._endpoint_url("get-media-by-message", msg_id),
@@ -294,6 +320,7 @@ class WhatsappMessenger(MessengerInterface):
         mime_type = json_response['mimetype']
         return (mime_type, decoded)
 
+    @override
     def send_typing(self, message: dict, typing: bool):
         is_group_message = self.is_group_message(message)
         recipient = message['chatId'] if is_group_message else message['sender']['id']
