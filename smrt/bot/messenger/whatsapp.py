@@ -20,13 +20,15 @@ class WhatsappMessenger(MessengerInterface):
     REACT_FAIL = "\u274c"
 
     DEFAULT_TIMEOUT = 60
+    DEFAULT_SECRET_TOKEN = "THISISMYSECURETOKEN" # token from standard config, probably no one changes this anyway
 
-    def __init__(self, server: str, session: str, api_key: str, lid: str):
+    def __init__(self, server: str, session: str, api_key: str, lid: str, secret_token: str = DEFAULT_SECRET_TOKEN) -> None:
         self._server = server
         self._session = session
         self._api_key = api_key
         self._jid = ""
         self._lid = lid
+        self._secret_token = secret_token
         self._headers = {"Authorization": f"Bearer {self._api_key}"}
 
     def get_server(self) -> str:
@@ -52,6 +54,26 @@ class WhatsappMessenger(MessengerInterface):
                                 timeout=self.DEFAULT_TIMEOUT)
         self._jid = response.json().get("response", "")
         logging.debug(f"WhatsApp JID: {self._jid}")
+
+    def logout_clear_session(self):
+        # first we log out
+        response = requests.post(self._endpoint_url("logout-session"),
+                      headers=self._headers,
+                      timeout=self.DEFAULT_TIMEOUT)
+        logging.debug(response.json())
+        
+        # then we clear the session
+        response = requests.post(self._endpoint_url(f"{self._secret_token}/clear-session-data"),
+                      headers=self._headers,
+                      timeout=self.DEFAULT_TIMEOUT)
+        logging.debug(response.json())
+    
+    def get_session_qr_code(self):
+        response = requests.get(self._endpoint_url("qrcode-session"),
+                                headers=self._headers,
+                                timeout=self.DEFAULT_TIMEOUT)
+        response = response.json()
+        logging.debug(response)
 
     @override
     def send_message(self, chat_id: str, text: str):
