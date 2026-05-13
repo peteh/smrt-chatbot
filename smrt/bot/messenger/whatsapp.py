@@ -95,20 +95,22 @@ class WhatsappMessenger(MessengerInterface):
             "message": text,
             "isGroup": is_group
         }
-        requests.post(self._endpoint_url("send-message"),
+        response = requests.post(self._endpoint_url("send-message"),
                       json=data,
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
+        logging.debug(response.json())
 
     def _react(self, message_id, reaction_text):
         data = {
             "msgId": message_id,
             "reaction": reaction_text
         }
-        requests.post(self._endpoint_url("react-message"),
+        response = requests.post(self._endpoint_url("react-message"),
                       json=data,
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
+        logging.debug(response.json())
 
     @override
     def mark_in_progress_0(self, message: dict):
@@ -143,10 +145,11 @@ class WhatsappMessenger(MessengerInterface):
             "phone": recipient,
             "isGroup": is_group_message
         }
-        requests.post(self._endpoint_url("send-seen"),
+        response = requests.post(self._endpoint_url("send-seen"),
                       json=data,
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
+        logging.debug(response.json())
 
     @override
     def mark_unseen(self, message: dict) -> None:
@@ -156,10 +159,11 @@ class WhatsappMessenger(MessengerInterface):
             "phone": recipient,
             "isGroup": is_group_message
         }
-        requests.post(self._endpoint_url("mark-unseen"),
+        response = requests.post(self._endpoint_url("mark-unseen"),
                       json=data,
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
+        logging.debug(response.json())
 
     @override
     def is_group_message(self, message: dict):
@@ -191,10 +195,11 @@ class WhatsappMessenger(MessengerInterface):
             "isGroup": is_group_message, 
             "messageId": message.get("id")
         }
-        requests.post(self._endpoint_url("send-reply"),
+        response = requests.post(self._endpoint_url("send-reply"),
                       json=data,
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
+        logging.debug(response.json())
 
     @override
     def delete_message(self, message: dict):
@@ -226,10 +231,11 @@ class WhatsappMessenger(MessengerInterface):
             "message": caption,
             "isGroup": is_group, 
         }
-        requests.post(self._endpoint_url("send-image"),
+        response = requests.post(self._endpoint_url("send-image"),
                       json=data,
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
+        logging.debug(response.json())
 
     @override
     def send_image_to_group(self, group_message, file_name, binary_data, caption = ""):
@@ -276,10 +282,11 @@ class WhatsappMessenger(MessengerInterface):
             "base64Ptt": f"data:audio/ogg;base64,{base64data}",
             "isGroup": is_group, 
         }
-        requests.post(self._endpoint_url("send-voice-base64"),
+        response = requests.post(self._endpoint_url("send-voice-base64"),
                       json=data,
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
+        logging.debug(response.json())
 
     @override
     def has_audio_data(self, message: dict):
@@ -354,10 +361,11 @@ class WhatsappMessenger(MessengerInterface):
             "isGroup": is_group_message,
             "value": typing
         }
-        requests.post(self._endpoint_url("typing"),
+        response = requests.post(self._endpoint_url("typing"),
                       json=data,
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
+        logging.debug(response.json())
 
 class WhatsappMessageQueue():
 
