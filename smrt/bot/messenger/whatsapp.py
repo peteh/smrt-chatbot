@@ -193,11 +193,13 @@ class WhatsappMessenger(MessengerInterface):
     def reply_message(self, message: dict, text: str) -> None:
         is_group_message = self.is_group_message(message)
         recipient = message['chatId'] if is_group_message else message['sender']['id']
+        message_id = message.get('id')
+        logging.debug(f"Replying to message ID: {message_id} to recipient: {recipient}")
         data = {
             "phone": recipient,
             "message": text,
             "isGroup": is_group_message, 
-            "messageId": message.get("id")
+            "messageId": message_id
         }
         response = requests.post(self._endpoint_url("send-reply"),
                       json=data,
