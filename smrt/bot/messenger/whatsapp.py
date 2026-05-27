@@ -90,10 +90,14 @@ class WhatsappMessenger(MessengerInterface):
         self._send_message(recipient, is_group, text)
 
     def _send_message(self, recipient: str, is_group, text: str):
+        logging.debug(f"Sending message to recipient: {recipient}")
+        is_lid = "@lid" in recipient
+        logging.debug(f"Is recipient a LID? {'Yes' if is_lid else 'No'}")
         data = {
             "phone": recipient,
             "message": text,
-            "isGroup": is_group
+            "isGroup": is_group,
+            "isLid": is_lid
         }
         response = requests.post(self._endpoint_url("send-message"),
                       json=data,
@@ -224,12 +228,14 @@ class WhatsappMessenger(MessengerInterface):
         else:
             data_type="image/png"
 
+        is_lid = "@lid" in recipient
         data = {
             "phone": recipient,
             "base64": f"data:{data_type};base64,{base64data}",
             "filename": file_name,
             "message": caption,
             "isGroup": is_group, 
+            "isLid": is_lid
         }
         response = requests.post(self._endpoint_url("send-image"),
                       json=data,
