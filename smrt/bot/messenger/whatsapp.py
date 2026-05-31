@@ -115,6 +115,9 @@ class WhatsappMessenger(MessengerInterface):
                       headers=self._headers,
                       timeout=self.DEFAULT_TIMEOUT)
         logging.debug(response.json())
+    
+    def _is_lid(self, recipient: str):
+        return "@lid" in recipient
 
     @override
     def mark_in_progress_0(self, message: dict):
@@ -195,11 +198,13 @@ class WhatsappMessenger(MessengerInterface):
         recipient = message['chatId'] if is_group_message else message['sender']['id']
         message_id = message.get('id')
         logging.debug(f"Replying to message ID: {message_id} to recipient: {recipient}")
+
         data = {
             "phone": recipient,
             "message": text,
             "isGroup": is_group_message, 
-            "messageId": message_id
+            "messageId": message_id,
+            "isLid": self._is_lid(recipient)
         }
         response = requests.post(self._endpoint_url("send-reply"),
                       json=data,
@@ -210,9 +215,9 @@ class WhatsappMessenger(MessengerInterface):
     @override
     def delete_message(self, message: dict):
         is_group = self.is_group_message(message)
-        recpipient = message['chatId'] if is_group else message['sender']['id']
+        recipient = message['chatId'] if is_group else message['sender']['id']
         data = {
-            "phone": recpipient,
+            "phone": recipient,
             "messageId": message['id'],
             "isGroup": is_group
         }
