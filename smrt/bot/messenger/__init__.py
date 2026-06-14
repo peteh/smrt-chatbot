@@ -1,5 +1,6 @@
 from .signal import SignalMessenger, SignalMessageQueue
 from .whatsapp import WhatsappMessenger, WhatsappMessageQueue
+from .whatsapp_evo import WhatsappEvoMessenger, WhatsappEvoMessageQueue
 from .telegram import TelegramMessenger, TelegramMessageQueue
 from .telethonage import TelethonMessenger, TelethonMessageQueue
 from .messenger import MessengerInterface, MessengerManager
@@ -17,4 +18,6 @@ __all__ = [
     "TelethonMessageQueue",
     "WhatsappMessenger",
     "WhatsappMessageQueue",
+    "WhatsappEvoMessenger",
+    "WhatsappEvoMessageQueue",
 ]

@@ -87,6 +87,16 @@ schema["whatsapp"] = {
     "required": False,
 }
 
+schema["whatsapp_evolution"] = {
+    "type": "dict",
+    "schema": {
+        "evolution_server": {"type": "string", "required": True},
+        "instance": {"type": "string", "required": True},
+        "api_key": {"type": "string", "required": True},    
+    },
+    "required": False,
+}
+
 schema["telegram"] = {
     "type": "dict",
     "schema": {
@@ -713,6 +723,31 @@ def run():
         # mainpipe.add_pipeline(stock_notifier)
         # stock_notifier.run_async()
 
+    CONFIG_WHATSAPP_EVOLUTION = "whatsapp_evolution"
+    if CONFIG_WHATSAPP_EVOLUTION in configuration:
+
+        config_whatsapp_evolution = configuration[CONFIG_WHATSAPP_EVOLUTION]
+
+  
+        evolution_server = config_whatsapp_evolution["evolution_server"]
+        api_key = config_whatsapp_evolution["api_key"]
+        instance = config_whatsapp_evolution["instance"]
+        whatsapp_evolution = messenger.WhatsappEvoMessenger(
+            evolution_server,
+            instance,
+            api_key
+        )
+
+        messenger_manager.add_messenger(whatsapp_evolution)
+        whatsapp_evolution_queue = messenger.WhatsappEvoMessageQueue(
+            whatsapp_evolution, main_pipe.process
+        )
+        whatsapp_evolution_queue.run_async()
+
+        try:
+            whatsapp_evolution.start_session()
+        except:
+            logging.warning("Could not start Whatsapp Evolution session")
     # run scheduled tasks continuously in background
     stop_run_continuously = run_schedule_continuously()
 
