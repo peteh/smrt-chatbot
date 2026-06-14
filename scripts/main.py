@@ -40,7 +40,9 @@ schema["article_summary"] = {
 
 schema["image_generation"] = {
     "type": "dict",
-    "schema": {"generator": {"type": "string", "required": True}},
+    "schema": {"host": {"type": "string", "required": True}, 
+               "api_key": {"type": "string", "required": False},
+               "model": {"type": "string", "required": False},},
     "required": False,
 }
 
@@ -551,8 +553,12 @@ def run():
     CONFIG_IMAGEGEN = "image_generation"
     if CONFIG_IMAGEGEN in configuration:
         import smrt.bot.tools.texttoimage as texttoimage
-
         config_imagegen = configuration[CONFIG_IMAGEGEN]
+        host = config_imagegen["host"]
+        api_key = config_imagegen.get("api_key", None)
+        model = config_imagegen.get("model", None)
+
+        '''
         imagegen_processors = []
         if "generator" in config_imagegen:
             if config_imagegen["generator"].startswith("stablehorde:"):
@@ -577,6 +583,11 @@ def run():
             imagegen_api = texttoimage.FallbackTextToImageProcessor(imagegen_processors)
             imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
             main_pipe.add_pipeline(imagegen_pipeline)
+        '''
+        imagegen_processor = texttoimage.OpenAIImagePrompt(host, api_key, model)
+        imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_processor)
+        main_pipe.add_pipeline(imagegen_pipeline)
+
 
     CONFIG_GALLERY = "gallery"
     if CONFIG_GALLERY in configuration:

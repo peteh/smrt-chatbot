@@ -9,116 +9,50 @@ import requests
 class ImagePromptInterface(ABC):
     """Interface to turn prompts into a list of pictures. """
     @abstractmethod
-    def process(self, prompt) -> List[Tuple[str,str]]:
+    def process(self, prompt) -> List[Tuple[str,str]] | None:
         """Processes prompts and turns them to images"""
 
 
 DEFAULT_NEGATIVE_PROMPT = "blender, cropped, lowres, poorly drawn face, out of frame, poorly \
     drawn hands, blurry, bad art, blurred, text, watermark, disfigured, deformed, closed eyes"
 
-class ReplicateAPI(ImagePromptInterface):
-    def __init__(self, model, model_version) -> None:
+class OpenAIImagePrompt(ImagePromptInterface):
+    """Implementation to get images from OpenAI API. """
+    def __init__(self, host:str, api_key:str, model:str) -> None:
+        super().__init__()
+        self._host = host
+        self._api_key = api_key
         self._model = model
-        self._model_version = model_version
-
-    def _get_model_url(self):
-        return 'https://replicate.com/%s' \
-        % (self._model)
-
-    def _generate_predict_url(self):
-        return 'https://replicate.com/api/models/%s/versions/%s/predictions' \
-        % (self._model, self._model_version)
-
-    def _generate_predict_url_for_uuid(self, uuid):
-        return 'https://replicate.com/api/models/%s/versions/%s/predictions/%s' \
-        % (self._model, self._model_version, uuid)
-
-    @abstractmethod
-    def _generate_prompt(self, prompt: str) -> dict:
-        pass
+        self._negative_prompt = DEFAULT_NEGATIVE_PROMPT
 
     def process(self, prompt):
-        session = requests.Session()
-        session.headers.update({'Referer': self._get_model_url()})
-
-        # TODO: extract to constructor or something
-        session.headers.update({'X-CSRFToken': "9D5vvVyFmxiydLtV7qSM6DDYTwIDl7u0"})
-        session.cookies.set("csrftoken", "9D5vvVyFmxiydLtV7qSM6DDYTwIDl7u0", domain="replicate.com")
-        session.cookies.set("replicate_anonymous_id", "d140b681-5aee-4741-8ea0-fea46aae20ea",
-                            domain="replicate.com")
-        session.cookies.set("sessionid", "50bub2y2fbf9c6yx0pj1wl2kk9wz6dot", domain="replicate.com")
-
-        response = session.get(self._get_model_url())
-
-        data = self._generate_prompt(prompt)
-        session.headers.update({'Referer': self._generate_predict_url()})
-        response = session.post(self._generate_predict_url(), json = data)
-        json_response = response.json()
-
-        if 'uuid' not in json_response:
-            session.close()
-            print("No uuid in server response")
-            print(json.dumps(json_response, indent = 4))
-            return None
-
-        uuid = json_response['uuid']
-        predict_url_for_uuid = self._generate_predict_url_for_uuid(uuid)
-
-        for i in range(0, 10):
-            response = session.get(predict_url_for_uuid)
-            json_response = response.json()
-            status = json_response['prediction']['status']
-            print(status)
-            if status == 'succeeded':
-                #open text file
-                #text_file = open("response.json", "w")
-                #text_file.write(json.dumps(jsonResponse, indent = 4))
-                #text_file.close()
-                response = requests.get(json_response['prediction']['output_files'][0], allow_redirects=True)
-                #imageFile = open("image.png", "wb")
-                #imageFile.write(r.content)
-                #imageFile.close()
-                return ("image.png", response.content)
-
-            #print(json.dumps(r.json(), indent = 4))
-            time.sleep(2)
+        try:
+            model = self._model if self._model is not None else ""
+            headers={
+                    "Authorization": f"Bearer {self._api_key}"
+                } if self._api_key is not None else None
+            response = requests.post(
+                f"{self._host}/v1/images/generations",
+                headers=headers,
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "n": 1,
+                    "size": "512x512"
+                },
+                timeout=1200
+            )
+            response_json = response.json()
+            images = []
+            for i, image in enumerate(response_json['data']):
+                image_binary = image['b64_json']
+                image_name = f"image{i+1}.png"
+                binary = base64.b64decode(image_binary)
+                images.append((image_name, binary))
+            return images
+        except Exception as ex:
+            logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
         return None
-
-class StableDiffusionAPI(ReplicateAPI):
-
-    def __init__(self):
-        super().__init__('stability-ai/stable-diffusion',
-                         'db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf')
-
-    def _generate_prompt(self, prompt: str) -> dict:
-        return {
-                "inputs": {
-                    "guidance_scale": 7.5,
-                    "image_dimensions": "512x512",
-                    "num_inference_steps": 100,
-                    "num_outputs": 1,
-                    "prompt": prompt,
-                    "scheduler": "K_EULER"
-                }
-            }
-
-class Kandinsky2API(ReplicateAPI):
-
-    def __init__(self):
-        super().__init__('ai-forever/kandinsky-2',
-                         '65a15f6e3c538ee4adf5142411455308926714f7d3f5c940d9f7bc519e0e5c1a')
-
-    def _generate_prompt(self, prompt: str) -> dict:
-        return {
-                "inputs": {
-                    "guidance_scale": 4,
-                    "num_inference_steps": 100,
-                    "prior_cf_scale": 4,
-                    "prior_steps": "5",
-                    "prompt": prompt,
-                    "scheduler": "p_sampler"
-                }
-            }
 
 
 import base64
@@ -312,129 +246,6 @@ class StableHordeTextToImage(ImagePromptInterface):
             print("Failed to get images")
             return None
         return self._download_files(request_id)
-
-# from diffusers import StableDiffusionPipeline, DiffusionPipeline
-# import torch
-# import io
-# class DiffusersTextToImage(ImagePromptInterface):
-#     """Image prompt generation using stablehorde.net API"""
-#     def __init__(self) -> None:
-#         self._negativePrompt = DEFAULT_NEGATIVE_PROMPT
-
-#     def process(self, prompt):
-#         #model_id = "SG161222/Realistic_Vision_V6.0_B1_noVAE"
-#         #pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_checker=None, use_safetensors=True)
-#         pipe = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5", safety_checker=None) 
-#         #pipe = DiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0", use_safetensors=True, safety_checker=None)
-
-#         img_num = 1
-#         img_list = []
-#         for image in pipe(f"{prompt} ### {self._negativePrompt}").images:
-#             # Create a BytesIO object to store the PNG data
-#             png_bytes_io = io.BytesIO()
-
-#             # Save the Pillow image to the BytesIO object as PNG
-#             image.save(png_bytes_io, format="PNG")
-#             image.close()
-
-#             # Get the PNG bytes from the BytesIO object
-#             png_bytes = png_bytes_io.getvalue()
-#             img_list.append((f"image{img_num}.png", png_bytes))
-#             img_num += 1
-#         return img_list
-
-# import re_edge_gpt
-# class BingImageProcessor(ImagePromptInterface):
-#     """Prompt based image generator based on Microsoft Bing's creator"""
-#     def __init__(self, cookie_path = "cookie.json") -> None:
-#         self._cookie_path = cookie_path
-
-#     def process(self, prompt):
-#         try:
-#             with open(self._cookie_path, "r", encoding="utf-8") as f:
-#                 cookies = json.load(f)
-#                 for cookie in cookies:
-#                     if cookie['name'] == "_U":
-#                         cookie_u = cookie['value']
-#             image_gen = re_edge_gpt.ImageGen(auth_cookie=cookie_u)
-#             image_urls = image_gen.get_images(prompt)
-#             img_num = 0
-#             images = []
-#             for image_url in image_urls:
-#                 logging.debug(f"Image url: {image_url}")
-#                 print(f"Image url: {image_url}")
-#                 img_num += 1
-#                 response = requests.get(image_url, timeout=1200)
-#                 # filter out these weird svg graphics
-#                 if len(response.content) > 3400:
-#                     images.append((f"image{img_num}.jpg" , response.content))
-#             if images is None or len(images) == 0:
-#                 logging.error("Did not receive images from Bing")
-#                 return images
-#             return images
-#         except Exception as ex:
-#             logging.critical(ex, exc_info=True)
-#         print("Failed to get an image")
-#         return None
-
-class FlowGPTImageProcessor(ImagePromptInterface):
-    MODEL_DALLE3 = "DALLE3"
-    def __init__(self, model = MODEL_DALLE3) -> None:
-        self._model = model
-    
-    def process(self, prompt) -> List[Tuple[str, str]]:
-        url = "https://backend-k8s.flowgpt.com/image-generation-anonymous"
-
-        headers = {
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8,fr;q=0.7",
-            "Content-Length": "84",
-            "Content-Type": "application/json",
-            "Origin": "https://flowgpt.com",
-            "Referer": "https://flowgpt.com/",
-            "Sec-Ch-Ua": '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-site",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        }
-
-        payload = {
-            "model": self._model,
-            "prompt": prompt, # add your custom prompt
-        }
-
-        response = requests.post(url, headers=headers, json=payload)
-
-        try:
-            print(response.status_code)
-            response_data = response.json()
-            url_value = response_data.get("url", "No URL found in the response")
-            # TODO write this better
-            image_urls = [url_value]
-            img_num = 0
-            images = []
-            for image_url in image_urls:
-                logging.debug(f"Image url: {image_url}")
-                print(f"Image url: {image_url}")
-                img_num += 1
-                response = requests.get(image_url, timeout=1200)
-                # filter out these weird svg graphics
-                if len(response.content) > 3400:
-                    images.append((f"image{img_num}.png" , response.content))
-            if images is None or len(images) == 0:
-                logging.error("Did not receive images from FlowGPT")
-                return images
-            return images
-        except Exception as ex:
-            logging.critical(ex, exc_info=True)
-        print("Failed to get an image")
-        return None
-        
-    
 
 class FallbackTextToImageProcessor(ImagePromptInterface):
     """Image processor that tries a list of image processor until one succeeds. """
