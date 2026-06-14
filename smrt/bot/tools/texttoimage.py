@@ -18,12 +18,14 @@ DEFAULT_NEGATIVE_PROMPT = "blender, cropped, lowres, poorly drawn face, out of f
 
 class OpenAIImagePrompt(ImagePromptInterface):
     """Implementation to get images from OpenAI API. """
+
+    REQUEST_TIMEOUT = 1200
+
     def __init__(self, host:str, api_key:str, model:str) -> None:
         super().__init__()
         self._host = host
         self._api_key = api_key
         self._model = model
-        self._negative_prompt = DEFAULT_NEGATIVE_PROMPT
 
     def process(self, prompt):
         try:
@@ -40,7 +42,7 @@ class OpenAIImagePrompt(ImagePromptInterface):
                     "n": 1,
                     "size": "512x512"
                 },
-                timeout=1200
+                timeout=self.REQUEST_TIMEOUT
             )
             response_json = response.json()
             images = []
