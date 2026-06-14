@@ -376,14 +376,14 @@ class SignalMessenger(MessengerInterface):
             response = requests.put(endpoint,
                         json=data,
                         timeout=self.DEFAULT_TIMEOUT)
-            if response.status_code != 200:
-                logging.warning(f"Failed to send typing indicator: {response.text} on {endpoint}")
+            if response.status_code != 204:
+                logging.warning(f"Failed to send typing indicator: {response.status_code} {response.text} on {endpoint}")
         else:
             response = requests.delete(endpoint,
                         json=data,
                         timeout=self.DEFAULT_TIMEOUT)
-            if response.status_code != 200:
-                logging.warning(f"Failed to send typing indicator: {response.text} on {endpoint}")
+            if response.status_code != 204:
+                logging.warning(f"Failed to send typing indicator: {response.status_code} {response.text} on {endpoint}")
 
 
 class SignalMessageQueue():
