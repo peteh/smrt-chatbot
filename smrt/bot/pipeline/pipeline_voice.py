@@ -1,5 +1,6 @@
 import logging
 import tempfile
+import threading
 from typing import List
 from pathlib import Path
 
@@ -7,6 +8,9 @@ from smrt.bot.tools.summary import SummaryInterface
 from smrt.bot.messenger import MessengerInterface
 from smrt.bot.pipeline import AbstractPipeline
 from smrt.libtranscript import TranscriptInterface, TranscriptUtils
+
+NUM_PARALLEL_TRANSCRIPTS = 2
+_transcribe_semaphore = threading.Semaphore(NUM_PARALLEL_TRANSCRIPTS)
 
 
 class VoiceMessagePipeline(AbstractPipeline):
@@ -65,7 +69,7 @@ class VoiceMessagePipeline(AbstractPipeline):
                 with open(wav_file_path, "rb") as f:
                     wav_file_data = f.read()  # returns bytes
 
-            transcript = self._transcriber.transcribe(wav_file_data)
+            transcript = self._transcribe_wav(wav_file_data)
 
             transcript_text = transcript.text
             words = transcript.num_words
@@ -90,6 +94,11 @@ class VoiceMessagePipeline(AbstractPipeline):
             logging.critical(ex, exc_info=True)
             messenger.mark_in_progress_fail(message)
             return
+
+    def _transcribe_wav(self, wav_file_data: bytes):
+        """Transcribe audio while limiting parallel transcription jobs."""
+        with _transcribe_semaphore:
+            return self._transcriber.transcribe(wav_file_data)
 
     def get_help_text(self) -> str:
         return """*Voice Message Transcription*
