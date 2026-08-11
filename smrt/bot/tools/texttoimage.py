@@ -53,6 +53,8 @@ class OpenAIImagePrompt(ImagePromptInterface):
                 images.append((image_name, binary))
             return images
         except Exception as ex:
+            if "response" in locals():
+                logging.critical(response.text)
             logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
         return None
 
