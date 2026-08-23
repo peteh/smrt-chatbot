@@ -66,7 +66,6 @@ class OpenAIApiTranscript(TranscriptInterface):
 
     def transcribe(self, audio_data) -> TranscriptResult:
         headers = {
-            "Content-Type": "audio/wav",
         }
         if self._api_key is not None:
             headers["Authorization"] = f"Bearer {self._api_key}"
@@ -76,7 +75,7 @@ class OpenAIApiTranscript(TranscriptInterface):
         if self._model is not None:
             data["model"] = self._model
 
-        files = {"audio": ("file.wav", io.BytesIO(audio_data), "audio/wav")}
+        files = {"file": ("file.wav", io.BytesIO(audio_data), "audio/wav")}
 
         response = requests.post(
             self._api_url,
