@@ -21,7 +21,9 @@ class QuestionBotSummary(SummaryInterface):
         self._bot = question_bot
 
     def summarize(self, text: str, language: str) -> dict:
-        if language == 'de':
+        if language is None:
+            language = 'en'
+        if language == 'de' or language.lower() == 'german':
             prompt = \
 f"Fasse die wichtigsten Punkte des folgenden Textes mit den \
 wichtigsten Stichpunkten und so kurz wie möglich in Deutsch zusammen, \
