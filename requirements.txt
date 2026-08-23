@@ -11,8 +11,12 @@ flask
 waitress
 
 # text to speech
-faster_whisper
+# faster_whisper -- removed due to handling with llamacpp
 wyoming
+
+# tts qwen 3.5 ASR - removed due to handling with llamacpp
+#qwen-asr
+#torchaudio
 
 trafilatura
 youtube-transcript-api
@@ -23,9 +27,7 @@ spacy
 piper-tts
 torchcodec
 
-# qwen 3.5 ASR
-qwen-asr
-torchaudio
+
 
 # scheduling recurring tasks
 schedule

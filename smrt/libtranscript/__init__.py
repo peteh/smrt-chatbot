@@ -1,13 +1,13 @@
 from .transcript import TranscriptInterface, TranscriptResult, OpenAIApiTranscript
 from .utils import TranscriptUtils
-from .transcript_faster_whisper import FasterWhisperTranscript
+#from .transcript_faster_whisper import FasterWhisperTranscript
 from .transcript_wyoming import WyomingTranscript
-from .transcript_qwen import Qwen35Transcript
+#from .transcript_qwen import Qwen35Transcript
 
 __all__ = ["TranscriptInterface",
            "TranscriptResult",
-           "FasterWhisperTranscript",
+#           "FasterWhisperTranscript",
            "TranscriptUtils",
            "WyomingTranscript",
-           "Qwen35Transcript",
+#           "Qwen35Transcript",
            "OpenAIApiTranscript"]

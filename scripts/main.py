@@ -21,7 +21,7 @@ import smrt.bot.pipeline as pipeline
 import smrt.bot.messenger as messenger
 from smrt.web.galleryweb import GalleryFlaskApp
 import smrt.bot.tools
-from smrt.libtranscript import FasterWhisperTranscript, WyomingTranscript, Qwen35Transcript, OpenAIApiTranscript
+from smrt.libtranscript import WyomingTranscript, OpenAIApiTranscript
 from smrt.bot.tools.question_bot import (
     QuestionBotInterface,
     QuestionBotOllama,
@@ -498,11 +498,7 @@ def run():
         vt_chat_id_blacklist = config_vt.get("chat_id_blacklist", [])
 
         asr_engine = config_vt.get("asr_engine", "faster_whisper")
-        if asr_engine == "faster_whisper":
-            vt_transcriber = FasterWhisperTranscript()
-        elif asr_engine == "qwen":
-            vt_transcriber = Qwen35Transcript()
-        elif asr_engine == "openai":
+        if asr_engine == "openai":
             asr_options = config_vt.get("asr_options", {})
             api_url = asr_options.get("api_url", None)
             api_key = asr_options.get("api_key", None)
@@ -518,7 +514,7 @@ def run():
                 raise ValueError("For 'wyoming' asr_engine, 'api_url' must be provided in 'asr_options' and match uri to wyoming server, e.g. tcp://127.0.0.1:10300.")
             vt_transcriber = WyomingTranscript(uri=api_url)
         else:
-            raise ValueError("asr_engine must be 'faster_whisper', 'qwen', 'openai' or 'wyoming'")
+            raise ValueError("asr_engine must be 'openai' or 'wyoming'")
 
         if "summary_bot" in config_vt:
             vt_summary_bot = bot_loader.get_bot(config_vt["summary_bot"])
