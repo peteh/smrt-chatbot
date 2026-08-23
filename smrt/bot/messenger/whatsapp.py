@@ -106,6 +106,13 @@ class WhatsappMessenger(MessengerInterface):
         logging.debug(response.json())
 
     def _react(self, message_id, reaction_text):
+        
+        if message_id is None:
+            # Fail silently if message_id is None, as we cannot react to a message without an ID
+            # WPPconnect for some reason does not always provide a message ID for messages
+            logging.warning("Cannot react to message: message_id is None")
+            return
+        
         data = {
             "msgId": message_id,
             "reaction": reaction_text
@@ -121,27 +128,27 @@ class WhatsappMessenger(MessengerInterface):
 
     @override
     def mark_in_progress_0(self, message: dict):
-        self._react(message['id'], self.REACT_HOURGLASS_FULL)
+        self._react(message.get('id', None), self.REACT_HOURGLASS_FULL)
         self.send_typing(message, True)
 
     @override
     def mark_in_progress_50(self, message: dict):
-        self._react(message['id'], self.REACT_HOURGLASS_HALF)
+        self._react(message.get('id', None), self.REACT_HOURGLASS_HALF)
         self.send_typing(message, True)
 
     @override
     def mark_skipped(self, message):
-        self._react(message['id'], self.REACT_SKIP)
+        self._react(message.get('id', None), self.REACT_SKIP)
         self.send_typing(message, False)
 
     @override
     def mark_in_progress_done(self, message: dict):
-        self._react(message['id'], self.REACT_CHECKMARK)
+        self._react(message.get('id', None), self.REACT_CHECKMARK)
         self.send_typing(message, False)
 
     @override
     def mark_in_progress_fail(self, message: dict):
-        self._react(message['id'], self.REACT_FAIL)
+        self._react(message.get('id', None), self.REACT_FAIL)
         self.send_typing(message, False)
 
     @override
@@ -196,7 +203,18 @@ class WhatsappMessenger(MessengerInterface):
     def reply_message(self, message: dict, text: str) -> None:
         is_group_message = self.is_group_message(message)
         recipient = message['chatId'] if is_group_message else message['sender']['id']
-        message_id = message.get('id')
+        message_id = message.get('id', None)
+        
+        if message_id is None:
+            logging.warning("Cannot reply to message: message_id is None, using sendMessage instead.")
+            
+            if is_group_message:
+                self.send_message_to_group(message, text)
+            else:
+                self.send_message_to_individual(message, text)
+            return
+        
+        
         logging.debug(f"Replying to message ID: {message_id} to recipient: {recipient}")
 
         data = {
