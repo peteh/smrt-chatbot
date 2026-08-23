@@ -16,7 +16,7 @@ wyoming
 
 # tts qwen 3.5 ASR - removed due to handling with llamacpp
 #qwen-asr
-#torchaudio
+
 
 trafilatura
 youtube-transcript-api
@@ -26,6 +26,7 @@ coqui-tts
 spacy
 piper-tts
 torchcodec
+torchaudio
 
 
 
