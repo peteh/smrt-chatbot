@@ -1,4 +1,4 @@
-from .transcript import TranscriptInterface, TranscriptResult
+from .transcript import TranscriptInterface, TranscriptResult, OpenAIApiTranscript
 from .utils import TranscriptUtils
 from .transcript_faster_whisper import FasterWhisperTranscript
 from .transcript_wyoming import WyomingTranscript
@@ -9,4 +9,5 @@ __all__ = ["TranscriptInterface",
            "FasterWhisperTranscript",
            "TranscriptUtils",
            "WyomingTranscript",
-           "Qwen35Transcript"]
+           "Qwen35Transcript",
+           "OpenAIApiTranscript"]

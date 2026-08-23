@@ -21,7 +21,7 @@ import smrt.bot.pipeline as pipeline
 import smrt.bot.messenger as messenger
 from smrt.web.galleryweb import GalleryFlaskApp
 import smrt.bot.tools
-from smrt.libtranscript import FasterWhisperTranscript, WyomingTranscript, Qwen35Transcript
+from smrt.libtranscript import FasterWhisperTranscript, WyomingTranscript, Qwen35Transcript, OpenAIApiTranscript
 from smrt.bot.tools.question_bot import (
     QuestionBotInterface,
     QuestionBotOllama,
@@ -147,6 +147,15 @@ schema["voice_transcription"] = {
     "schema": {
         "min_words_for_summary": {"type": "integer", "required": True},
         "asr_engine": {"type": "string", "required": False},
+        "asr_options": {
+            "type": "dict",
+            "schema": {
+                "api_url": {"type": "string", "required": False},
+                "api_key": {"type": "string", "required": False},
+                "model": {"type": "string", "required": False},
+            },
+            "required": False,
+        },
         "summary_bot": {"type": "string", "required": False},
         "transcribe_group_chats": {"type": "boolean", "required": False},
         "transcribe_private_chats": {"type": "boolean", "required": False},
@@ -487,17 +496,30 @@ def run():
         config_vt = configuration[CONFIG_VOICE_TRANSCRIPTION]
         vt_min_words_for_summary = config_vt.get("min_words_for_summary", 10)
         vt_chat_id_blacklist = config_vt.get("chat_id_blacklist", [])
+
         asr_engine = config_vt.get("asr_engine", "faster_whisper")
         if asr_engine == "faster_whisper":
             vt_transcriber = FasterWhisperTranscript()
         elif asr_engine == "qwen":
             vt_transcriber = Qwen35Transcript()
+        elif asr_engine == "openai":
+            asr_options = config_vt.get("asr_options", {})
+            api_url = asr_options.get("api_url", None)
+            api_key = asr_options.get("api_key", None)
+            model = asr_options.get("model", None)
+            vt_transcriber = OpenAIApiTranscript(
+                api_url=api_url,
+                api_key=api_key, model=model
+            )
+        elif asr_engine== "wyoming":
+            asr_options = config_vt.get("asr_options", {})
+            api_url = asr_options.get("api_url", None)
+            if api_url is None or not api_url.startswith("tcp://"):
+                raise ValueError("For 'wyoming' asr_engine, 'api_url' must be provided in 'asr_options' and match uri to wyoming server, e.g. tcp://127.0.0.1:10300.")
+            vt_transcriber = WyomingTranscript(uri=api_url)
         else:
-            if not asr_engine.startswith("tcp://"):
-                raise ValueError(
-                    "asr_engine must 'faster_whisper', 'qwen' or uri to wyoming server, e.g. tcp://127.0.0.1:10300"
-                )
-            vt_transcriber = WyomingTranscript(asr_engine)
+            raise ValueError("asr_engine must be 'faster_whisper', 'qwen', 'openai' or 'wyoming'")
+
         if "summary_bot" in config_vt:
             vt_summary_bot = bot_loader.get_bot(config_vt["summary_bot"])
             vt_summarizer = smrt.bot.tools.QuestionBotSummary(vt_summary_bot)
@@ -557,33 +579,6 @@ def run():
         host = config_imagegen["host"]
         api_key = config_imagegen.get("api_key", None)
         model = config_imagegen.get("model", None)
-
-        '''
-        imagegen_processors = []
-        if "generator" in config_imagegen:
-            if config_imagegen["generator"].startswith("stablehorde:"):
-                stable_horde_api_key = config_imagegen["generator"][
-                    config_imagegen["generator"].find(":") + 1 :
-                ]
-                imagegen_processors.append(
-                    texttoimage.StableHordeTextToImage(stable_horde_api_key)
-                )
-                fallback_image_processor = texttoimage.FallbackTextToImageProcessor(
-                    imagegen_processors
-                )
-                main_pipe.add_pipeline(
-                    pipeline.ImagePromptPipeline(fallback_image_processor)
-                )
-            else:
-                raise ValueError(
-                    f"Unknown image generation processor: {config_imagegen['generator']}"
-                )
-
-        if len(imagegen_processors) > 0:
-            imagegen_api = texttoimage.FallbackTextToImageProcessor(imagegen_processors)
-            imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_api)
-            main_pipe.add_pipeline(imagegen_pipeline)
-        '''
         imagegen_processor = texttoimage.OpenAIImagePrompt(host, api_key, model)
         imagegen_pipeline = pipeline.ImageGenerationPipeline(imagegen_processor)
         main_pipe.add_pipeline(imagegen_pipeline)
