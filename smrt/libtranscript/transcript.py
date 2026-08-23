@@ -93,9 +93,9 @@ class OpenAIApiTranscript(TranscriptInterface):
             # TODO: workaround for bug in llamacpp that prefixes the text with crap. 
             match = re.match(r"language (\w+)<asr_text>(.*)", text, re.DOTALL)
             if match:
-                language, transcript = match.group(1), match.group(2).strip()
+                language, text = match.group(1), match.group(2).strip()
             else:
-                language, transcript = None, text.strip()
+                language, text = None, text.strip()
             # if the language is in the response we will use it from there
             language = transcript.get("language", language)
             return TranscriptResult(text=text, language=language)

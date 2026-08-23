@@ -19,7 +19,7 @@ class TranscriptTests(unittest.TestCase):
         data = f.read()
         f.close()
         transcription = whisper.transcribe(data)
-        self.assertEqual(transcription.text, "Open the apartment door")
+        self.assertEqual(transcription.text, "Open the apartment door.")
         
 
 if __name__ == '__main__':
