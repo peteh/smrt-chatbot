@@ -25,6 +25,10 @@ yt_dlp
 coqui-tts
 spacy
 piper-tts
+
+# torch trash
+transformers<5.0 # workaround for isin_mps_friendly issue
+torch
 torchcodec
 torchaudio
 
