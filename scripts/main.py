@@ -442,14 +442,21 @@ def run():
 
             chat_id_whitelist = gaudeam_config.get("chat_id_whitelist", None)
             chat_id_blacklist = gaudeam_config.get("chat_id_blacklist", None)
-            gaudeam_pipeline = pipeline.GaudeamBdayPipeline(
+
+            gaudeam_bday_pipeline = pipeline.GaudeamBdayPipeline(
                 gaudeam_members, chat_id_whitelist, chat_id_blacklist
             )
-            main_pipe.add_pipeline(gaudeam_pipeline)
-            gaudeam_pipeline = pipeline.GaudeamCalendarPipeline(
+            main_pipe.add_pipeline(gaudeam_bday_pipeline)
+
+            gaudeam_calendar_pipeline = pipeline.GaudeamCalendarPipeline(
                 gaudeam_calendar, chat_id_whitelist, chat_id_blacklist
             )
-            main_pipe.add_pipeline(gaudeam_pipeline)
+            main_pipe.add_pipeline(gaudeam_calendar_pipeline)
+
+            gaudeam_member_pipeline = pipeline.GaudeamMemberPipeline(
+                gaudeam_members, chat_id_whitelist, chat_id_blacklist
+            )
+            main_pipe.add_pipeline(gaudeam_member_pipeline)
 
             schedule_time = "09:00"
             # schedule daily birthday notifications

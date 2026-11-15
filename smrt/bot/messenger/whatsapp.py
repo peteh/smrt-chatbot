@@ -78,14 +78,17 @@ class WhatsappMessenger(MessengerInterface):
         response = response.json()
         logging.debug(response)
 
+    def _clean_chat_id(self, chat_id: str) -> str:
+        """Cleans the chat_id to be in the format <phone-number>@c.us or <group-id>@g.us"""
+        if chat_id.startswith("whatsapp://"):
+            return chat_id.split("whatsapp://")[1]
+        return chat_id
+
     @override
     def send_message(self, chat_id: str, text: str):
         # The chat_id is in the format "whatsapp://<phone-number>@c.us"
         # We need to extract the phone number part
-        if chat_id.startswith("whatsapp://"):
-            recipient = chat_id.split("whatsapp://")[1]
-        else:
-            recipient = chat_id
+        recipient = self._clean_chat_id(chat_id)
         is_group = chat_id.endswith("@g.us")
         self._send_message(recipient, is_group, text)
 
@@ -366,6 +369,51 @@ class WhatsappMessenger(MessengerInterface):
     @override
     def get_sender_name(self, message: dict):
         return message['sender']['pushname']
+
+#### START WHATSAPP GROUP HACK ###
+
+    
+    def get_group_members(self, group_chat_id: str):
+        response = requests.get(self._endpoint_url("group-members", self._clean_chat_id(group_chat_id)),
+                                headers=self._headers,
+                                timeout=self.DEFAULT_TIMEOUT)
+        json_response = response.json()
+        if 'response' not in json_response:
+            logging.error(f"Invalid members response, missing 'response' field: {json_response}")
+            raise ValueError("Invalid members response from server, missing 'response' field")
+        return json_response['response']
+    
+    def get_group_info(self, group_chat_id: str):
+        response = requests.get(self._endpoint_url("group-info", self._clean_chat_id(group_chat_id)),
+                                headers=self._headers,
+                                timeout=self.DEFAULT_TIMEOUT)
+        json_response = response.json()
+        if 'response' not in json_response:
+            logging.error(f"Invalid group info response, missing 'response' field: {json_response}")
+            raise ValueError("Invalid group info response from server, missing 'response' field")
+        return json_response['response']
+
+    def get_group_member_ids(self, group_chat_id: str):
+        response = requests.get(self._endpoint_url("group-members-ids", self._clean_chat_id(group_chat_id)),
+                                headers=self._headers,
+                                timeout=self.DEFAULT_TIMEOUT)
+        json_response = response.json()
+        if 'response' not in json_response:
+            logging.error(f"Invalid group member ids response, missing 'response' field: {json_response}")
+            raise ValueError("Invalid group member ids response from server, missing 'response' field")
+        return json_response['response']
+
+    def get_contact_by_pn_lid(self, pn_lid: str):
+        response = requests.get(self._endpoint_url("contact/pn-lid", pn_lid),
+                                headers=self._headers,
+                                timeout=self.DEFAULT_TIMEOUT)
+        json_response = response.json()
+        if 'lid' not in json_response:
+            logging.error(f"Invalid contact by pn-lid response, missing 'lid' field: {json_response}")
+            raise ValueError("Invalid contact by pn-lid response from server, missing 'lid' field")
+        return json_response
+
+### END WHATSAPP GROUP HACK ###
 
     @override
     def download_media(self, message):

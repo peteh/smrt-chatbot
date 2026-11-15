@@ -2,7 +2,8 @@
 import logging
 import typing
 import datetime
-from igitur import GaudeamCalendar, GaudeamMembers, GaudeamEvent
+from igitur import GaudeamCalendar, GaudeamMember, GaudeamMembers, GaudeamEvent
+from smrt.bot.messenger.whatsapp import WhatsappMessenger
 from smrt.bot.pipeline import PipelineHelper, AbstractPipeline
 from smrt.bot.messenger import MessengerInterface, MessengerManager
 from smrt.bot.pipeline import scheduled
@@ -51,13 +52,144 @@ class GaudeamBdayPipeline(AbstractPipeline):
 f"""*Gaudeam Birthdays*
 _#{self.BDAY_COMMAND}_ Sends birthdays of today. """
 
+class GaudeamMemberCache: 
+    """Cache for Gaudeam members. """
+    def __init__(self, gaudeam: GaudeamMembers):
+        self._gaudeam = gaudeam
+        self._members = gaudeam.get_members()
+        self._member_map = self._build_hashmap(self._members)
+        
+    
+    def _build_hashmap(self, members: list[GaudeamMember]) -> dict[str, GaudeamMember]:
+        # build the map but fail if the entry already exists, because that would mean we have duplicate phone numbers
+        
+        # TODO: add only members that have a phone number, and log the ones that don't have a phone number
+        # TODO: fail if we add a member with a phone number that already exists in the map, because that would mean we have duplicate phone numbers
+        member_map = {}
+        for member in members:
+            phone_number = member.get_phone()
+            if phone_number is None or phone_number.strip() == "":
+                logging.warning(f"Member {member.get_first_name()} {member.get_last_name()} has no phone number, skipping.")
+                continue
+            normalized_phonenumber = self._normalize_phonenumber(phone_number)
+            if normalized_phonenumber in member_map:
+                logging.error(f"Duplicate phone number found: {normalized_phonenumber} for members {member_map[normalized_phonenumber].get_first_name()} {member_map[normalized_phonenumber].get_last_name()} and {member.get_first_name()} {member.get_last_name()}.")
+                continue
+            member_map[normalized_phonenumber] = member
+        return member_map
+
+    def _normalize_phonenumber(self, phonenumber: str) -> str:
+        """Normalizes a phone number to the +49 format without dashes or whitespace.
+
+        Args:
+            phonenumber (str): The phone number to normalize.
+
+        Returns:
+            str: The normalized phone number.
+        """
+        # strip whitespaces and dashes
+        phonenumber = phonenumber.replace(" ", "").replace("-", "")
+        # normalize phonenumber to +49 format
+        if phonenumber.startswith("+"):
+            return phonenumber
+        elif phonenumber.startswith("0"):
+            return "+49" + phonenumber[1:]
+        else:
+            return "+49" + phonenumber
+
+    def get_member_by_phonenumber(self, phone_number: str) -> GaudeamMember|None:
+        """Gets a member by phone number. 
+
+        Args:
+            phone_number (str): _description_
+
+        Returns:
+            GaudeamMember|None: _description_
+        """
+        normalized_phonenumber = self._normalize_phonenumber(phone_number)
+        return self._member_map.get(normalized_phonenumber)
+
+
+class GaudeamMemberPipeline(AbstractPipeline):
+    """Pipe to handle ha commands in text. """
+    MEMBERS_COMMAND = "gaumembers"
+
+    def __init__(self, gaudeam: GaudeamMembers, chat_id_whitelist: list[str]|None = None, chat_id_blacklist: list[str]|None = None):
+        # can only be whitelisted chat ids
+        super().__init__(chat_id_whitelist, chat_id_blacklist)
+        self._commands = [self.MEMBERS_COMMAND]
+        self._gaudeam = gaudeam
+
+    def matches(self, messenger: MessengerInterface, message: dict):
+        message_text = messenger.get_message_text(message)
+        if message_text is None:
+            return False
+
+        # we check if the message is a command for this pipeline
+        command = PipelineHelper.extract_command(messenger.get_message_text(message))
+        if command not in self._commands:
+            return False
+        
+        # we check if we are in a group chat
+
+        if not messenger.is_group_message(message):
+            return False
+        
+        # we can accept the message
+        return True
+
+    def process(self, messenger: MessengerInterface, message: dict):
+        (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
+        if command == self.MEMBERS_COMMAND:
+            messenger.mark_in_progress_0(message)
+            try:
+                cache = GaudeamMemberCache(self._gaudeam)
+                
+                #members = self._gaudeam.get_members()
+                # cast to WhatsappMessenger to access the get_group_members method
+                wa_messenger = typing.cast(WhatsappMessenger, messenger)
+                
+                # does not get the phone numbers of the members, only the ids and names
+                #print(wa_messenger.get_group_members(wa_messenger.get_chat_id(message)))
+
+                # does not get the phone numbers of the members, only the ids and names
+                #print(wa_messenger.get_group_info(wa_messenger.get_chat_id(message)))
+
+                # does not get the phone numbers of the members, only the ids and names
+                member_lids = wa_messenger.get_group_member_ids(wa_messenger.get_chat_id(message))
+                message_text = f"Gaudeam Members in this group:\n"
+                # TODO: improve message, use check marks and cross marks to indicate if the member is found in Gaudeam or not, add whatsapp name if available, add first and last name if available, add phone number if available
+                for member in member_lids:
+                    member_lid = member["_serialized"]
+                    wa_contact = wa_messenger.get_contact_by_pn_lid(member_lid)
+                    phone_number = wa_contact["phoneNumber"]["id"]
+                    normalized_phone_number = f"+{phone_number}"
+
+                    cache_member = cache.get_member_by_phonenumber(normalized_phone_number)
+                    # TODO: tag the whatsapp user in the message that belongs to the number
+                    if cache_member is None:
+                        message_text += f"{normalized_phone_number}: No member found for phone number\n"
+                    else:
+                        message_text += f"{normalized_phone_number}: {cache_member.get_first_name()} {cache_member.get_last_name()}\n"
+
+                messenger.send_message(messenger.get_chat_id(message), message_text)
+                messenger.mark_in_progress_done(message)
+            except Exception as ex:
+                logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
+                messenger.mark_in_progress_fail(message)
+                return
+    def get_help_text(self) -> str:
+        return \
+f"""*Gaudeam Birthdays*
+_#{self.MEMBERS_COMMAND}_ Sends birthdays of today. """
+
 class GaudeamCalendarPipeline(AbstractPipeline):
     """Pipe to handle ha commands in text. """
-    DATE_COMMAND = "gauevents"
+    EVENTS_COMMAND = "gauevents"
 
     def __init__(self, gaudeam: GaudeamCalendar, chat_id_whitelist: typing.List[str]|None = None, chat_id_blacklist: typing.List[str]|None = None):
         super().__init__(chat_id_whitelist, chat_id_blacklist)
-        self._commands = [self.DATE_COMMAND]
+        self._commands = [self.EVENTS_COMMAND]
         self._gaudeam = gaudeam
 
     def matches(self, messenger: MessengerInterface, message: dict):
@@ -71,7 +203,7 @@ class GaudeamCalendarPipeline(AbstractPipeline):
 
     def process(self, messenger: MessengerInterface, message: dict):
         (command, _, text) = PipelineHelper.extract_command_full(messenger.get_message_text(message))
-        if command == self.DATE_COMMAND:
+        if command == self.EVENTS_COMMAND:
             messenger.mark_in_progress_0(message)
             try:
                 days = 14
@@ -91,25 +223,25 @@ class GaudeamCalendarPipeline(AbstractPipeline):
     def get_help_text(self) -> str:
         return \
 f"""*Gaudeam Event Dates*
-_#{self.DATE_COMMAND}_ Sends a list of events coming up. """
+_#{self.EVENTS_COMMAND}_ Sends a list of events coming up. """
 
 class GaudeamUtils:
     @staticmethod
-    def format_bday_message(bday_members: list[dict]) -> str:
+    def format_bday_message(bday_members: list[GaudeamMember]) -> str:
         if len(bday_members) == 0:
             return "No birthdays today."
 
         text = "Birthdays today:"
         for member in bday_members:
-            first_name = member["first_name"]
-            last_name = member["last_name"]
-            age = member["age"]
+            first_name = member.get_first_name()
+            last_name = member.get_last_name()
+            age = member.get_age()
             text = text + f"\n - {first_name} {last_name} ({age})"
         text += "\n\nHappy Birthday! 🎉🎂"
         return text
 
     @staticmethod
-    def get_bdays_today(gaudeam: GaudeamMembers) -> list[dict]:
+    def get_bdays_today(gaudeam: GaudeamMembers) -> list[GaudeamMember]:
         # todays date in format dd.mm
         today_date = datetime.datetime.now().strftime("%d.%m")
         logging.debug(f"Today's date: {today_date}")
@@ -117,7 +249,7 @@ class GaudeamUtils:
         bday_members = []
 
         for member in gaudeam.get_members():
-            birth_date = member["birthdate"]
+            birth_date = member.get_birthdate()
             if birth_date and birth_date.startswith(today_date):
                 bday_members.append(member)
         return bday_members
@@ -149,6 +281,7 @@ class GaudeamUtils:
 
             text = text + f"\n - {start_str}: {title} ({url})"
         return text
+
 class GaudeamBdayScheduledTask(scheduled.AbstractScheduledTask):
     """Scheduled task to send birthday notifications. """
 
