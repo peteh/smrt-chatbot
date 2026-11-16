@@ -85,27 +85,33 @@ class WhatsappMessenger(MessengerInterface):
         return chat_id
 
     @override
-    def send_message(self, chat_id: str, text: str):
+    def send_message(self, chat_id: str, text: str, mentioned_list: list[str]|None = None):
         # The chat_id is in the format "whatsapp://<phone-number>@c.us"
         # We need to extract the phone number part
         recipient = self._clean_chat_id(chat_id)
         is_group = chat_id.endswith("@g.us")
-        self._send_message(recipient, is_group, text)
-
-    def _send_message(self, recipient: str, is_group, text: str):
+        self._send_message(recipient, is_group, text, mentioned_list)
+    
+    def _send_message(self, recipient: str, is_group: bool, text: str, mentioned_list: list[str]|None = None):
         logging.debug(f"Sending message to recipient: {recipient}")
         is_lid = "@lid" in recipient
-        logging.debug(f"Is recipient a LID? {'Yes' if is_lid else 'No'}")
         data = {
             "phone": recipient,
             "message": text,
             "isGroup": is_group,
             "isLid": is_lid
         }
-        response = requests.post(self._endpoint_url("send-message"),
-                      json=data,
-                      headers=self._headers,
-                      timeout=self.DEFAULT_TIMEOUT)
+        if mentioned_list is not None:
+            data["mentioned"] = mentioned_list
+            response = requests.post(self._endpoint_url("send-mentioned"),
+                        json=data,
+                        headers=self._headers,
+                        timeout=self.DEFAULT_TIMEOUT)
+        else:
+            response = requests.post(self._endpoint_url("send-message"),
+                        json=data,
+                        headers=self._headers,
+                        timeout=self.DEFAULT_TIMEOUT)
         logging.debug(response.json())
 
     def _react(self, message_id, reaction_text):

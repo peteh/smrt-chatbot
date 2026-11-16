@@ -62,9 +62,6 @@ class GaudeamMemberCache:
     
     def _build_hashmap(self, members: list[GaudeamMember]) -> dict[str, GaudeamMember]:
         # build the map but fail if the entry already exists, because that would mean we have duplicate phone numbers
-        
-        # TODO: add only members that have a phone number, and log the ones that don't have a phone number
-        # TODO: fail if we add a member with a phone number that already exists in the map, because that would mean we have duplicate phone numbers
         member_map = {}
         for member in members:
             phone_number = member.get_phone()
@@ -130,11 +127,15 @@ class GaudeamMemberPipeline(AbstractPipeline):
         if command not in self._commands:
             return False
         
-        # we check if we are in a group chat
-
-        if not messenger.is_group_message(message):
+        # check if we are in whatsapp messenger
+        if not isinstance(messenger, WhatsappMessenger):
+            logging.warning(f"GaudeamMemberPipeline only supports WhatsappMessenger, but got {type(messenger)}")
             return False
         
+        # we check if we are in a group chat
+        if not messenger.is_group_message(message):
+            return False
+
         # we can accept the message
         return True
 
@@ -159,21 +160,28 @@ class GaudeamMemberPipeline(AbstractPipeline):
                 member_lids = wa_messenger.get_group_member_ids(wa_messenger.get_chat_id(message))
                 message_text = f"Gaudeam Members in this group:\n"
                 # TODO: improve message, use check marks and cross marks to indicate if the member is found in Gaudeam or not, add whatsapp name if available, add first and last name if available, add phone number if available
+                message_lids = []
                 for member in member_lids:
                     member_lid = member["_serialized"]
+                    message_lids.append(member_lid)
                     wa_contact = wa_messenger.get_contact_by_pn_lid(member_lid)
                     phone_number = wa_contact["phoneNumber"]["id"]
                     normalized_phone_number = f"+{phone_number}"
 
                     cache_member = cache.get_member_by_phonenumber(normalized_phone_number)
                     # TODO: tag the whatsapp user in the message that belongs to the number
+                    member_tag = f"@{member_lid.replace('@c.us', '').replace('@g.us', '').replace('@lid', '')}"
                     if cache_member is None:
-                        message_text += f"{normalized_phone_number}: No member found for phone number\n"
+                        message_text += f"{wa_messenger.REACT_FAIL} {normalized_phone_number} ({member_tag}): Not found\n"
                     else:
-                        message_text += f"{normalized_phone_number}: {cache_member.get_first_name()} {cache_member.get_last_name()}\n"
+                        member_id = cache_member.get_property("id")
+                        vcard_link = f"{self._gaudeam._session.url()}/member/{member_id}.vcf"
+                        message_text += f"{wa_messenger.REACT_CHECKMARK} {normalized_phone_number} ({member_tag}): \n"
+                        message_text += f"* {cache_member.get_first_name()} {cache_member.get_last_name()}\n"
+                        message_text += f"* {vcard_link}\n"
 
-                messenger.send_message(messenger.get_chat_id(message), message_text)
-                messenger.mark_in_progress_done(message)
+                wa_messenger.send_message(messenger.get_chat_id(message), message_text, message_lids)
+                wa_messenger.mark_in_progress_done(message)
             except Exception as ex:
                 logging.critical(ex, exc_info=True)  # log exception info at CRITICAL log level
                 messenger.mark_in_progress_fail(message)
