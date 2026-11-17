@@ -103,11 +103,11 @@ class PipelineHelper():
         return command
 
     @staticmethod
-    def extract_command_full(data: str) -> tuple[str, str, str] | None:
+    def extract_command_full(data: str) -> tuple[str|None, str|None, str|None]:
         """Extracts commands from a text"""
         left_over = data.strip()
         if not left_over.startswith("#"):
-            return None
+            return (None, None, None)
         length = 0
         for i in range(1, len(left_over)):
             if left_over[i].isalnum() or left_over[i] == "_":
@@ -115,7 +115,7 @@ class PipelineHelper():
             else:
                 break
         if length == 0:
-            return None
+            return (None, None, None)
         command = left_over[1:1 + length]
         left_over = left_over[1 + length:]
 
@@ -123,7 +123,7 @@ class PipelineHelper():
         if len(left_over) > 0 and left_over[0] == "(":
             end_parentesis = left_over.find(")")
             if end_parentesis == -1:
-                return None
+                return (None, None, None)
             params = left_over[1:end_parentesis]
             left_over = left_over[end_parentesis+1:]
 
@@ -190,7 +190,7 @@ class WhatsappLidPipeline(AbstractPipeline):
             messenger.mark_in_progress_fail(message)
             return
 
-        lids = messenger.get_lids(message)
+        lids = messenger._get_lids(message)
         lid_text = ", ".join(lids)
         response_text = f"Lids: {lid_text}"
         messenger.reply_message(message, response_text)

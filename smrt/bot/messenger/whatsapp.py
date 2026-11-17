@@ -18,6 +18,7 @@ class WhatsappMessenger(MessengerInterface):
     REACT_CHECKMARK = "\u2714\ufe0f"
     REACT_SKIP = "\U0001F4A4"
     REACT_FAIL = "\u274c"
+    REACT_EXCLAMATION = "\u2757"
 
     DEFAULT_TIMEOUT = 60
     DEFAULT_SECRET_TOKEN = "THISISMYSECURETOKEN" # token from standard config, probably no one changes this anyway
@@ -352,7 +353,7 @@ class WhatsappMessenger(MessengerInterface):
                 return True
         return False
 
-    def get_lids(self, message: dict):
+    def _get_lids(self, message: dict):
         if "mentionedJidList" not in message:
             return []
         lids = []
@@ -378,7 +379,16 @@ class WhatsappMessenger(MessengerInterface):
 
 #### START WHATSAPP GROUP HACK ###
 
-    
+    def get_group_metadata(self, group_chat_id: str):
+        response = requests.get(self._endpoint_url("chat-by-id", f"{self._clean_chat_id(group_chat_id)}?isGroup=true"),
+                                headers=self._headers,
+                                timeout=self.DEFAULT_TIMEOUT)
+        json_response = response.json()
+        if 'id' not in json_response:
+            logging.error(f"Invalid group metadata response, missing 'id' field: {json_response}")
+            raise ValueError("Invalid group metadata response from server, missing 'id' field")
+        return json_response
+
     def get_group_members(self, group_chat_id: str):
         response = requests.get(self._endpoint_url("group-members", self._clean_chat_id(group_chat_id)),
                                 headers=self._headers,

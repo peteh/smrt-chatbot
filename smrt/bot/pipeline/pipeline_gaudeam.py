@@ -1,20 +1,21 @@
 """Implementations of a pipeline for processing data from Gaudeam. """
+import datetime
+import json
 import logging
 import typing
-import datetime
-from igitur import GaudeamCalendar, GaudeamMember, GaudeamMembers, GaudeamEvent
-from smrt.bot.messenger.whatsapp import WhatsappMessenger
-from smrt.bot.pipeline import PipelineHelper, AbstractPipeline
-from smrt.bot.messenger import MessengerInterface, MessengerManager
-from smrt.bot.pipeline import scheduled
 
+from igitur import GaudeamCalendar, GaudeamEvent, GaudeamMember, GaudeamMembers
+
+from smrt.bot.messenger import MessengerInterface, MessengerManager
+from smrt.bot.messenger.whatsapp import WhatsappMessenger
+from smrt.bot.pipeline import AbstractPipeline, PipelineHelper, scheduled
 
 
 class GaudeamBdayPipeline(AbstractPipeline):
     """Pipe to handle ha commands in text. """
     BDAY_COMMAND = "gaubday"
 
-    def __init__(self, gaudeam: GaudeamMembers, chat_id_whitelist: typing.List[str]|None = None, chat_id_blacklist: typing.List[str]|None = None):
+    def __init__(self, gaudeam: GaudeamMembers, chat_id_whitelist: list[str]|None = None, chat_id_blacklist: list[str]|None = None):
         # can only be whitelisted chat ids
         super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._commands = [self.BDAY_COMMAND]
@@ -156,10 +157,11 @@ class GaudeamMemberPipeline(AbstractPipeline):
                 # does not get the phone numbers of the members, only the ids and names
                 #print(wa_messenger.get_group_info(wa_messenger.get_chat_id(message)))
 
-                # does not get the phone numbers of the members, only the ids and names
+                wa_group_metadata = wa_messenger.get_group_metadata(wa_messenger.get_chat_id(message))
+                print(json.dumps(wa_group_metadata, indent=2))
+                
                 member_lids = wa_messenger.get_group_member_ids(wa_messenger.get_chat_id(message))
-                message_text = f"Gaudeam Members in this group:\n"
-                # TODO: improve message, use check marks and cross marks to indicate if the member is found in Gaudeam or not, add whatsapp name if available, add first and last name if available, add phone number if available
+                message_text = "Gaudeam Members in this group:\n"
                 message_lids = []
                 for member in member_lids:
                     member_lid = member["_serialized"]
@@ -169,15 +171,20 @@ class GaudeamMemberPipeline(AbstractPipeline):
                     normalized_phone_number = f"+{phone_number}"
 
                     cache_member = cache.get_member_by_phonenumber(normalized_phone_number)
-                    # TODO: tag the whatsapp user in the message that belongs to the number
                     member_tag = f"@{member_lid.replace('@c.us', '').replace('@g.us', '').replace('@lid', '')}"
                     if cache_member is None:
                         message_text += f"{wa_messenger.REACT_FAIL} {normalized_phone_number} ({member_tag}): Not found\n"
                     else:
                         member_id = cache_member.get_property("id")
+                        member_resigned = cache_member.get_property("resigned")
                         vcard_link = f"{self._gaudeam._session.url()}/member/{member_id}.vcf"
-                        message_text += f"{wa_messenger.REACT_CHECKMARK} {normalized_phone_number} ({member_tag}): \n"
+                        
+                        reaction = wa_messenger.REACT_CHECKMARK if not member_resigned else wa_messenger.REACT_EXCLAMATION
+                        
+                        message_text += f"{reaction} {normalized_phone_number} ({member_tag}): \n"
                         message_text += f"* {cache_member.get_first_name()} {cache_member.get_last_name()}\n"
+                        if member_resigned:
+                            message_text += f"* Not active anymore! \n"
                         message_text += f"* {vcard_link}\n"
 
                 wa_messenger.send_message(messenger.get_chat_id(message), message_text, message_lids)
@@ -195,7 +202,7 @@ class GaudeamCalendarPipeline(AbstractPipeline):
     """Pipe to handle ha commands in text. """
     EVENTS_COMMAND = "gauevents"
 
-    def __init__(self, gaudeam: GaudeamCalendar, chat_id_whitelist: typing.List[str]|None = None, chat_id_blacklist: typing.List[str]|None = None):
+    def __init__(self, gaudeam: GaudeamCalendar, chat_id_whitelist: list[str]|None = None, chat_id_blacklist: list[str]|None = None):
         super().__init__(chat_id_whitelist, chat_id_blacklist)
         self._commands = [self.EVENTS_COMMAND]
         self._gaudeam = gaudeam
@@ -309,6 +316,9 @@ class GaudeamBdayScheduledTask(scheduled.AbstractScheduledTask):
             for chat_id in self.get_chat_ids():
                 try:
                     messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)
+                    if messenger is None:
+                        logging.error(f"Failed to send birthday message to {chat_id}: Messenger not found.")
+                        continue
                     messenger.send_message(chat_id, text)
                 except Exception as ex:
                     logging.error(f"Failed to send birthday message to {chat_id} via: {ex}", exc_info=True)
@@ -343,6 +353,9 @@ class GaudeamEventsScheduledTask(scheduled.AbstractScheduledTask):
             for chat_id in self.get_chat_ids():
                 try:
                     messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)
+                    if messenger is None:
+                        logging.error(f"Failed to send events message to {chat_id}: Messenger not found.")
+                        continue
                     messenger.send_message(chat_id, text)
                 except Exception as ex:
                     logging.error(f"Failed to send events message to {chat_id}: {ex}", exc_info=True)
