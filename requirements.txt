@@ -23,11 +23,13 @@ youtube-transcript-api
 yt_dlp
 # tts stuff
 coqui-tts
+six
 spacy
 piper-tts
 
 # torch trash
-transformers<5.0 # workaround for isin_mps_friendly issue
+#transformers<5.0 # workaround for isin_mps_friendly issue
+transformers
 torch
 torchcodec
 torchaudio
