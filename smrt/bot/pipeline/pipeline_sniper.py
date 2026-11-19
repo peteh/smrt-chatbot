@@ -106,7 +106,7 @@ class CCCScheduledTask(AbstractSniperTask):
                 counter += 1
                 if counter % 40 == 0:
                     session = self.new_session()
-                r = session.get("https://tickets.events.ccc.de/39c3/secondhand/?item=&sort=price_asc")
+                r = session.get("https://tickets.events.ccc.de/40c3/secondhand/?item=&sort=price_asc")
                 
                 if r.status_code != 200:
                     logging.debug(f"CCC: Unexpected status code {r.status_code}, waiting...")
@@ -138,7 +138,7 @@ class CCCScheduledTask(AbstractSniperTask):
                 logging.debug(r.text)
                 for chat_id in self.get_chat_ids():
                     messenger = self.get_messenger_manager().get_messenger_by_chatid(chat_id)
-                    messenger.send_message(chat_id, "Tickets available! Check https://tickets.events.ccc.de/39c3/secondhand/")
+                    messenger.send_message(chat_id, "Tickets available! Check https://tickets.events.ccc.de/40c3/secondhand/")
                     time.sleep(3*60)
 
             except Exception as e:
